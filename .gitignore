@@ -1,0 +1,17 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
