@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://education.asfai.org/schemas/external-item-reference/versions/0.1.0",
+  "title": "ASFAI External Framework Item Reference 0.1",
+  "type": "object",
+  "required": ["id", "uuid", "frameworkId", "frameworkSlug", "sourceKey", "code", "sourceVersion", "sourceLandingPage", "textAvailableInMarbleSnapshot", "textIncludedInAsfaiPackage", "linkedObjectiveCount", "review"],
+  "properties": {
+    "id": { "type": "string", "format": "uri", "pattern": "^https://education\\.asfai\\.org/frameworks/" },
+    "uuid": { "type": "string", "format": "uuid" },
+    "frameworkId": { "type": "string", "format": "uri" },
+    "frameworkSlug": { "type": "string", "minLength": 1 },
+    "sourceKey": { "type": "string", "minLength": 1 },
+    "code": { "type": "string", "minLength": 1 },
+    "sourceVersion": { "type": "string", "minLength": 1 },
+    "sourceLandingPage": { "type": "string", "format": "uri" },
+    "textAvailableInMarbleSnapshot": { "type": "boolean" },
+    "textIncludedInAsfaiPackage": { "const": false },
+    "linkedObjectiveCount": { "type": "integer", "minimum": 0 },
+    "review": { "type": "object" }
+  },
+  "additionalProperties": false
+}

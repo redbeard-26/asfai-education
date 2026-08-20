@@ -1,0 +1,24 @@
+ASFAI Core Learning Objectives 0.1.0
+
+This database is adapted from Marble Open Skill Taxonomy release 1.0.0:
+https://github.com/withmarbleapp/os-taxonomy
+
+Pinned source commit:
+96a7933754af672e1bfdbf7ecb05c325860c6e0d
+
+Database and transformed graph/mappings:
+Open Data Commons Open Database License 1.0
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Marble-authored and adapted textual content:
+Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+
+ASFAI-original generator, schemas, documentation, identifier policy, and general
+mastery rubric are licensed under Apache License 2.0 as described at repository
+root.
+
+External curriculum statements are not included. Framework names, versions,
+codes, and links are retained for identification and interoperability. Rights in
+the referenced standards and marks remain with their respective holders. No
+endorsement is implied.

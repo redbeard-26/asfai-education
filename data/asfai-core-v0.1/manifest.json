@@ -1,0 +1,126 @@
+{
+  "dataset": "ASFAI Core Learning Objectives",
+  "version": "0.1.0",
+  "releasedAt": "2026-08-19T00:00:00.000Z",
+  "canonicalBaseUri": "https://education.asfai.org",
+  "frameworkId": "https://education.asfai.org/frameworks/asfai-core/versions/0.1.0",
+  "status": "provisional",
+  "source": {
+    "repository": "https://github.com/withmarbleapp/os-taxonomy",
+    "commit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+    "release": "1.0.0",
+    "taxonomyVersion": "v1",
+    "generatedAt": "2026-07-08T09:15:41.140Z",
+    "files": {
+      "topics.json": "2d99fc3b5e57d9ddb86b6c179b58a1b0390f048d9798585fe03b13cbc183719b",
+      "dependencies.json": "86a24efb44b480e5be23082b4bdea653f69f6d6fd54c5409a2f33c185be1d87f",
+      "curriculum-standards.json": "33a835abaafa68ed736f2102d5502ff030d6448dc55ae45718be05a78f5fc73f"
+    }
+  },
+  "existingAsfaiSnapshot": {
+    "repository": "https://github.com/redbeard-26/asfai-constitution",
+    "commit": "94cb3c47ebfd48c73395ba20e20b1f9454851182",
+    "integration": "Bundled src/content/taxonomy/topics.json and dependencies.json; no hosted API or package.",
+    "topicsNormalizedSha256": "2d99fc3b5e57d9ddb86b6c179b58a1b0390f048d9798585fe03b13cbc183719b",
+    "dependenciesNormalizedSha256": "86a24efb44b480e5be23082b4bdea653f69f6d6fd54c5409a2f33c185be1d87f",
+    "contentIdenticalToPinnedMarbleSnapshot": true,
+    "externalCurriculumCatalogBundled": false
+  },
+  "licenses": {
+    "database": "ODbL-1.0",
+    "marbleDerivedText": "CC-BY-SA-4.0",
+    "externalStandards": "Source-specific; this package includes identifiers and links only.",
+    "asfaiOriginalCodeDocumentationAndRubric": "Apache-2.0"
+  },
+  "caseExport": {
+    "version": "1.1",
+    "file": "case-1.1/package.json",
+    "validationSchema": "https://github.com/1EdTech/OpenCASE/blob/06e4e617e04708a8059cfecaabd134193f3e2940/apps/editor/schemas/case-v1p1-cfpackage.json",
+    "schemaCommit": "06e4e617e04708a8059cfecaabd134193f3e2940"
+  },
+  "counts": {
+    "objectives": 1590,
+    "relationships": 3221,
+    "alignments": 1859,
+    "externalFrameworks": 7,
+    "externalItems": 3261
+  },
+  "quality": {
+    "sourceTopics": 1590,
+    "generatedObjectives": 1590,
+    "sourceDependencies": 3221,
+    "generatedRelationships": 3221,
+    "externalFrameworks": 7,
+    "externalRecords": 3261,
+    "externalRecordsLinked": 1656,
+    "externalRecordsUnlinked": 1605,
+    "topicToExternalLinks": 1859,
+    "topicsWithoutEvidenceExpectations": 35,
+    "topicsWithoutExternalAlignments": 772,
+    "duplicateTopicLabels": 23,
+    "duplicateTopicDescriptions": 0,
+    "invalidDependencyReferences": 0,
+    "duplicateDependencies": 0,
+    "selfDependencies": 0,
+    "dependencyCycles": 0,
+    "missingExternalReferences": 0
+  },
+  "files": {
+    "framework.json": {
+      "bytes": 980,
+      "sha256": "fc230bb3fa8053470b053474656e7bd76da4eb5910895535d14e0dae97cf19f2"
+    },
+    "rubrics.json": {
+      "bytes": 2095,
+      "sha256": "8b23ccfe911ac17983358c5c116db1872ec1ce01b387eb6f845de8b329ea66a4"
+    },
+    "objectives.jsonl": {
+      "bytes": 3367547,
+      "sha256": "fea58700f2fe589543214d1230ec39837303c0774b6618b46a4bb6cc7cf41104"
+    },
+    "objectives.csv": {
+      "bytes": 1008725,
+      "sha256": "94eee7e4fa91290531545a31414f2c0110878b6e73a17bbe6c0592040e448341"
+    },
+    "relationships.jsonl": {
+      "bytes": 3373432,
+      "sha256": "f11afd98d38c766ca1e4ecc43fcaadc65e8d9cb96767239e1c4c2f5c1cc571fb"
+    },
+    "relationships.csv": {
+      "bytes": 1141995,
+      "sha256": "8418fe6415e3ba7cabc31e1dcff90a3ced18be118461eb01a5256e0b97e8e522"
+    },
+    "alignments.jsonl": {
+      "bytes": 2014693,
+      "sha256": "a7ca8c07d2c46858850f4ab53d74b69428653fe9d30912e4dbbd4e3dc393c0f3"
+    },
+    "alignments.csv": {
+      "bytes": 592787,
+      "sha256": "f8de499940df134831247453132f9e991a085838240160475ffd638671804037"
+    },
+    "external-frameworks.json": {
+      "bytes": 7795,
+      "sha256": "0789644e8cb10107143ca57647577431db74dbb05c50bf4c6832a55d398e7ad0"
+    },
+    "external-items.jsonl": {
+      "bytes": 1868262,
+      "sha256": "9593ece3601c9c575556198ea0128b539469947286b54bfd7bcc6da0a6b0582a"
+    },
+    "external-items.csv": {
+      "bytes": 738749,
+      "sha256": "516df835c174962a608c78afd3393d00c3c13bc4aaab3d092d0a8a7d7a1330ec"
+    },
+    "case-1.1/package.json": {
+      "bytes": 15474560,
+      "sha256": "e490397ce185f92d3b95947ad8381bf8ffcabf5fddb75d9a2981a6a29e4551f0"
+    },
+    "reports/source-evaluation.json": {
+      "bytes": 9034,
+      "sha256": "a5b82aa0245a861c1987b7f16f62d146fe44bf3b065483b86515c7537cdf9ffd"
+    },
+    "reports/source-evaluation.md": {
+      "bytes": 3300,
+      "sha256": "efecbe7a6e48f36abb239f983324de8daea5a90af3db8f9c5c4f92fd555de331"
+    }
+  }
+}

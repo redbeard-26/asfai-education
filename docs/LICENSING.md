@@ -33,6 +33,17 @@ Code, original schemas, and original documentation can remain Apache-2.0 while d
 
 Do not place third-party data in an Apache-only directory or describe the entire repository as uniformly Apache-licensed if differently licensed data is later added.
 
+## ASFAI Core 0.1 data package
+
+`data/asfai-core-v0.1` is intentionally identified as a mixed-rights data package rather than Apache-only material:
+
+- its database and transformed Marble relationships/mappings are distributed under ODbL 1.0;
+- Marble-authored and adapted textual fields are distributed under CC BY-SA 4.0;
+- the ASFAI-original generator, schemas, documentation, identifier policy, and general rubric remain Apache-2.0;
+- external curriculum records contain identifiers, versions, and source links but omit the external standard statements.
+
+The package manifest pins the source commit and source-file hashes and supplies hashes for every generated data representation. Removing attribution or describing the generated objective text as Apache-only would be incorrect.
+
 ## Contributions
 
 Unless a contribution states otherwise and is accepted on that basis, contributions are made under the same Apache-2.0 terms as the repository. Contributors must have the right to submit their work. They should not submit copied curriculum text, proprietary assessment items, student work, or personal data merely because it is technically accessible.

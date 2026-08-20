@@ -2,7 +2,7 @@
 
 Open, standards-based architecture for AI-mediated learning, evidence, and mastery.
 
-> **Status:** This repository is an early design and interoperability project. It is not yet a production learner-record system, assessment engine, or curriculum dataset.
+> **Status:** This repository now includes a complete provisional competency bootstrap dataset. It is not yet a reviewed production curriculum, learner-record system, or assessment engine.
 
 ASFAI Education is intended to let students learn through AI tutors, courses, games, and hands-on projects while maintaining a coherent picture of what each student has attempted, demonstrated, and mastered.
 
@@ -28,7 +28,20 @@ The central rule is that an AI may produce an evidence-backed **assessment claim
 - Import/export profiles for relevant education standards
 - Guidance for integrating public standards and open taxonomies safely
 
-No student records or third-party curriculum datasets are included in this initial repository.
+No student records are included. The provisional data package contains ASFAI records derived from Marble plus identifier-only references to external standards; it does not copy external standards statements.
+
+## Provisional objective catalog
+
+[ASFAI Core Learning Objectives 0.1.0](data/asfai-core-v0.1/README.md) contains:
+
+- 1,590 canonical ASFAI objectives under `https://education.asfai.org/objectives/{uuid}`;
+- 3,221 prerequisite relationships;
+- 1,859 conservative, unreviewed alignments;
+- all 3,261 external framework-item identifiers found in the source snapshot;
+- CSV, JSON Lines, source-evaluation, and CASE 1.1 representations;
+- deterministic generation and integrity validation.
+
+The package is a complete conversion of the pinned source, but every objective and mapping remains provisional pending curriculum review.
 
 ## Design documents
 
@@ -36,6 +49,7 @@ No student records or third-party curriculum datasets are included in this initi
 - [Existing ASFAI implementation assessment](docs/ASFAI-PRIOR-ART.md)
 - [Standards profile](docs/STANDARDS.md)
 - [Core data model](docs/DATA-MODEL.md)
+- [ASFAI competency application profile](docs/ASFAI-COMPETENCY-PROFILE.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Licensing policy](docs/LICENSING.md)
 - [Implementation roadmap](docs/ROADMAP.md)

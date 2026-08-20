@@ -1,6 +1,6 @@
 # Roadmap
 
-The first goal is not to ingest every available standard. It is to prove that evidence from two very different learning experiences can produce a trustworthy, inspectable view of progress against a shared objective graph.
+The first goal is not to activate every available standard for learner reporting. A complete mechanical seed catalog is useful for discovery and gap analysis, but the product goal is to prove that evidence from two very different learning experiences can produce a trustworthy, inspectable view of progress against a reviewed subset of the shared graph.
 
 ## Phase 0 — application profile and governance
 
@@ -9,6 +9,7 @@ The first goal is not to ingest every available standard. It is to prove that ev
 - Define privacy classifications, retention rules, and human-review requirements.
 - Establish source, licensing, and attribution manifests for imported data.
 - Choose conformance targets and pin exact versions of external specifications.
+- Maintain the complete provisional ASFAI Core seed catalog and its deterministic CASE export.
 
 **Exit condition:** two independent implementers can serialize the same sample objectives, events, and claims without inventing incompatible fields.
 
@@ -27,7 +28,7 @@ The first goal is not to ingest every available standard. It is to prove that ev
 ## Phase 2 — interoperability
 
 - Publish an xAPI profile and validation fixtures for evidence events.
-- Add CASE import/export for competency frameworks and rubrics.
+- Extend and integration-test the existing CASE 1.1 export; add reviewed import workflows.
 - Add QTI support for appropriate formal assessments.
 - Add LTI 1.3 and OneRoster adapters for institutional context.
 - Export validated accomplishments through CLR and Open Badges.
@@ -39,7 +40,7 @@ The first goal is not to ingest every available standard. It is to prove that ev
 
 - Build source-specific importers for selected official frameworks.
 - Add jurisdiction-aware state mappings and version transitions.
-- Evaluate a reviewed Marble subset as a prerequisite-graph seed.
+- Review and activate selected objectives from the provisional Marble-derived seed.
 - Establish educator review and dispute workflows for mappings and AI claims.
 - Validate scoring reliability, subgroup fairness, calibration, and accessibility.
 - Add longitudinal retention and transfer-of-learning checks.
@@ -58,7 +59,7 @@ The first goal is not to ingest every available standard. It is to prove that ev
 
 ## Explicit non-goals for the first release
 
-- importing all 1,590 Marble topics;
+- treating all 1,590 mechanically imported objectives as reviewed production curriculum;
 - declaring blanket conformance to every referenced standard;
 - using one opaque AI score as a permanent learner record;
 - creating a nationwide replacement for state standards;

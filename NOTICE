@@ -5,6 +5,10 @@ This product includes documentation describing interoperability with third-party
 standards, specifications, and curriculum sources. Those names and marks belong
 to their respective owners. No endorsement is implied.
 
-No third-party curriculum dataset or student data is included in the initial
-repository. If such data is added later, its license, attribution, provenance,
-and distribution terms must be stated separately.
+The data/asfai-core-v0.1 package is derived from the Marble Open Skill Taxonomy
+release 1.0.0. The derived database is offered under ODbL 1.0 and Marble-authored
+or adapted text under CC BY-SA 4.0. External curriculum statements are not
+included. See THIRD_PARTY_NOTICES.md and the data-package README for attribution,
+provenance, source hashes, and license boundaries.
+
+No student data is included in this repository.

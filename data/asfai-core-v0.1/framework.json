@@ -1,0 +1,30 @@
+{
+  "id": "https://education.asfai.org/frameworks/asfai-core/versions/0.1.0",
+  "uuid": "6fad656a-0aaa-585e-ad62-fd64151cbf2a",
+  "canonicalBaseUri": "https://education.asfai.org",
+  "title": "ASFAI Core Learning Objectives",
+  "creator": "ASFAI Education",
+  "publisher": "ASFAI Education",
+  "description": "A provisional, standards-aligned competency framework transformed from the Marble Open Skill Taxonomy and assigned permanent ASFAI identifiers.",
+  "version": "0.1.0",
+  "status": "provisional",
+  "language": "en",
+  "releasedAt": "2026-08-19T00:00:00.000Z",
+  "standardsProfile": [
+    "IEEE 1484.20.2-2022 aligned",
+    "IEEE 1484.20.3-2022 aligned",
+    "1EdTech CASE 1.1 exchange"
+  ],
+  "license": {
+    "database": "ODbL-1.0",
+    "derivedText": "CC-BY-SA-4.0",
+    "asfaiOriginalCodeAndRubric": "Apache-2.0"
+  },
+  "counts": {
+    "objectives": 1590,
+    "relationships": 3221,
+    "alignments": 1859,
+    "externalFrameworks": 7,
+    "externalItems": 3261
+  }
+}

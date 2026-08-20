@@ -1,0 +1,54 @@
+{
+  "rubrics": [
+    {
+      "id": "https://education.asfai.org/rubrics/general-mastery/versions/0.1.0",
+      "uuid": "90d769b3-a3d5-5de7-a8e2-ba0861991a02",
+      "title": "ASFAI General Mastery Rubric",
+      "version": "0.1.0",
+      "status": "provisional",
+      "description": "A cross-objective default rubric. Objective-specific evidence expectations refine what counts as a representative demonstration.",
+      "criteria": [
+        {
+          "id": "https://education.asfai.org/rubrics/general-mastery/versions/0.1.0/criteria/demonstration",
+          "code": "demonstration",
+          "title": "Quality and independence of demonstration",
+          "levels": [
+            {
+              "code": "not_observed",
+              "score": 0,
+              "descriptor": "No interpretable evidence has been collected."
+            },
+            {
+              "code": "emerging",
+              "score": 1,
+              "descriptor": "Shows partial understanding or performance with substantial assistance."
+            },
+            {
+              "code": "developing",
+              "score": 2,
+              "descriptor": "Succeeds in a familiar task with some assistance or inconsistency."
+            },
+            {
+              "code": "proficient",
+              "score": 3,
+              "descriptor": "Independently satisfies the objective's evidence expectations in a representative task."
+            },
+            {
+              "code": "mastered",
+              "score": 4,
+              "descriptor": "Independently satisfies the evidence expectations across materially different contexts and later demonstrates retention."
+            }
+          ]
+        }
+      ],
+      "masteryPolicy": {
+        "requiredMinimumLevel": "mastered",
+        "minimumIndependentDemonstrations": 2,
+        "minimumMateriallyDifferentContexts": 2,
+        "retentionCheckRequired": true,
+        "note": "This is a transparent default, not a universal psychometric claim. Programs may issue a versioned replacement policy."
+      },
+      "license": "Apache-2.0"
+    }
+  ]
+}

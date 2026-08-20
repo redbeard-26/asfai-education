@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://education.asfai.org/schemas/learning-objective/versions/0.1.0",
+  "title": "ASFAI Learning Objective 0.1",
+  "type": "object",
+  "required": [
+    "id",
+    "uuid",
+    "humanCodingScheme",
+    "frameworkId",
+    "type",
+    "label",
+    "statement",
+    "description",
+    "competencyType",
+    "subject",
+    "domain",
+    "educationLevel",
+    "evidenceExpectations",
+    "assessmentPrompt",
+    "masteryRubricId",
+    "status",
+    "language",
+    "review",
+    "provenance"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://education\\.asfai\\.org/objectives/"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "humanCodingScheme": {
+      "type": "string",
+      "pattern": "^ASFAI-[A-Z]{3}-[A-F0-9]{10}$"
+    },
+    "frameworkId": {
+      "type": "string",
+      "format": "uri"
+    },
+    "type": {
+      "const": "LearningObjective"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "competencyType": {
+      "enum": ["CONCEPTUAL", "PROCEDURAL", "REPRESENTATIONAL", "LANGUAGE", "META"]
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "educationLevel": {
+      "type": "object",
+      "required": ["minimumAge", "maximumAge", "label"],
+      "properties": {
+        "minimumAge": { "type": "integer", "minimum": 0 },
+        "maximumAge": { "type": "integer", "minimum": 0 },
+        "label": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "evidenceExpectations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "assessmentPrompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "masteryRubricId": {
+      "type": "string",
+      "format": "uri"
+    },
+    "status": {
+      "enum": ["provisional", "active", "deprecated", "retired"]
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2
+    },
+    "review": {
+      "type": "object",
+      "required": ["status", "flags"],
+      "properties": {
+        "status": { "enum": ["unreviewed", "in_review", "approved", "rejected"] },
+        "flags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["derivation", "sourceName", "sourceId", "sourceVersion", "sourceCommit", "sourceReferenceId", "sourceUri", "databaseLicense", "contentLicense"],
+      "properties": {
+        "derivation": { "enum": ["original", "transformed", "imported"] },
+        "sourceName": { "type": "string" },
+        "sourceId": { "type": "string" },
+        "sourceVersion": { "type": "string" },
+        "sourceRelease": { "type": "string" },
+        "sourceCommit": { "type": "string" },
+        "sourceReferenceId": { "type": "string", "format": "uri", "pattern": "^https://education\\.asfai\\.org/sources/marble/" },
+        "sourceUri": { "type": "string", "format": "uri" },
+        "databaseLicense": { "type": "string" },
+        "contentLicense": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

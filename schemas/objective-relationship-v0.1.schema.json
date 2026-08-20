@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://education.asfai.org/schemas/objective-relationship/versions/0.1.0",
+  "title": "ASFAI Objective Relationship 0.1",
+  "type": "object",
+  "required": ["id", "uuid", "frameworkId", "relationshipType", "fromObjectiveId", "toObjectiveId", "strength", "rationale", "caseAssociationType", "status", "review", "provenance"],
+  "properties": {
+    "id": { "type": "string", "format": "uri", "pattern": "^https://education\\.asfai\\.org/associations/" },
+    "uuid": { "type": "string", "format": "uuid" },
+    "frameworkId": { "type": "string", "format": "uri" },
+    "relationshipType": { "enum": ["prerequisiteOf", "isChildOf", "isPartOf", "precedes", "supports"] },
+    "fromObjectiveId": { "type": "string", "format": "uri" },
+    "toObjectiveId": { "type": "string", "format": "uri" },
+    "strength": { "enum": ["hard", "soft"] },
+    "rationale": { "type": "string", "minLength": 1 },
+    "caseAssociationType": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["provisional", "active", "deprecated", "retired"] },
+    "review": { "type": "object" },
+    "provenance": { "type": "object" }
+  },
+  "additionalProperties": false
+}

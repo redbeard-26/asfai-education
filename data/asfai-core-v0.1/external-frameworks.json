@@ -1,0 +1,137 @@
+{
+  "frameworks": [
+    {
+      "id": "https://education.asfai.org/frameworks/uk-nc-2013/versions/september-2013",
+      "uuid": "905a499a-c903-5ba9-8f78-c0cd0512acb9",
+      "slug": "uk-nc-2013",
+      "name": "The national curriculum in England: Key stages 1 and 2 framework document",
+      "country": "GB",
+      "version": "September 2013",
+      "sourceLandingPage": "https://www.gov.uk/government/publications/national-curriculum-in-england-framework-for-key-stages-1-to-4",
+      "sourceUrlRecordedByMarble": "gs://educational_assets/national_curriculum/england_national_curriculum_ks1_and_ks2.pdf",
+      "textIncludedInMarbleSnapshot": true,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 1117,
+      "upstreamRightsSummary": "Verbatim standard text included under this source’s upstream license. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/ib-pyp-pspe/versions/2009",
+      "uuid": "a8eb77b2-25da-5fa3-ab46-8de538d7ba93",
+      "slug": "ib-pyp-pspe",
+      "name": "IB PYP Personal, Social and Physical Education (PSPE) Scope and Sequence",
+      "country": "International",
+      "version": "2009",
+      "sourceLandingPage": "https://www.ibo.org/programmes/primary-years-programme/curriculum/",
+      "sourceUrlRecordedByMarble": "https://plkis.edu.hk/wp-content/uploads/2018/04/IB-Personal-Social-and-Physical-Education-Scope-Sequence.pdf",
+      "textIncludedInMarbleSnapshot": false,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 138,
+      "upstreamRightsSummary": "Codes/identifiers only — verbatim standard text omitted; this source carries an upstream license that does not permit our redistribution of the full text. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/c3-social-studies/versions/2013-rev-2017",
+      "uuid": "841e3b64-573a-58c3-8631-b89118e9423e",
+      "slug": "c3-social-studies",
+      "name": "C3 Framework for Social Studies State Standards",
+      "country": "US",
+      "version": "2013 (rev. 2017)",
+      "sourceLandingPage": "https://www.socialstudies.org/sites/default/files/c3/C3-Framework-for-Social-Studies.pdf",
+      "sourceUrlRecordedByMarble": "https://www.socialstudies.org/sites/default/files/c3/C3-Framework-for-Social-Studies.pdf",
+      "textIncludedInMarbleSnapshot": false,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 338,
+      "upstreamRightsSummary": "Codes/identifiers only — verbatim standard text omitted; this source carries an upstream license that does not permit our redistribution of the full text. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/ccss-ela/versions/2010",
+      "uuid": "da189dfb-2c29-554a-9a07-40f5e88f814b",
+      "slug": "ccss-ela",
+      "name": "Common Core State Standards for English Language Arts & Literacy in History/Social Studies, Science, and Technical Subjects",
+      "country": "US",
+      "version": "2010",
+      "sourceLandingPage": "https://corestandards.org/english-language-arts-standards/",
+      "sourceUrlRecordedByMarble": "gs://educational_assets/national_curriculum/us_common_core_state_standards_english.pdf",
+      "textIncludedInMarbleSnapshot": true,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 1028,
+      "upstreamRightsSummary": "Verbatim standard text included under this source’s upstream license. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/ccss-math/versions/2010",
+      "uuid": "b6454728-168f-5ab0-a770-0dd9b957f3a4",
+      "slug": "ccss-math",
+      "name": "Common Core State Standards for Mathematics",
+      "country": "US",
+      "version": "2010",
+      "sourceLandingPage": "https://corestandards.org/mathematics-standards/",
+      "sourceUrlRecordedByMarble": "gs://educational_assets/national_curriculum/us_common_core_state_standards_maths.pdf",
+      "textIncludedInMarbleSnapshot": true,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 503,
+      "upstreamRightsSummary": "Verbatim standard text included under this source’s upstream license. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/ngss-k5/versions/2013",
+      "uuid": "fdc1aeda-e025-5dc4-9563-7843f46827bf",
+      "slug": "ngss-k5",
+      "name": "Next Generation Science Standards (NGSS) K-5",
+      "country": "US",
+      "version": "2013",
+      "sourceLandingPage": "https://www.nextgenscience.org/search-standards",
+      "sourceUrlRecordedByMarble": "https://www.nextgenscience.org/overview-dci",
+      "textIncludedInMarbleSnapshot": false,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 78,
+      "upstreamRightsSummary": "Codes/identifiers only — verbatim standard text omitted; this source carries an upstream license that does not permit our redistribution of the full text. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    },
+    {
+      "id": "https://education.asfai.org/frameworks/ngss-ms/versions/2013",
+      "uuid": "6c5d212a-f82b-5380-8f7b-d3284345465a",
+      "slug": "ngss-ms",
+      "name": "Next Generation Science Standards (NGSS) Middle School",
+      "country": "US",
+      "version": "2013",
+      "sourceLandingPage": "https://www.nextgenscience.org/search-standards",
+      "sourceUrlRecordedByMarble": "https://www.nextgenscience.org/overview-dci#middle-school",
+      "textIncludedInMarbleSnapshot": false,
+      "textIncludedInAsfaiPackage": false,
+      "itemCount": 59,
+      "upstreamRightsSummary": "Codes/identifiers only — verbatim standard text omitted; this source carries an upstream license that does not permit our redistribution of the full text. See PROVENANCE.md.",
+      "provenance": {
+        "mappingSource": "Marble Open Skill Taxonomy",
+        "sourceCommit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+        "sourceUri": "https://github.com/withmarbleapp/os-taxonomy/blob/96a7933754af672e1bfdbf7ecb05c325860c6e0d/data/curriculum-standards.json"
+      }
+    }
+  ]
+}

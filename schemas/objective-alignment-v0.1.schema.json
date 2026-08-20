@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://education.asfai.org/schemas/objective-alignment/versions/0.1.0",
+  "title": "ASFAI Objective Alignment 0.1",
+  "type": "object",
+  "required": ["id", "uuid", "objectiveId", "targetId", "targetFrameworkId", "targetFrameworkSlug", "targetCode", "relation", "mappingConfidence", "mappingRationale", "status", "review", "provenance"],
+  "properties": {
+    "id": { "type": "string", "format": "uri", "pattern": "^https://education\\.asfai\\.org/alignments/" },
+    "uuid": { "type": "string", "format": "uuid" },
+    "objectiveId": { "type": "string", "format": "uri" },
+    "targetId": { "type": "string", "format": "uri" },
+    "targetFrameworkId": { "type": "string", "format": "uri" },
+    "targetFrameworkSlug": { "type": "string", "minLength": 1 },
+    "targetCode": { "type": "string", "minLength": 1 },
+    "relation": { "enum": ["exactMatch", "closeMatch", "broaderThan", "narrowerThan", "relatedTo"] },
+    "mappingConfidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "mappingRationale": { "type": ["string", "null"] },
+    "status": { "enum": ["provisional", "active", "deprecated", "retired"] },
+    "review": { "type": "object" },
+    "provenance": { "type": "object" }
+  },
+  "additionalProperties": false
+}

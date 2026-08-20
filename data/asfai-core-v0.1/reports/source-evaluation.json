@@ -1,0 +1,339 @@
+{
+  "inspectedSource": {
+    "repository": "https://github.com/withmarbleapp/os-taxonomy",
+    "commit": "96a7933754af672e1bfdbf7ecb05c325860c6e0d",
+    "release": "1.0.0",
+    "existingAsfaiApplication": {
+      "repository": "https://github.com/redbeard-26/asfai-constitution",
+      "commit": "94cb3c47ebfd48c73395ba20e20b1f9454851182",
+      "topicsAndDependenciesContentIdentical": true,
+      "externalCurriculumCatalogBundled": false
+    }
+  },
+  "decision": {
+    "objectivePolicy": "Create one provisional ASFAI objective for every Marble micro-topic, with a permanent education.asfai.org URI and deterministic UUID.",
+    "dependencyPolicy": "Transform every Marble dependency to prerequisiteOf; export it to CASE as precedes and retain hard/soft strength in the ASFAI extension.",
+    "alignmentPolicy": "Retain every source mapping as unreviewed relatedTo. Do not infer exactMatch, closeMatch, broaderThan, or narrowerThan.",
+    "externalRecordPolicy": "Include every imported record as an identifier-only reference. Do not copy external standard text into the ASFAI package.",
+    "reviewPolicy": "Mark every generated objective, dependency, and alignment provisional and unreviewed."
+  },
+  "summary": {
+    "sourceTopics": 1590,
+    "generatedObjectives": 1590,
+    "sourceDependencies": 3221,
+    "generatedRelationships": 3221,
+    "externalFrameworks": 7,
+    "externalRecords": 3261,
+    "externalRecordsLinked": 1656,
+    "externalRecordsUnlinked": 1605,
+    "topicToExternalLinks": 1859,
+    "topicsWithoutEvidenceExpectations": 35,
+    "topicsWithoutExternalAlignments": 772,
+    "duplicateTopicLabels": 23,
+    "duplicateTopicDescriptions": 0,
+    "invalidDependencyReferences": 0,
+    "duplicateDependencies": 0,
+    "selfDependencies": 0,
+    "dependencyCycles": 0,
+    "missingExternalReferences": 0
+  },
+  "distributions": {
+    "topicsByType": {
+      "CONCEPTUAL": 810,
+      "LANGUAGE": 75,
+      "META": 144,
+      "PROCEDURAL": 512,
+      "REPRESENTATIONAL": 49
+    },
+    "topicsBySubject": {
+      "Computing": 21,
+      "English": 286,
+      "History": 90,
+      "Learning to Learn": 18,
+      "Life Skills": 37,
+      "Mathematics": 503,
+      "Personal & Social Development": 88,
+      "Science": 547
+    },
+    "relationshipsByStrength": {
+      "hard": 2025,
+      "soft": 1196
+    },
+    "externalByFramework": {
+      "uk-nc-2013": {
+        "records": 1117,
+        "linkedRecords": 798,
+        "unlinkedRecords": 319,
+        "topicLinks": 895,
+        "textIncludedInMarbleSnapshot": true,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 0
+      },
+      "ib-pyp-pspe": {
+        "records": 138,
+        "linkedRecords": 66,
+        "unlinkedRecords": 72,
+        "topicLinks": 70,
+        "textIncludedInMarbleSnapshot": false,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 138
+      },
+      "c3-social-studies": {
+        "records": 338,
+        "linkedRecords": 0,
+        "unlinkedRecords": 338,
+        "topicLinks": 0,
+        "textIncludedInMarbleSnapshot": false,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 338
+      },
+      "ccss-ela": {
+        "records": 1028,
+        "linkedRecords": 493,
+        "unlinkedRecords": 535,
+        "topicLinks": 528,
+        "textIncludedInMarbleSnapshot": true,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 0
+      },
+      "ccss-math": {
+        "records": 503,
+        "linkedRecords": 187,
+        "unlinkedRecords": 316,
+        "topicLinks": 223,
+        "textIncludedInMarbleSnapshot": true,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 0
+      },
+      "ngss-k5": {
+        "records": 78,
+        "linkedRecords": 78,
+        "unlinkedRecords": 0,
+        "topicLinks": 85,
+        "textIncludedInMarbleSnapshot": false,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 78
+      },
+      "ngss-ms": {
+        "records": 59,
+        "linkedRecords": 34,
+        "unlinkedRecords": 25,
+        "topicLinks": 58,
+        "textIncludedInMarbleSnapshot": false,
+        "textIncludedInAsfaiPackage": false,
+        "recordsMissingTextInMarbleSnapshot": 59
+      }
+    }
+  },
+  "findings": [
+    {
+      "severity": "positive",
+      "finding": "Every source topic has an ID, name, description, age range, domain, and assessment prompt."
+    },
+    {
+      "severity": "positive",
+      "finding": "Every dependency points to an existing topic; the graph has no self-edges, duplicate pairs, or directed cycles."
+    },
+    {
+      "severity": "warning",
+      "finding": "35 topics have no evidence expectations and require rubric authoring."
+    },
+    {
+      "severity": "warning",
+      "finding": "23 normalized labels are reused by distinct records. IDs and descriptions, not labels, must determine identity."
+    },
+    {
+      "severity": "warning",
+      "finding": "1859 mappings are present, but the source does not state mapping semantics or confidence."
+    },
+    {
+      "severity": "warning",
+      "finding": "1605 imported external records have no mapping to a Marble topic."
+    },
+    {
+      "severity": "license",
+      "finding": "The generated database is derived from Marble and remains subject to ODbL 1.0; adapted Marble-authored text remains CC BY-SA 4.0."
+    },
+    {
+      "severity": "license",
+      "finding": "External standards are represented by identifiers and links only; upstream standard text is omitted from the ASFAI package."
+    }
+  ],
+  "duplicateLabels": [
+    {
+      "label": "asking for help",
+      "sourceIds": [
+        "mt_mvXufozy2s",
+        "mt_PdYlsA33jB"
+      ]
+    },
+    {
+      "label": "learning from mistakes",
+      "sourceIds": [
+        "mt_TDUpy57QVM",
+        "mt_UGf6jICEhs"
+      ]
+    },
+    {
+      "label": "addition and subtraction word problems",
+      "sourceIds": [
+        "mt_yJmvUCCym7",
+        "mt_ZLqYE7la4Z",
+        "mt_DLcEzmmj2r"
+      ]
+    },
+    {
+      "label": "estimating by rounding",
+      "sourceIds": [
+        "mt_QaYfeVL-0C",
+        "mt_VVn1IXjkzn"
+      ]
+    },
+    {
+      "label": "numbers on a number line",
+      "sourceIds": [
+        "mt_19j_5AuuQI",
+        "mt_i2F1nWxJjv",
+        "mt_oDlduFnemk",
+        "mt_zMEvtigoM3",
+        "mt_IL86kadLSS",
+        "mt_RWUY7_IXvw"
+      ]
+    },
+    {
+      "label": "understanding fractions",
+      "sourceIds": [
+        "mt_IHipFGTFEY",
+        "mt_MyGblah2yY",
+        "mt_dXq9VWm31W",
+        "mt_ZOJ6EbdPOb",
+        "mt_FnUJMXPUZX"
+      ]
+    },
+    {
+      "label": "fractions on a number line",
+      "sourceIds": [
+        "mt_Kr3IyA6m-O",
+        "mt_3VmBdlAeOZ",
+        "mt_5HV4mbgSGH",
+        "mt_PsylzZ9lHW"
+      ]
+    },
+    {
+      "label": "decimal place value",
+      "sourceIds": [
+        "mt_Fl7b8q9pI1",
+        "mt_2VpdPjvewx",
+        "mt_SoDP1fSQEB",
+        "mt__casygEB85"
+      ]
+    },
+    {
+      "label": "understanding fractions (age 9+)",
+      "sourceIds": [
+        "mt_09sySPqM9Z",
+        "mt_2ESZh70NyS"
+      ]
+    },
+    {
+      "label": "transformations on a grid",
+      "sourceIds": [
+        "mt_SH7QgFl8-v",
+        "mt_efOeaGFyGM"
+      ]
+    },
+    {
+      "label": "understanding angles (age 8+)",
+      "sourceIds": [
+        "mt_Xt1cRqaBOW",
+        "mt_GzcJEVkNRn"
+      ]
+    },
+    {
+      "label": "shape patterns",
+      "sourceIds": [
+        "mt_DW2D1c0fKx",
+        "mt_A-FyLLLLzy"
+      ]
+    },
+    {
+      "label": "multi-step problem solving",
+      "sourceIds": [
+        "mt_RKeheOL9uo",
+        "mt_SmghasIvbT"
+      ]
+    },
+    {
+      "label": "multiplicative comparison",
+      "sourceIds": [
+        "mt_6-j1NO2ZUH",
+        "mt_U4cIBXVug4"
+      ]
+    },
+    {
+      "label": "square and cube numbers",
+      "sourceIds": [
+        "mt_gxCIASSezX",
+        "mt_hCVPYlF-7Y"
+      ]
+    },
+    {
+      "label": "polar animals",
+      "sourceIds": [
+        "mt_D4lyx0iYyB",
+        "mt_7OJjLOl0fz"
+      ]
+    },
+    {
+      "label": "rainforest animals",
+      "sourceIds": [
+        "mt_DCelLx_H1A",
+        "mt_xVW5U41tbp"
+      ]
+    },
+    {
+      "label": "how fossils form",
+      "sourceIds": [
+        "mt_iycQEai3dK",
+        "mt_mwirOvigWD",
+        "mt_GheLsWvrJ4"
+      ]
+    },
+    {
+      "label": "weather vs climate",
+      "sourceIds": [
+        "mt_Gm12BzcCfX",
+        "mt_AB-TEMXSGJ"
+      ]
+    },
+    {
+      "label": "the water cycle",
+      "sourceIds": [
+        "mt_V2lNzEex_a",
+        "mt_fhqVdj4BYr"
+      ]
+    },
+    {
+      "label": "separating mixtures",
+      "sourceIds": [
+        "mt_2b6CB0w3Yx",
+        "mt_U_tJvy3cbB"
+      ]
+    },
+    {
+      "label": "the rock cycle",
+      "sourceIds": [
+        "mt_NckKLZ3uCE",
+        "mt_z7AJZapsJj"
+      ]
+    },
+    {
+      "label": "types of teeth",
+      "sourceIds": [
+        "mt_DbXWivdJFB",
+        "mt_I047mKeeaq"
+      ]
+    }
+  ],
+  "cycles": []
+}

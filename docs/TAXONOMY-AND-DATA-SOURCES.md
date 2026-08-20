@@ -44,7 +44,7 @@ It should not become ASFAI Education's complete runtime model:
 - dependency order alone cannot represent every framework, assessment, and resource relationship;
 - its share-alike and database-license obligations require deliberate distribution design.
 
-The recommended approach is to build a documented importer, retain Marble identifiers and attribution, and transform selected records into the canonical application profile. Do not copy the entire dataset into this repository by default.
+The implemented approach uses a documented, deterministic importer, retains Marble identifiers and attribution, and transforms all 1,590 source topics into a separately licensed provisional ASFAI data package. The raw Marble files are not copied into this repository. A complete mechanical conversion makes gaps and duplicates visible, while production use should still be limited to curriculum-reviewed subsets until the relevant records are approved.
 
 ## State standards and collaboration
 
@@ -92,6 +92,8 @@ Every imported framework or taxonomy record must preserve:
 
 Importers must be repeatable and must never silently replace old versions. A source should remain useful even if its API later changes or a state revises its standards.
 
-## Initial recommendation
+## Implemented bootstrap and next step
 
-Use a small, reviewed subset of Marble as a prototyping seed, author ASFAI's canonical objective and rubric schema around IEEE 1484.20.3 concepts, and use CASE as the principal K–12 framework exchange format. Add official Common Core, NGSS, and state alignments only through source-specific importers with tested licensing and provenance controls.
+[ASFAI Core 0.1](../data/asfai-core-v0.1/README.md) is the complete provisional Marble-derived bootstrap: permanent ASFAI identifiers, a default rubric, prerequisite edges, identifier-only external references, conservative alignments, and a CASE 1.1 export. It intentionally marks every record unreviewed.
+
+The next step is to review and activate small subject/age subsets, replace generic evidence expectations with objective-specific criteria where needed, and upgrade external mappings only after comparing official versioned sources. New official Common Core, NGSS, UK, or state imports should continue to use source-specific importers with tested licensing and provenance controls.
