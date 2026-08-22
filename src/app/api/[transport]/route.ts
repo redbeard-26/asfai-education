@@ -124,7 +124,7 @@ const handler = createMcpHandler(
     );
   },
   { serverInfo: { name: "asfai-education", version: "0.1.0" } },
-  { basePath: "/education/api", maxDuration: 60, verboseLogs: false },
+  { basePath: "/api", maxDuration: 60, verboseLogs: false },
 );
 
 export { handler as GET, handler as POST, handler as DELETE };
