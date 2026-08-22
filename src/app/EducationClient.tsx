@@ -9,7 +9,36 @@ import {
   restoreSolidSession,
   solidSession,
 } from "@/lib/learner-store/solid";
-import { masteredIds, type LearnerProfile, type LearnerStore } from "@/lib/learner-store/types";
+import {
+  masteredIds,
+  type LearnerProfile,
+  type LearnerStore,
+} from "@/lib/learner-store/types";
+
+interface Objective {
+  id: string;
+  name: string;
+  subject: string;
+  domain: string;
+  description: string;
+  evidence: string[];
+  assessmentPrompt: string;
+}
+
+interface ObjectiveLink {
+  id: string;
+  name: string;
+  strength: "hard" | "soft";
+  reason: string;
+}
+
+interface Neighborhood {
+  objective: Objective;
+  prerequisites: ObjectiveLink[];
+  unlocks: ObjectiveLink[];
+}
+
+const API = "/education/api/objectives";
 
 export default function EducationClient() {
   const localStore = useMemo(() => new IndexedDbLearnerStore(), []);
@@ -18,6 +47,10 @@ export default function EducationClient() {
   const [podRoot, setPodRoot] = useState("");
   const [oidcIssuer, setOidcIssuer] = useState("");
   const [status, setStatus] = useState("Loading local learner profile…");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Objective[]>([]);
+  const [selected, setSelected] = useState<Neighborhood | null>(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -69,7 +102,78 @@ export default function EducationClient() {
     setStatus("Using IndexedDB on this browser.");
   }
 
+  async function search() {
+    if (!query.trim()) return;
+    setSearching(true);
+    try {
+      const response = await fetch(`${API}?q=${encodeURIComponent(query)}&limit=20`);
+      setResults((await response.json()) as Objective[]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function openObjective(id: string) {
+    const response = await fetch(`${API}?mode=neighbors&id=${encodeURIComponent(id)}`);
+    if (response.ok) setSelected((await response.json()) as Neighborhood);
+  }
+
+  async function startLearning(objective: Objective) {
+    if (!profile) return;
+    const state = {
+      objectiveId: objective.id,
+      level: "developing" as const,
+      supportingEvidenceCount: profile.objectiveStates[objective.id]?.supportingEvidenceCount ?? 0,
+      claimIds: profile.objectiveStates[objective.id]?.claimIds ?? [],
+      lastObservedAt: new Date().toISOString(),
+      policyVersion: "self-directed-v0.1",
+    };
+    setProfile(await store.putObjectiveState(state));
+    setStatus(`Tracking ${objective.name} as in progress in ${store.kind === "solid" ? "your Solid Pod" : "IndexedDB"}.`);
+  }
+
+  async function recordSelfAssessedMastery(objective: Objective) {
+    if (!profile) return;
+    const now = new Date().toISOString();
+    const evidenceId = `urn:uuid:${crypto.randomUUID()}`;
+    const claimId = `urn:uuid:${crypto.randomUUID()}`;
+    let next = await store.appendEvidence({
+      id: evidenceId,
+      learnerId: profile.learnerId,
+      objectiveId: objective.id,
+      occurredAt: now,
+      verb: "self-assessed-mastery",
+      result: { selfReported: true },
+      source: { system: "asfai-education", version: "0.1.0" },
+    });
+    next = await store.appendAssessmentClaim({
+      id: claimId,
+      learnerId: profile.learnerId,
+      objectiveId: objective.id,
+      evidenceIds: [evidenceId],
+      level: "mastered",
+      confidence: 0.5,
+      rationale: "Learner self-assessed this objective as mastered; independent evidence has not yet been established.",
+      assessor: { type: "human", system: "learner-self-assessment" },
+      createdAt: now,
+      supersedes: null,
+    });
+    next = await store.putObjectiveState({
+      objectiveId: objective.id,
+      level: "mastered",
+      confidence: 0.5,
+      supportingEvidenceCount: 1,
+      independentEvidenceCount: 0,
+      lastObservedAt: now,
+      claimIds: [claimId],
+      policyVersion: "self-directed-v0.1",
+    });
+    setProfile(next);
+    setStatus(`Recorded self-assessed mastery of ${objective.name}.`);
+  }
+
   const mastered = profile ? masteredIds(profile) : [];
+  const selectedLevel = selected && profile ? profile.objectiveStates[selected.objective.id]?.level : undefined;
 
   return (
     <section className="panel-grid">
@@ -102,6 +206,54 @@ export default function EducationClient() {
           <button onClick={connectPod}>Connect Solid Pod</button>
           <button onClick={copyLocalToPod} disabled={!solidSession.info.isLoggedIn}>Copy local progress to Pod</button>
         </div>
+      </article>
+
+      <article className="card wide">
+        <h2>Explore learning objectives</h2>
+        <div className="search-row">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void search(); }}
+            placeholder="Search algebra, photosynthesis, programming…"
+          />
+          <button onClick={search} disabled={searching}>{searching ? "Searching…" : "Search"}</button>
+        </div>
+        {results.length > 0 && (
+          <ul className="objective-list">
+            {results.map((objective) => (
+              <li key={objective.id}>
+                <button className="objective-link" onClick={() => openObjective(objective.id)}>
+                  <strong>{objective.name}</strong>
+                  <span>{objective.subject} · {objective.domain}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {selected && (
+          <div className="objective-detail">
+            <p className="eyebrow">{selected.objective.subject} · {selected.objective.domain}</p>
+            <h3>{selected.objective.name}</h3>
+            <p>{selected.objective.description}</p>
+            {selectedLevel && <p><strong>Current state:</strong> {selectedLevel}</p>}
+            <div className="actions">
+              <button onClick={() => startLearning(selected.objective)}>Start learning</button>
+              <button onClick={() => recordSelfAssessedMastery(selected.objective)}>Record self-assessed mastery</button>
+            </div>
+            <div className="neighbor-grid">
+              <div>
+                <h4>Prerequisites</h4>
+                <ul>{selected.prerequisites.map((link) => <li key={`${link.id}-${link.strength}`}><button className="text-button" onClick={() => openObjective(link.id)}>{link.name}</button> <small>{link.strength}</small></li>)}</ul>
+              </div>
+              <div>
+                <h4>Unlocks</h4>
+                <ul>{selected.unlocks.map((link) => <li key={`${link.id}-${link.strength}`}><button className="text-button" onClick={() => openObjective(link.id)}>{link.name}</button> <small>{link.strength}</small></li>)}</ul>
+              </div>
+            </div>
+          </div>
+        )}
       </article>
 
       <article className="card wide">
