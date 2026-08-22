@@ -1,8 +1,8 @@
 # ASFAI Education
 
-Open, standards-based architecture for AI-mediated learning, evidence, and mastery.
+Open, standards-based architecture and reference implementation for AI-mediated learning, evidence, and mastery.
 
-> **Status:** This repository is an early design and interoperability project. It is not yet a production learner-record system, assessment engine, or curriculum dataset.
+> **Status:** Early implementation. The repository now contains a deployable Next.js education service and MCP server, but it is not yet a production learner-record system or assessment engine.
 
 ASFAI Education is intended to let students learn through AI tutors, courses, games, and hands-on projects while maintaining a coherent picture of what each student has attempted, demonstrated, and mastered.
 
@@ -19,16 +19,64 @@ Games · tutors · courses · projects
 
 The central rule is that an AI may produce an evidence-backed **assessment claim**, but it should not directly set an unexplained `mastered = true`. Mastery is a derived, revisable state based on multiple observations, explicit rubrics, provenance, recency, and confidence.
 
+## Current implementation
+
+The app is deliberately **accountless**. ASFAI does not require a learner to create an ASFAI account simply to retain progress.
+
+Learner state is accessed through a common `LearnerStore` interface with two initial implementations:
+
+- **IndexedDB** — the zero-setup default, stored in the current browser profile.
+- **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
+
+The education MCP server is also in this repository. It contains **education graph tools only** and does not persist learner identity or progress. It can:
+
+- list learning programs;
+- search and retrieve objectives;
+- identify prerequisite and downstream neighboring objectives;
+- return objectives within a subject/domain learning program;
+- compute a learner's current frontier from client-supplied mastered objective IDs; and
+- find a prerequisite path to a target objective.
+
+See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
+
+## Deployment
+
+The Next.js app uses `/education` as its base path so it can be independently deployed and presented through the main ASFAI site as:
+
+```text
+https://constitution.asfai.org/education
+```
+
+The `asfai-constitution` project rewrites `/education/*` to the separately deployed education origin. Set `EDUCATION_ORIGIN` in that Vercel project to the origin of this project's Vercel deployment.
+
+The MCP endpoint is:
+
+```text
+/education/api/mcp
+```
+
+For local development:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000/education`.
+
 ## What belongs here
 
 - A standards-aligned competency and curriculum graph model
+- The ASFAI education application
+- Education-specific MCP tools
+- Accountless learner-storage adapters
 - Event and evidence formats for games, tutors, courses, and projects
 - Rubrics and assessment-claim formats
 - A transparent mastery-state model
 - Import/export profiles for relevant education standards
 - Guidance for integrating public standards and open taxonomies safely
 
-No student records or third-party curriculum datasets are included in this initial repository.
+No student records are committed to this repository.
 
 ## Design documents
 
@@ -37,6 +85,7 @@ No student records or third-party curriculum datasets are included in this initi
 - [Standards profile](docs/STANDARDS.md)
 - [Core data model](docs/DATA-MODEL.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
+- [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
 - [Licensing policy](docs/LICENSING.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 
@@ -57,7 +106,7 @@ See [Standards](docs/STANDARDS.md) for the proposed division of responsibilities
 
 ## Starting small
 
-The recommended first implementation is deliberately narrow:
+The recommended first implementation remains deliberately narrow:
 
 1. Model a small set of algebra and project-based technology objectives.
 2. Instrument one learning game and one project workflow.
