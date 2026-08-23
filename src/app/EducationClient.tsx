@@ -260,7 +260,7 @@ export default function EducationClient() {
         <h2>Education MCP</h2>
         <p>
           The education server exposes only public graph operations: objective search, neighbors, program objectives,
-          learning frontier, and prerequisite paths. Private progress stays in IndexedDB or the learner's Pod and is
+          learning frontier, and prerequisite paths. Private progress stays in IndexedDB or the learner’s Pod and is
           supplied to graph tools only as the minimum objective IDs needed for a calculation.
         </p>
         <code>/education/api/mcp</code>
