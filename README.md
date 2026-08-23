@@ -47,7 +47,9 @@ The Next.js app uses `/education` as its base path so it can be independently de
 https://constitution.asfai.org/education
 ```
 
-The `asfai-constitution` project rewrites `/education/*` to the separately deployed education origin. Set `EDUCATION_ORIGIN` in that Vercel project to the origin of this project's Vercel deployment.
+The `asfai-constitution` project rewrites `/education/*` to the separately running education service. Production is released manually to the shared ASFAI AWS host using the deployment package in `redbeard-26/asfai-constitution`; GitHub pushes do not deploy either service. The public education origin is `https://education.asfai.org`, while the constitution container reaches this service over the private Docker network.
+
+The repository-level `Dockerfile` produces the standalone Next.js image consumed by that release. The competency graph continues to use the upstream GitHub fetch/cache implementation; taxonomy files are not copied into the deployment repository or image beyond normal application source.
 
 The MCP endpoint is:
 
