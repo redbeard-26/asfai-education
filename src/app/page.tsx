@@ -7,7 +7,7 @@ export default function Page() {
         <p className="eyebrow">American Society for AI</p>
         <h1>ASFAI Education</h1>
         <p className="lede">
-          Explore an open learning-objective graph while keeping learner progress under the learner's control.
+          Explore an open learning-objective graph while keeping learner progress under the learner’s control.
         </p>
       </section>
       <EducationClient />
