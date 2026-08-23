@@ -259,9 +259,9 @@ export default function EducationClient() {
       <article className="card wide">
         <h2>Education MCP</h2>
         <p>
-          The education server exposes only public graph operations: objective search, neighbors, program objectives,
-          learning frontier, and prerequisite paths. Private progress stays in IndexedDB or the learner’s Pod and is
-          supplied to graph tools only as the minimum objective IDs needed for a calculation.
+          The education MCP supports graph exploration plus conversational assessment planning and evidence creation.
+          It returns a portable learner profile for the AI host to save locally or to the learner’s authenticated Pod;
+          the public server does not create learner accounts, retain progress, or receive Solid credentials.
         </p>
         <code>/education/api/mcp</code>
       </article>
