@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@inrupt/solid-client": "^3.0.3",
+    "@inrupt/solid-client": "^3.0.0",
     "@inrupt/solid-client-authn-browser": "^5.0.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "events": "^3.3.0",
