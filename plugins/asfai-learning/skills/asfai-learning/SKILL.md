@@ -1,11 +1,22 @@
 ---
 name: asfai-learning
-description: Use ASFAI in chat to teach, learn, assess, plan lessons, save progress, connect/read/write a PrivateDataPod or other Solid Pod, or import/export work through a configured classroom provider. Trigger on requests such as "connect my private Pod," "save my learning progress," "continue my ASFAI lesson," or "import my Classroom assignment."
+description: Use or verify the installed ASFAI Learning plugin in chat to teach, learn, assess, plan lessons, save progress, connect/read/write a PrivateDataPod or other Solid Pod, or import/export work through a configured classroom provider. Trigger when a user asks whether ASFAI is installed/available, asks to use ASFAI, says "connect my private Pod," "save my learning progress," "continue my ASFAI lesson," or "import my Classroom assignment."
 ---
 
 # ASFAI learning
 
 This installed plugin already includes the public ASFAI education MCP and a private local companion. Use the public ASFAI MCP for learning objectives, lesson guidance, assessment preparation, and portable record construction. Use private `asfai_personal_storage` for learner-, teacher-, and classroom-owned storage. Use private `asfai_classroom` to exchange work with a configured classroom provider. The public service must not receive Solid credentials, classroom OAuth tokens, raw private student work, private signing keys, or complete private profiles.
+
+## Recognize the installed plugin
+
+`ASFAI Learning` is the plugin's display name; it does not expose a tool named `asfai_learning` or `ASFAI Learning`. Its callable surface is:
+
+- public `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, and `asfai_storage`;
+- private local `asfai_personal_storage` and `asfai_classroom`.
+
+When asked whether ASFAI is available, inspect the callable tools for those names and, when possible, call `asfai_capability` action `manifest` or `asfai_personal_storage` action `status`. Do not search the public plugin directory or registry to decide whether this locally installed personal-marketplace plugin is present. A directory search lists installable directory entries and can miss a locally installed plugin.
+
+Plugins and updated plugin versions are loaded when a new chat starts. If this skill is visible but the expected ASFAI tools genuinely are not callable, say that the current chat did not load the enabled plugin and ask the user to start a new chat after confirming the ASFAI Learning toggle is on. Do not report the plugin as uninstalled solely because the tool name `asfai_learning` is absent.
 
 When a user asks to connect, use, read, or write a private Pod, do not answer with generic connector architecture, search for a separate Solid connector, or say that a bridge must be built. Call `asfai_personal_storage` with action `status` immediately. Only explain a surface limitation if that tool is genuinely unavailable after checking the available tools.
 
