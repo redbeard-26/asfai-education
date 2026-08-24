@@ -13,4 +13,6 @@ Do not ask for unnecessary identity, contact, health, disability, discipline, im
 
 Conversation summaries and possible demonstrations remain learner-owned and provisional. Only call `asfai_evidence` after the learner has done observable work, with assistance and limitations recorded. Ask before sharing a scoped progress envelope; never share the whole learner profile by default.
 
-Save learner state using `asfai_storage` instructions and read-back verification. Teacher room definitions and aggregate, privacy-protected summaries belong in the educator store through `asfai_resource`.
+Save learner state with `asfai_personal_storage` when the private companion is installed: load the learner/classroom document, save the complete update with the prior digest as `expectedDigest`, and require `verified: true`. If the companion is unavailable, use public `asfai_storage` instructions and do not claim success without an actual host-side write and read-back. Teacher room definitions and aggregate, privacy-protected summaries belong in the educator store through `asfai_resource`.
+
+To return progress, ask the learner before creating the scoped envelope. Sign the exact envelope with the private companion, queue it in the learner-owned classroom document, and give the signed portable envelope to the authorized teacher. The teacher accepts it only after signature, integrity, recipient, and replay checks. Neither side needs an ASFAI webpage.

@@ -39,6 +39,18 @@ Do not put client secrets, passwords, access tokens, or session cookies in this 
 
 The Education MCP server is intentionally stateless with respect to durable learner identity. It hosts public graph operations, conversational assessment, lesson orchestration, evidence transformation, reporting, progress-envelope validation, and skill installation.
 
+For MCP clients that can run a local companion process, `npm run personal-storage:mcp` exposes exactly one additional tool, `asfai_personal_storage`. It performs Solid OIDC through a loopback browser callback, retains the resulting access material only inside the local process, and performs authenticated Pod reads/writes. It also provides verified atomic local JSON storage and owner-controlled Ed25519 signatures for classroom exchange. This companion is deliberately not deployed as part of the public AWS MCP: putting user tokens in the shared server would violate the learner-owned storage boundary.
+
+The companion uses these stable documents:
+
+```text
+<POD_ROOT>/asfai/learner.json
+<POD_ROOT>/asfai/educator.json
+<POD_ROOT>/asfai/classroom.json
+```
+
+The temporary AWS Education page can complete browser Solid OIDC even before a custom education domain exists. The custom domain is an alias, not a storage or MCP prerequisite.
+
 Public graph actions use `asfai_graph`:
 
 - `list_programs`

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getCapability } from "@/lib/capabilities/catalog";
+import { getPriorityCapabilitySpec, validatePriorityCapability } from "@/lib/capabilities/priority-capabilities";
 
 export const capabilityRunInputSchema = z.object({
   capabilityId: z.string(),
@@ -8,6 +9,8 @@ export const capabilityRunInputSchema = z.object({
   contextRefs: z.array(z.string()).max(50).optional(),
   outputFormat: z.string().max(100).optional(),
   confirmationToken: z.string().max(500).optional(),
+  phase: z.enum(["prepare", "validate"]).default("prepare"),
+  candidate: z.unknown().optional(),
 });
 
 export const learningSessionSchema = z.object({
@@ -56,6 +59,17 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
   if (typeof input.input.request !== "string" || input.input.request.trim().length === 0) {
     throw new Error(`Capability '${capability.id}' requires a non-empty 'request' input.`);
   }
+  const priority = getPriorityCapabilitySpec(capability.id);
+  if (input.phase === "validate") {
+    if (!priority) throw new Error(`Capability '${capability.id}' does not have a specialized validation contract.`);
+    if (input.candidate === undefined) throw new Error("A candidate output is required for validation.");
+    return {
+      capability: { id: capability.id, version: capability.version, name: capability.name },
+      phase: "validate" as const,
+      validation: validatePriorityCapability(capability.id, input.candidate),
+      persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: capability.mcp.stateOwner === "educator-store" ? "asfai_resource" : "asfai_storage" },
+    };
+  }
   const review = capability.mcp.confirmation === "human-review"
     ? "Return a draft only. An authorized, qualified human must review and approve any consequential conclusion or action."
     : capability.mcp.confirmation === "prepare-commit"
@@ -84,6 +98,8 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
         rule:
           "The MCP supplies the versioned workflow and validation contract. The connected AI host creates the draft and must not claim that the ASFAI server generated, saved, sent, or approved it.",
       },
+      specializedWorkflow: priority?.workflow,
+      validation: priority ? { tool: "asfai_run", options: { phase: "validate", candidate: "<completed result>" }, requiredBeforeSave: true } : undefined,
     },
     persistence: {
       owner: capability.mcp.stateOwner,
@@ -96,6 +112,7 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
 
 export function startLearningSession(capabilityId: string, context?: Record<string, unknown>) {
   const capability = requireCapability(capabilityId);
+  const priority = getPriorityCapabilitySpec(capability.id);
   if (capability.mode !== "interactive") throw new Error(`Capability '${capability.id}' is not interactive. Use asfai_run.`);
   const now = new Date().toISOString();
   const session = learningSessionSchema.parse({
@@ -119,6 +136,7 @@ export function startLearningSession(capabilityId: string, context?: Record<stri
       "Address the learner naturally. State what they are learning or doing and ask the actual question. Never mention an interaction, skill, workflow, tool call, MCP, rubric, evidence event, assessment claim, telemetry, session state, or orchestration machinery.",
     next:
       "Use the capability purpose and supplied context to ask one useful opening question. Then call asfai_session continue with a concise learner response summary and your feedback summary.",
+    specializedWorkflow: priority?.workflow,
   };
 }
 
