@@ -109,6 +109,14 @@ describe("compact ASFAI MCP surface", () => {
     expect(resultJson(result)).toMatchObject({ verified: true });
   });
 
+  it("matches Solid storage against the authenticated fetch capability identifier", async () => {
+    const result = await registeredServer().asfai_storage.handler({
+      action: "instructions",
+      payload: { owner: "learner", target: { mode: "solid_pod", location: "https://pod.example/" }, hostCapabilities: ["authenticated_solid_fetch"] },
+    });
+    expect(resultJson(result)).toMatchObject({ capabilityCheck: { required: "authenticated_solid_fetch", capable: true }, persistence: { location: "https://pod.example/asfai/learner.json" } });
+  });
+
   it("discovers workflow guidance for the complete compact surface", () => {
     expect(listSkills().map((skill) => skill.name)).toEqual(expect.arrayContaining([
       "asfai-capability-router",

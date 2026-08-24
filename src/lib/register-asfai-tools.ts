@@ -488,9 +488,11 @@ function storageAction(action: z.infer<typeof storageActionSchema>, payload: Rec
   }
   if (action === "instructions") {
     const input = z.object({ owner: z.enum(["learner", "educator"]), target: z.record(z.string(), z.unknown()).optional(), hostCapabilities: z.array(z.string()).max(10).optional() }).parse(payload);
-    const persistence = input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(input.target as { mode?: string; location?: string } | undefined);
-    const capable = input.hostCapabilities ? input.hostCapabilities.includes(persistence.requiredCapability) : null;
-    return { persistence, capabilityCheck: { required: persistence.requiredCapability, capable }, confirmationRule: "Say saved only after a successful write and independent read-back verification." };
+    const target = input.target as { mode?: string; location?: string } | undefined;
+    const persistence = input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(target);
+    const required = target?.mode === "indexeddb" ? "browser_indexeddb" : target?.mode === "solid_pod" ? "authenticated_solid_fetch" : "local_filesystem";
+    const capable = input.hostCapabilities ? input.hostCapabilities.includes(required) : null;
+    return { persistence, capabilityCheck: { required, capable }, confirmationRule: "Say saved only after a successful write and independent read-back verification." };
   }
   if (action === "verify") {
     const input = z.object({ expected: z.unknown(), actual: z.unknown(), expectedDigest: z.string().optional() }).parse(payload);
