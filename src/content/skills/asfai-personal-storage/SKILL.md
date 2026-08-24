@@ -11,12 +11,12 @@ If the user says "connect my private Pod," "use my PrivateDataPod," or equivalen
 
 The companion exposes one tool, `asfai_personal_storage`:
 
-- `status` reports the current local/Solid mode without exposing credentials.
+- `status` reports the current local/Solid mode without exposing credentials. It also silently restores a saved Solid authorization for this device user when the Pod grant remains valid. If it returns `isLoggedIn:true`, continue directly to `load`; do not call `connect_solid` or send the user to a web page.
 - `configure_local` selects an approved local directory. `load` and `save` then use atomic JSON files under `asfai/` and verify every write by reading it back.
-- `connect_solid` uses payload `{ "podRoot": "https://<name>.privatedatapod.com/", "oidcIssuer": "https://privatedatapod.com/" }` for PrivateDataPod. Give the returned authorization URL to the user. The user authenticates on the Pod provider page; never ask them to paste credentials into chat. Poll `status` until `isLoggedIn` is true.
+- `connect_solid` uses payload `{ "podRoot": "https://<name>.privatedatapod.com/", "oidcIssuer": "https://privatedatapod.com/" }` for PrivateDataPod. Call it only when `status` could not restore the requested Pod. Give the returned authorization URL to the user. The user authenticates once on the Pod provider page; never ask them to paste credentials into chat. Poll `status` until `isLoggedIn` is true. The companion then protects the reusable Solid session for this device user and restores it across chats, MCP process exits, application restarts, and computer restarts.
 - `load` uses payload `{ "document": "learner" }`, `{ "document": "educator" }`, or `{ "document": "classroom" }`. `save` uses the same `document`, the complete updated `value`, and the prior load `digest` as `expectedDigest` so a concurrent change cannot be overwritten silently.
 - `identity`, `sign`, and `verify` use a local owner-controlled Ed25519 key for classroom envelopes. The private key is never exported or stored on the public server.
-- `disconnect` clears the companion's application session. It does not require or perform an identity-provider-wide logout.
+- `forget_solid_authorization` removes the reusable authorization from this device. Call it only after the user explicitly asks ASFAI to forget or revoke this Pod connection. Never call it when a lesson, chat, MCP process, application, or computer session ends. The user may also revoke ASFAI through their Pod provider; revoked or otherwise invalid grants require one new approval if the user later reconnects.
 
 Pod documents are stored at `<pod-root>/asfai/learner.json`, `<pod-root>/asfai/educator.json`, and `<pod-root>/asfai/classroom.json`. Local documents use the same names under the configured directory. Say that data is saved only when the tool returns `verified: true` after read-back.
 

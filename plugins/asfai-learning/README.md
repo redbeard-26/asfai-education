@@ -8,9 +8,9 @@ The plugin display name is **ASFAI Learning**; there is intentionally no tool na
 
 1. Install **ASFAI Learning** from the plugin directory.
 2. Start a chat and say, “Connect my private Pod,” or begin a lesson and keep progress on this device.
-3. For a Pod, approve access on the Pod provider page and return to chat.
+3. For a Pod, approve access once on the Pod provider page and return to chat. The device then reconnects silently in later chats until the user explicitly forgets it or revokes it at the provider.
 
-The private MCP runs on the learner's computer. Solid credentials and private signing keys never pass through the public AWS MCP. The local fallback writes under the learner's profile and verifies every save by reading it back.
+The private MCP runs on the learner's computer. Solid credentials and private signing keys never pass through the public AWS MCP. Reusable Solid authorization is protected for the current device user (with current-user DPAPI encryption on Windows) and is not removed when a chat or process ends. The local fallback writes under the learner's profile and verifies every save by reading it back.
 
 ## Classroom exchange
 
