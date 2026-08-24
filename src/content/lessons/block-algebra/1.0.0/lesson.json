@@ -1,0 +1,395 @@
+{
+  "schemaVersion": "0.1",
+  "id": "urn:asfai:lesson:block-algebra-foundations",
+  "version": "1.0.0",
+  "status": "published",
+  "title": "Block Algebra: Structure, Factoring, and Fluency",
+  "description": "A guided and game-based lesson that uses algebra tiles, explanation, and symbolic transfer tasks to develop evidence about polynomial structure, factoring, and completing the square.",
+  "audience": {
+    "ageRangeStart": 13,
+    "ageRangeEnd": 18,
+    "description": "Secondary learners beginning or reviewing polynomial factoring with area models."
+  },
+  "estimatedMinutes": 65,
+  "interactionModes": ["self-guided", "teacher-led", "hybrid"],
+  "objectives": [
+    {
+      "objectiveId": "urn:asfai:objective:block-algebra:polynomial-structure",
+      "name": "Represent polynomial structure concretely",
+      "description": "Represent a polynomial as the corresponding counts of x-squared, x, and unit area tiles.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Block Algebra 1.0",
+      "externalAlignments": [
+        {
+          "objectiveId": "mt_g_fkAqmz72",
+          "relationship": "closeMatch",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        },
+        {
+          "objectiveId": "mt_AQo4u7O4sM",
+          "relationship": "relatedTo",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:block-algebra:factor-area-model",
+      "name": "Factor polynomials with an area model",
+      "description": "Arrange algebra tiles into a solid rectangle and connect its dimensions to a polynomial factorization.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Block Algebra 1.0",
+      "externalAlignments": [
+        {
+          "objectiveId": "mt_uESbzWCZIq",
+          "relationship": "closeMatch",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        },
+        {
+          "objectiveId": "mt_AQo4u7O4sM",
+          "relationship": "relatedTo",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:block-algebra:unlike-terms",
+      "name": "Distinguish unlike algebraic terms",
+      "description": "Explain why unit, x, and x-squared terms represent unlike quantities and cannot be substituted for one another.",
+      "alignmentType": "elicits",
+      "source": "ASFAI Block Algebra 1.0",
+      "externalAlignments": [
+        {
+          "objectiveId": "mt_g_fkAqmz72",
+          "relationship": "closeMatch",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:block-algebra:complete-square",
+      "name": "Complete the square with an area model",
+      "description": "Determine the constant needed to complete a perfect-square trinomial and explain the geometric relationship.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Block Algebra 1.0",
+      "externalAlignments": [
+        {
+          "objectiveId": "mt_uESbzWCZIq",
+          "relationship": "relatedTo",
+          "source": "https://github.com/withmarbleapp/os-taxonomy"
+        }
+      ]
+    }
+  ],
+  "prerequisites": [],
+  "artifacts": [
+    {
+      "id": "block-algebra-puzzle",
+      "title": "Block Algebra Walkthrough",
+      "type": "game",
+      "version": "1.1.1",
+      "url": "/education/artifacts/block-algebra/1.0.0/walkthrough/index.html",
+      "mediaType": "text/html",
+      "sha256": "30e120487c992dcccb088b8942fbfdadf683a187e275d3611400f8aa04e4e869",
+      "telemetrySchema": "urn:asfai:telemetry:block-algebra-puzzle:1",
+      "evidenceAdapter": "block-algebra-puzzle-v1",
+      "sandbox": {
+        "allowScripts": true,
+        "allowForms": false,
+        "allowPopups": false,
+        "allowedOrigin": "https://education.asfai.org"
+      },
+      "accessibility": {
+        "keyboardSupported": false,
+        "touchSupported": true,
+        "fallback": "Use the assistant-led symbolic and verbal area-model activity when pointer controls are not accessible."
+      },
+      "license": "Apache-2.0"
+    },
+    {
+      "id": "block-algebra-drop",
+      "title": "Block Algebra Drop",
+      "type": "game",
+      "version": "1.2.1",
+      "url": "/education/artifacts/block-algebra/1.0.0/drop/index.html",
+      "mediaType": "text/html",
+      "sha256": "33d5961351e6a94482cdd87e9a574c5c1279e642be3accac889df48c40000736",
+      "telemetrySchema": "urn:asfai:telemetry:block-algebra-drop:1",
+      "evidenceAdapter": "block-algebra-drop-v1",
+      "sandbox": {
+        "allowScripts": true,
+        "allowForms": false,
+        "allowPopups": false,
+        "allowedOrigin": "https://education.asfai.org"
+      },
+      "accessibility": {
+        "keyboardSupported": false,
+        "touchSupported": true,
+        "fallback": "Use untimed assistant-presented factorization targets and explain the required tiles and rectangle dimensions."
+      },
+      "license": "Apache-2.0"
+    }
+  ],
+  "assessmentMethods": [
+    {
+      "id": "walkthrough-telemetry",
+      "type": "game-telemetry",
+      "title": "Guided walkthrough evidence",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:polynomial-structure",
+        "urn:asfai:objective:block-algebra:factor-area-model",
+        "urn:asfai:objective:block-algebra:unlike-terms",
+        "urn:asfai:objective:block-algebra:complete-square"
+      ],
+      "rubricVersion": "block-algebra-pilot-1",
+      "criteria": [
+        {
+          "id": "representation",
+          "description": "Completes levels 1 through 3 with accurate tile counts.",
+          "evidenceDescriptors": ["Attempts to completion", "Wrong-count failure pattern", "Completion of distinct build targets"]
+        },
+        {
+          "id": "factoring",
+          "description": "Completes deliberate rectangle-building targets across distinct polynomials.",
+          "evidenceDescriptors": ["Levels completed", "Attempts per target", "Gap and ragged failure pattern", "Leading-coefficient targets"]
+        },
+        {
+          "id": "complete-square",
+          "description": "Determines and places the correct number of units to complete the square.",
+          "evidenceDescriptors": ["Added-unit sequence", "Attempts to completion", "Explanation of the side length"]
+        }
+      ],
+      "policy": { "calibrationStatus": "pilot", "rawTelemetryDefault": false },
+      "consequential": false
+    },
+    {
+      "id": "drop-telemetry",
+      "type": "game-telemetry",
+      "title": "Untimed-to-timed fluency evidence",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:polynomial-structure",
+        "urn:asfai:objective:block-algebra:factor-area-model"
+      ],
+      "rubricVersion": "block-algebra-pilot-1",
+      "criteria": [
+        {
+          "id": "constructed-clears",
+          "description": "Uses constructed, non-chain clears across multiple targets.",
+          "evidenceDescriptors": ["Constructed clears only", "Target breadth", "Clear rate per target"]
+        },
+        {
+          "id": "fluency-caveats",
+          "description": "Interprets speed only after accounting for practice, controls, stress, and board conditions.",
+          "evidenceDescriptors": ["Practice round excluded", "Session duration or target count", "Dexterity and stress caveats"]
+        }
+      ],
+      "policy": { "calibrationStatus": "pilot", "minimumMinutes": 6, "minimumTargets": 10, "excludeFirstGame": true },
+      "consequential": false
+    },
+    {
+      "id": "reasoning-conversation",
+      "type": "conversation",
+      "title": "Area-model reasoning conversation",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:factor-area-model",
+        "urn:asfai:objective:block-algebra:unlike-terms",
+        "urn:asfai:objective:block-algebra:complete-square"
+      ],
+      "rubricVersion": "block-algebra-pilot-1",
+      "criteria": [
+        {
+          "id": "explanation",
+          "description": "Explains how rectangle dimensions, tile types, and polynomial factors correspond.",
+          "evidenceDescriptors": ["Predicts dimensions", "Explains unlike terms", "Explains the completed-square constant"]
+        }
+      ],
+      "policy": { "minimumPrompts": 2 },
+      "consequential": false
+    },
+    {
+      "id": "symbolic-transfer",
+      "type": "writing",
+      "title": "Symbolic factoring transfer",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:factor-area-model",
+        "urn:asfai:objective:block-algebra:complete-square"
+      ],
+      "rubricVersion": "block-algebra-pilot-1",
+      "criteria": [
+        {
+          "id": "symbolic-accuracy",
+          "description": "Factors or completes square problems without relying on the game geometry.",
+          "evidenceDescriptors": ["Correct symbolic result", "Coherent explanation", "Transfer across at least two non-identical items"]
+        }
+      ],
+      "policy": { "minimumItems": 2 },
+      "consequential": false
+    },
+    {
+      "id": "lesson-reflection",
+      "type": "self-reflection",
+      "title": "Learner reflection",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:factor-area-model"],
+      "rubricVersion": "block-algebra-pilot-1",
+      "criteria": [
+        {
+          "id": "reflection",
+          "description": "Identifies a useful strategy and a remaining uncertainty.",
+          "evidenceDescriptors": ["Specific strategy", "Specific uncertainty or next step"]
+        }
+      ],
+      "policy": { "cannotEstablishMasteryAlone": true },
+      "consequential": false
+    }
+  ],
+  "activities": [
+    {
+      "id": "orientation",
+      "title": "Orient and predict",
+      "description": "Establish prior experience and connect polynomial terms to tile types.",
+      "type": "conversation",
+      "mode": "self-guided",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:polynomial-structure", "urn:asfai:objective:block-algebra:unlike-terms"],
+      "instructions": {
+        "student": "Describe what the x-squared, x, and unit tiles would represent in x² + 3x + 2.",
+        "assistant": "Ask for a prediction before teaching. Record the response as diagnostic evidence, including any help provided.",
+        "teacher": "Invite learners to compare representations without correcting every detail before the walkthrough."
+      },
+      "assessmentMethodIds": ["reasoning-conversation"],
+      "completion": { "type": "assistant-confirmed", "minimumEvidence": 1 },
+      "estimatedMinutes": 5,
+      "optional": false
+    },
+    {
+      "id": "guided-walkthrough",
+      "title": "Guided Block Algebra walkthrough",
+      "description": "Complete the deliberate build, factor, complete-square, and advanced targets.",
+      "type": "game",
+      "mode": "self-guided",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:polynomial-structure",
+        "urn:asfai:objective:block-algebra:factor-area-model",
+        "urn:asfai:objective:block-algebra:unlike-terms",
+        "urn:asfai:objective:block-algebra:complete-square"
+      ],
+      "artifactId": "block-algebra-puzzle",
+      "launchParameters": { "telemetry": "standard" },
+      "instructions": {
+        "student": "Complete the walkthrough through at least level 7. Attempt level 8 and continue through levels 9–10 if ready.",
+        "assistant": "Launch the game. After claiming the result, interpret deliberate check attempts and failure reasons. Do not convert the pilot bands directly into mastery.",
+        "teacher": "Mechanical overlap failures and resets are not algebra errors. Use the learner's explanations to clarify ambiguous attempts."
+      },
+      "assessmentMethodIds": ["walkthrough-telemetry"],
+      "completion": { "type": "artifact-result", "minimumEvidence": 1 },
+      "estimatedMinutes": 25,
+      "optional": false
+    },
+    {
+      "id": "reasoning-checkpoint",
+      "title": "Explain the rectangle",
+      "description": "Use a short adaptive conversation to test the reasoning behind the game performance.",
+      "type": "conversation",
+      "mode": "hybrid",
+      "objectiveIds": [
+        "urn:asfai:objective:block-algebra:factor-area-model",
+        "urn:asfai:objective:block-algebra:unlike-terms",
+        "urn:asfai:objective:block-algebra:complete-square"
+      ],
+      "instructions": {
+        "student": "Explain how the rectangle's dimensions tell you the factors. Be ready for a new example.",
+        "assistant": "Choose prompts dynamically from the learner's walkthrough evidence. Ask a dimension prediction, misconception check, or complete-square explanation rather than reciting a fixed answer key.",
+        "teacher": "You may contribute an attributed observation, but distinguish prompting from independent learner reasoning."
+      },
+      "assessmentMethodIds": ["reasoning-conversation"],
+      "completion": { "type": "assistant-confirmed", "minimumEvidence": 2 },
+      "estimatedMinutes": 8,
+      "optional": false
+    },
+    {
+      "id": "drop-practice",
+      "title": "Block Algebra Drop practice",
+      "description": "Become familiar with the arcade controls without using this round for proficiency claims.",
+      "type": "game",
+      "mode": "self-guided",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:polynomial-structure", "urn:asfai:objective:block-algebra:factor-area-model"],
+      "artifactId": "block-algebra-drop",
+      "launchParameters": { "telemetry": "summary", "evidence": "practice" },
+      "instructions": {
+        "student": "Play one practice game to learn the controls. This round is just for getting comfortable and will not count against you.",
+        "assistant": "Treat the result as activity completion and control-familiarity context, not proficiency evidence.",
+        "teacher": "Offer an untimed alternative if pointer control or arcade pressure is a barrier."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "artifact-result", "minimumEvidence": 0 },
+      "estimatedMinutes": 6,
+      "optional": false
+    },
+    {
+      "id": "drop-evidence",
+      "title": "Block Algebra Drop fluency round",
+      "description": "Complete a qualifying round for fluency evidence after learning the controls.",
+      "type": "game",
+      "mode": "self-guided",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:polynomial-structure", "urn:asfai:objective:block-algebra:factor-area-model"],
+      "artifactId": "block-algebra-drop",
+      "launchParameters": { "telemetry": "standard", "evidence": "fluency" },
+      "instructions": {
+        "student": "Play for at least six minutes or until at least ten targets have been offered. You may request the untimed alternative.",
+        "assistant": "Use constructed clears only. Treat time-to-clear as secondary and attach stress, dexterity, duration, and target-count caveats.",
+        "teacher": "Do not use a single weak arcade session as negative evidence of algebra understanding."
+      },
+      "assessmentMethodIds": ["drop-telemetry"],
+      "completion": { "type": "artifact-result", "minimumEvidence": 1 },
+      "estimatedMinutes": 10,
+      "optional": false
+    },
+    {
+      "id": "symbolic-transfer",
+      "title": "Transfer beyond the tiles",
+      "description": "Solve and explain ordinary symbolic problems without relying on the game geometry.",
+      "type": "writing",
+      "mode": "hybrid",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:factor-area-model", "urn:asfai:objective:block-algebra:complete-square"],
+      "instructions": {
+        "student": "Factor two non-identical quadratic expressions and explain one result. If complete-square work was attempted, also explain how to choose the missing constant in x² + bx + ?.",
+        "assistant": "Generate fresh items appropriate to the demonstrated level. Assess accuracy, reasoning, independence, and transfer. Keep tutoring assistance separate from the final independent attempt.",
+        "teacher": "Accept writing, an image of handwritten work, or an attributed live observation."
+      },
+      "assessmentMethodIds": ["symbolic-transfer"],
+      "completion": { "type": "submission", "minimumEvidence": 2 },
+      "estimatedMinutes": 8,
+      "optional": false
+    },
+    {
+      "id": "reflection-and-report",
+      "title": "Reflect and create the report",
+      "description": "Record a learner reflection and generate a lesson-specific report.",
+      "type": "reflection",
+      "mode": "self-guided",
+      "objectiveIds": ["urn:asfai:objective:block-algebra:factor-area-model"],
+      "instructions": {
+        "student": "Name one strategy that helped and one idea you would like to practice next.",
+        "assistant": "Record the reflection as self-report evidence, never as mastery by itself. Generate the report with evidence references, assistance, caveats, and next steps.",
+        "teacher": "Review the report's cited evidence rather than relying only on its headline level."
+      },
+      "assessmentMethodIds": ["lesson-reflection"],
+      "completion": { "type": "reflection", "minimumEvidence": 1 },
+      "estimatedMinutes": 3,
+      "optional": false
+    }
+  ],
+  "report": {
+    "title": "Block Algebra lesson report",
+    "includeActivityTimeline": true,
+    "includeObjectiveEvidence": true,
+    "includeArtifacts": true,
+    "includeNextSteps": true
+  },
+  "provenance": {
+    "author": "ASFAI",
+    "license": "Apache-2.0",
+    "sourceUrls": [],
+    "createdAt": "2026-08-23T00:00:00Z",
+    "updatedAt": "2026-08-23T00:00:00Z",
+    "contentDigest": "0551b0b7abf58c07a9d749601c6db92e7aa99a9da4df3a73f8169e2b7b8b4320"
+  }
+}

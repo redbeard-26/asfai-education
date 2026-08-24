@@ -13,6 +13,11 @@ The data model separates curricular meaning, observed evidence, assessment judgm
 | `RubricCriterion` | A dimension of performance described by a rubric |
 | `PerformanceLevel` | An ordered level with observable descriptors |
 | `Course` | An organized learning offering |
+| `LessonDefinition` | A public, immutable plan connecting objectives, activities, artifacts, assessment methods, and report rules |
+| `LessonAssignment` | Teacher-owned configuration and sharing policy for one lesson version |
+| `LessonRun` | Learner-owned state for one attempt through a lesson |
+| `LessonReport` | A lesson-scoped projection of linked evidence and claims |
+| `ProgressEnvelope` | A consent-scoped message exchanged between learner and teacher roles |
 | `Activity` | A game, assignment, lesson, project, or observation opportunity |
 | `ActivityObjectiveAlignment` | A sourced claim that an activity teaches or elicits an objective |
 | `EvidenceEvent` | An immutable observation of learner activity |
