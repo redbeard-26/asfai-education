@@ -3267,8 +3267,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path3) {
-      let input = path3;
+    function removeDotSegments(path4) {
+      let input = path4;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3673,8 +3673,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path3 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
+        const path4 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7761,31 +7761,31 @@ var require_Resolve = __commonJS({
       return baseIRI.substr(0, baseSlashAfterColonPos) + relativeIRI;
     }
     exports.resolve = resolve;
-    function removeDotSegments(path3) {
+    function removeDotSegments(path4) {
       const segmentBuffers = [];
       let i = 0;
-      while (i < path3.length) {
-        switch (path3[i]) {
+      while (i < path4.length) {
+        switch (path4[i]) {
           case "/":
-            if (path3[i + 1] === ".") {
-              if (path3[i + 2] === ".") {
-                if (!isCharacterAllowedAfterRelativePathSegment(path3[i + 3])) {
+            if (path4[i + 1] === ".") {
+              if (path4[i + 2] === ".") {
+                if (!isCharacterAllowedAfterRelativePathSegment(path4[i + 3])) {
                   segmentBuffers.push([]);
                   i++;
                   break;
                 }
                 segmentBuffers.pop();
-                if (!path3[i + 3]) {
+                if (!path4[i + 3]) {
                   segmentBuffers.push([]);
                 }
                 i += 3;
               } else {
-                if (!isCharacterAllowedAfterRelativePathSegment(path3[i + 2])) {
+                if (!isCharacterAllowedAfterRelativePathSegment(path4[i + 2])) {
                   segmentBuffers.push([]);
                   i++;
                   break;
                 }
-                if (!path3[i + 2]) {
+                if (!path4[i + 2]) {
                   segmentBuffers.push([]);
                 }
                 i += 2;
@@ -7800,14 +7800,14 @@ var require_Resolve = __commonJS({
             if (!segmentBuffers.length) {
               segmentBuffers.push([]);
             }
-            segmentBuffers[segmentBuffers.length - 1].push(path3.substr(i));
-            i = path3.length;
+            segmentBuffers[segmentBuffers.length - 1].push(path4.substr(i));
+            i = path4.length;
             break;
           default:
             if (!segmentBuffers.length) {
               segmentBuffers.push([]);
             }
-            segmentBuffers[segmentBuffers.length - 1].push(path3[i]);
+            segmentBuffers[segmentBuffers.length - 1].push(path4[i]);
             i++;
             break;
         }
@@ -7831,8 +7831,8 @@ var require_Resolve = __commonJS({
         return iri;
       }
       const base = iri.substr(0, pathSeparator);
-      const path3 = iri.substr(pathSeparator);
-      return base + removeDotSegments(path3);
+      const path4 = iri.substr(pathSeparator);
+      return base + removeDotSegments(path4);
     }
     exports.removeDotSegmentsOfPath = removeDotSegmentsOfPath;
     function isCharacterAllowedAfterRelativePathSegment(character) {
@@ -17948,8 +17948,8 @@ var require_ContextTree = __commonJS({
           subTree.setContext(tail, context);
         }
       }
-      removeContext(path3) {
-        this.setContext(path3, null);
+      removeContext(path4) {
+        this.setContext(path4, null);
       }
     };
     exports.ContextTree = ContextTree;
@@ -27362,9 +27362,9 @@ var require_pick = __commonJS({
   "node_modules/openid-client/lib/helpers/pick.js"(exports, module) {
     module.exports = function pick2(object3, ...paths) {
       const obj = {};
-      for (const path3 of paths) {
-        if (object3[path3] !== void 0) {
-          obj[path3] = object3[path3];
+      for (const path4 of paths) {
+        if (object3[path4] !== void 0) {
+          obj[path4] = object3[path4];
         }
       }
       return obj;
@@ -31787,8 +31787,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path3, errorMaps, issueData } = params;
-  const fullPath = [...path3, ...issueData.path || []];
+  const { data, path: path4, errorMaps, issueData } = params;
+  const fullPath = [...path4, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -31903,11 +31903,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path3, key) {
+  constructor(parent, value, path4, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path3;
+    this._path = path4;
     this._key = key;
   }
   get path() {
@@ -35827,10 +35827,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path4) {
+  if (!path4)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path4.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -36239,11 +36239,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path4, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path4);
     return iss;
   });
 }
@@ -36390,16 +36390,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -36426,17 +36426,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path3 = []) => {
+  const processError = (error52, path4 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path3, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path3, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path4, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -36468,8 +36468,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path4) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -49594,13 +49594,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path4 = ref.slice(1).split("/").filter(Boolean);
+  if (path4.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1];
+  if (path4[0] === defsKey) {
+    const key = path4[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -55327,7 +55327,7 @@ var StdioServerTransport = class {
 
 // scripts/personal-storage-mcp.ts
 import { homedir } from "node:os";
-import path2 from "node:path";
+import path3 from "node:path";
 
 // src/lib/classroom-connectors/contract.ts
 var classroomProviderSchema = external_exports.string().trim().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/);
@@ -55845,8 +55845,8 @@ ${work.content}\r
 // src/lib/personal-storage.ts
 import { createHash as createHash2, createPrivateKey, createPublicKey, generateKeyPairSync, sign as sign2, verify as verify2 } from "node:crypto";
 import { createServer as createServer2 } from "node:http";
-import { chmod, mkdir, readFile, rename, writeFile as writeFile2 } from "node:fs/promises";
-import path from "node:path";
+import { chmod as chmod2, mkdir as mkdir2, readFile as readFile2, rename as rename2, rm as rm2, writeFile as writeFile3 } from "node:fs/promises";
+import path2 from "node:path";
 
 // node_modules/@inrupt/solid-client/dist/formats/index.mjs
 var formats_exports = {};
@@ -59831,6 +59831,58 @@ var Session = class _Session {
     return sessionInfo;
   };
 };
+async function refreshSession(session, options) {
+  const clientAuth = options?.storage !== void 0 ? getClientAuthenticationWithDependencies({
+    secureStorage: options.storage,
+    insecureStorage: options.storage
+  }) : getClientAuthenticationWithDependencies({
+    secureStorage: defaultStorage,
+    insecureStorage: defaultStorage
+  });
+  const sessionInfo = await clientAuth.getSessionInfo(session.info.sessionId);
+  if (sessionInfo !== void 0 && sessionInfo.refreshToken) {
+    await session.login({
+      oidcIssuer: sessionInfo.issuer,
+      tokenType: sessionInfo.tokenType
+    });
+  }
+}
+async function getSessionFromStorage(sessionId, options) {
+  const { storage: storage2, onNewRefreshToken, refreshSession: refresh } = options ?? { refreshSession: true };
+  const clientAuth = storage2 ? getClientAuthenticationWithDependencies({
+    secureStorage: storage2,
+    insecureStorage: storage2
+  }) : getClientAuthenticationWithDependencies({
+    secureStorage: defaultStorage,
+    insecureStorage: defaultStorage
+  });
+  const sessionInfo = await clientAuth.getSessionInfo(sessionId);
+  if (sessionInfo === void 0) {
+    return void 0;
+  }
+  const session = new Session({
+    sessionInfo: { ...sessionInfo, isLoggedIn: false },
+    clientAuthentication: clientAuth,
+    keepAlive: sessionInfo.keepAlive
+  });
+  if (onNewRefreshToken !== void 0) {
+    session.events.on(EVENTS.NEW_REFRESH_TOKEN, onNewRefreshToken);
+  }
+  if (refresh ?? true) {
+    await refreshSession(session, { storage: storage2 ?? defaultStorage });
+  }
+  return session;
+}
+async function clearSessionFromStorageAll(storage2) {
+  const clientAuth = storage2 ? getClientAuthenticationWithDependencies({
+    secureStorage: storage2,
+    insecureStorage: storage2
+  }) : getClientAuthenticationWithDependencies({
+    secureStorage: defaultStorage,
+    insecureStorage: defaultStorage
+  });
+  return clientAuth.clearSessionAll();
+}
 
 // src/lib/capabilities/classroom.ts
 var timestampSchema = external_exports.string().datetime({ offset: true });
@@ -60196,6 +60248,180 @@ function newEducatorWorkspace(educatorId = uuidUrn()) {
   return { schemaVersion: "0.1", educatorId, createdAt: now, updatedAt: now, resources: {}, collections: {}, history: [] };
 }
 
+// src/lib/device-protected-storage.ts
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, readFile, rename, rm, rmdir, stat, writeFile as writeFile2 } from "node:fs/promises";
+import path from "node:path";
+var DPAPI_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security
+$operation = $env:ASFAI_DPAPI_OPERATION
+$inputValue = [Console]::In.ReadToEnd().Trim()
+$bytes = [Convert]::FromBase64String($inputValue)
+$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+if ($operation -eq 'protect') {
+  $result = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, $scope)
+} elseif ($operation -eq 'unprotect') {
+  $result = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope)
+} else {
+  throw 'Unsupported ASFAI device-protection operation.'
+}
+[Console]::Out.Write([Convert]::ToBase64String($result))
+`.trim();
+async function runWindowsDpapi(operation, value) {
+  const encodedCommand = Buffer.from(DPAPI_SCRIPT, "utf16le").toString("base64");
+  return await new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-EncodedCommand",
+      encodedCommand
+    ], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      env: { ...process.env, ASFAI_DPAPI_OPERATION: operation }
+    });
+    const stdout = [];
+    const stderr = [];
+    child.stdout.on("data", (chunk) => stdout.push(chunk));
+    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code !== 0) {
+        const detail = Buffer.concat(stderr).toString("utf8").trim();
+        reject(new Error(`Windows could not protect the saved Solid authorization.${detail ? ` ${detail}` : ""}`));
+        return;
+      }
+      try {
+        resolve(Buffer.from(Buffer.concat(stdout).toString("utf8").trim(), "base64"));
+      } catch {
+        reject(new Error("Windows returned invalid protected Solid authorization data."));
+      }
+    });
+    child.stdin.end(value.toString("base64"));
+  });
+}
+function deviceStorageProtector(platform = process.platform) {
+  if (platform === "win32") {
+    return {
+      id: "windows-dpapi-current-user",
+      protect: (value) => runWindowsDpapi("protect", value),
+      unprotect: (value) => runWindowsDpapi("unprotect", value)
+    };
+  }
+  return {
+    id: "user-file-permissions",
+    protect: async (value) => value,
+    unprotect: async (value) => value
+  };
+}
+var DeviceProtectedStorage = class {
+  constructor(filePath, protector = deviceStorageProtector()) {
+    this.filePath = filePath;
+    this.protector = protector;
+    this.serial = Promise.resolve();
+    this.protection = protector.id;
+  }
+  exclusive(operation) {
+    const result = this.serial.then(operation, operation);
+    this.serial = result.then(() => void 0, () => void 0);
+    return result;
+  }
+  async withSessionLease(operation) {
+    const leasePath = `${this.filePath}.lock`;
+    await mkdir(path.dirname(leasePath), { recursive: true });
+    const deadline = Date.now() + 3e4;
+    while (true) {
+      try {
+        await mkdir(leasePath);
+        break;
+      } catch (error51) {
+        if (error51.code !== "EEXIST") throw error51;
+        let leaseAge;
+        try {
+          leaseAge = Date.now() - (await stat(leasePath)).mtimeMs;
+        } catch (statError) {
+          if (statError.code === "ENOENT") continue;
+          throw statError;
+        }
+        if (leaseAge > 12e4) {
+          await rmdir(leasePath).catch(() => void 0);
+          continue;
+        }
+        if (Date.now() >= deadline) throw new Error("Another ASFAI companion is updating the saved Solid authorization. Try again shortly.");
+        await new Promise((resolve) => setTimeout(resolve, 75));
+      }
+    }
+    try {
+      this.values = void 0;
+      return await operation();
+    } finally {
+      await rmdir(leasePath).catch(() => void 0);
+    }
+  }
+  async loadUnlocked() {
+    if (this.values) return this.values;
+    try {
+      const envelope = JSON.parse(await readFile(this.filePath, "utf8"));
+      if (envelope.schemaVersion !== "1" || envelope.protection !== this.protector.id || typeof envelope.payload !== "string") {
+        throw new Error("unsupported format");
+      }
+      const plaintext = await this.protector.unprotect(Buffer.from(envelope.payload, "base64"));
+      const parsed = JSON.parse(plaintext.toString("utf8"));
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || Object.values(parsed).some((value) => typeof value !== "string")) {
+        throw new Error("invalid contents");
+      }
+      this.values = parsed;
+    } catch (error51) {
+      if (error51.code === "ENOENT") {
+        this.values = {};
+      } else {
+        throw new Error("The saved Solid authorization could not be opened for this device user.", { cause: error51 });
+      }
+    }
+    return this.values;
+  }
+  async persistUnlocked() {
+    const directory = path.dirname(this.filePath);
+    await mkdir(directory, { recursive: true });
+    const protectedValue = await this.protector.protect(Buffer.from(JSON.stringify(this.values ?? {}), "utf8"));
+    const envelope = {
+      schemaVersion: "1",
+      protection: this.protector.id,
+      payload: protectedValue.toString("base64")
+    };
+    const temporary = `${this.filePath}.${randomUUID()}.tmp`;
+    await writeFile2(temporary, JSON.stringify(envelope), { encoding: "utf8", mode: 384 });
+    await rename(temporary, this.filePath);
+    await chmod(this.filePath, 384).catch(() => void 0);
+  }
+  async get(key) {
+    return await this.exclusive(async () => (await this.loadUnlocked())[key]);
+  }
+  async set(key, value) {
+    await this.exclusive(async () => {
+      const values = await this.loadUnlocked();
+      values[key] = value;
+      await this.persistUnlocked();
+    });
+  }
+  async delete(key) {
+    await this.exclusive(async () => {
+      const values = await this.loadUnlocked();
+      delete values[key];
+      await this.persistUnlocked();
+    });
+  }
+  async clear() {
+    await this.exclusive(async () => {
+      this.values = {};
+      await rm(this.filePath, { force: true });
+    });
+  }
+};
+
 // src/lib/learner-workflow.ts
 var INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES = 8 * 1024;
 var inlineTranscriptTextSchema = external_exports.string().min(1).superRefine((value, context) => {
@@ -60355,14 +60581,23 @@ function parsePersonalDocument(kind, input, ownerRole = "learner") {
   return input ? classroomExchangeStoreSchema.parse(input) : newClassroomExchangeStore(ownerRole);
 }
 function safeBaseDirectory(value) {
-  return path.resolve(value);
+  return path2.resolve(value);
 }
+var defaultDependencies = {
+  createSession: (storage2, sessionId) => new Session({ storage: storage2, keepAlive: false }, sessionId),
+  restoreSession: (storage2, sessionId) => getSessionFromStorage(sessionId, { storage: storage2, refreshSession: true }),
+  clearSessions: (storage2) => clearSessionFromStorageAll(storage2),
+  createDeviceStorage: (filePath) => new DeviceProtectedStorage(filePath)
+};
 var PersonalStorageService = class {
-  constructor(baseDirectory = process.cwd()) {
+  constructor(baseDirectory = process.cwd(), dependencies = {}) {
     this.mode = "local";
+    this.sessionRestored = false;
+    this.restoreEnabled = true;
     this.baseDirectory = safeBaseDirectory(baseDirectory);
+    this.dependencies = { ...defaultDependencies, ...dependencies };
   }
-  status() {
+  statusSnapshot() {
     return {
       mode: this.mode,
       baseDirectory: this.mode === "local" ? this.baseDirectory : void 0,
@@ -60373,25 +60608,125 @@ var PersonalStorageService = class {
       isLoggedIn: this.session?.info.isLoggedIn ?? false,
       webId: this.session?.info.webId,
       error: this.authError,
-      credentialBoundary: "Passwords, cookies, tokens, refresh tokens, and DPoP keys are never accepted as MCP input or returned as output."
+      authorizationPersistence: {
+        persistsAcrossChatsAndRestarts: true,
+        restoredFromDevice: this.sessionRestored,
+        protectedBy: this.deviceStorage?.protection ?? (process.platform === "win32" ? "windows-dpapi-current-user" : "user-file-permissions"),
+        removal: "Authorization remains available until the user explicitly asks ASFAI to forget this Pod on this device or revokes access at the Pod provider. It is never removed merely because a chat or MCP process ends."
+      },
+      credentialBoundary: "Passwords, cookies, tokens, refresh tokens, client secrets, and DPoP keys are never accepted as MCP input or returned as output. Reusable Solid authorization is protected for the current device user."
     };
   }
-  configureLocal(baseDirectory) {
-    if (baseDirectory) this.baseDirectory = safeBaseDirectory(baseDirectory);
+  async status() {
+    await this.restoreSavedSession();
+    return this.statusSnapshot();
+  }
+  async configureLocal(baseDirectory) {
+    if (baseDirectory) {
+      this.baseDirectory = safeBaseDirectory(baseDirectory);
+      this.deviceStorage = void 0;
+      this.restorePromise = void 0;
+    }
+    this.restoreEnabled = false;
     this.mode = "local";
-    return this.status();
+    return this.statusSnapshot();
+  }
+  authDirectory() {
+    return path2.resolve(this.baseDirectory, "asfai", "auth");
+  }
+  connectionPreferencePath() {
+    return path2.join(this.authDirectory(), "solid-connection.json");
+  }
+  solidSessionStorage() {
+    if (!this.deviceStorage) {
+      this.deviceStorage = this.dependencies.createDeviceStorage(path2.join(this.authDirectory(), "solid-session.protected.json"));
+    }
+    return this.deviceStorage;
+  }
+  sessionId(podRoot, oidcIssuer) {
+    return `asfai-solid-${createHash2("sha256").update(`${podRoot}
+${oidcIssuer}`).digest("hex").slice(0, 32)}`;
+  }
+  async readConnectionPreference() {
+    try {
+      const value = JSON.parse(await readFile2(this.connectionPreferencePath(), "utf8"));
+      if (value.schemaVersion !== "1" || !value.podRoot || !value.oidcIssuer || !value.sessionId) throw new Error("invalid preference");
+      return value;
+    } catch (error51) {
+      if (error51.code === "ENOENT") return void 0;
+      throw new Error("The saved Solid connection preference is invalid.", { cause: error51 });
+    }
+  }
+  async saveConnectionPreference(value) {
+    await mkdir2(this.authDirectory(), { recursive: true });
+    const target = this.connectionPreferencePath();
+    const temporary = `${target}.${crypto.randomUUID()}.tmp`;
+    await writeFile3(temporary, JSON.stringify(value, null, 2), { encoding: "utf8", mode: 384 });
+    await rename2(temporary, target);
+    await chmod2(target, 384).catch(() => void 0);
+  }
+  async restoreSavedSession() {
+    if (!this.restoreEnabled) return;
+    const expirationDate = this.session?.info.expirationDate;
+    if (this.session?.info.isLoggedIn && (expirationDate === void 0 || expirationDate > Date.now() + 3e4)) return;
+    if (this.session?.info.isLoggedIn) {
+      this.session = void 0;
+      this.restorePromise = void 0;
+    }
+    if (this.restorePromise) return await this.restorePromise;
+    this.restorePromise = (async () => {
+      const preference = await this.readConnectionPreference();
+      if (!preference) return;
+      this.mode = "solid";
+      this.podRoot = preference.podRoot;
+      this.oidcIssuer = preference.oidcIssuer;
+      try {
+        const storage2 = this.solidSessionStorage();
+        const session = await storage2.withSessionLease(() => this.dependencies.restoreSession(storage2, preference.sessionId));
+        if (session?.info.isLoggedIn) {
+          this.session = session;
+          this.sessionRestored = true;
+          this.authError = void 0;
+        }
+      } catch {
+        this.authError = "The saved Pod authorization could not be refreshed. Connect again to replace it, or revoke ASFAI at the Pod provider if access should end.";
+      }
+    })();
+    await this.restorePromise;
   }
   async connectSolid(input) {
     const podRoot = new URL(input.podRoot);
     const oidcIssuer = new URL(input.oidcIssuer);
     if (podRoot.protocol !== "https:" || oidcIssuer.protocol !== "https:") throw new Error("Solid Pod and OIDC issuer URLs must use HTTPS.");
     await this.closeCallbackServer();
+    this.restoreEnabled = true;
     this.mode = "solid";
     this.podRoot = withSlash(podRoot.toString());
     this.oidcIssuer = withSlash(oidcIssuer.toString());
-    this.session = new Session();
+    const sessionId = this.sessionId(this.podRoot, this.oidcIssuer);
+    const storage2 = this.solidSessionStorage();
+    try {
+      const restored = await storage2.withSessionLease(() => this.dependencies.restoreSession(storage2, sessionId));
+      if (restored?.info.isLoggedIn) {
+        this.session = restored;
+        this.sessionRestored = true;
+        this.authorizationUrl = void 0;
+        this.callbackUrl = void 0;
+        this.authError = void 0;
+        await this.saveConnectionPreference({ schemaVersion: "1", podRoot: this.podRoot, oidcIssuer: this.oidcIssuer, sessionId });
+        return {
+          ...this.statusSnapshot(),
+          authorizationUrl: void 0,
+          instruction: "The saved Pod authorization was restored for this device user. Continue without opening a web page."
+        };
+      }
+    } catch {
+    }
+    this.session = this.dependencies.createSession(storage2, sessionId);
+    this.sessionRestored = false;
     this.authorizationUrl = void 0;
     this.authError = void 0;
+    await this.saveConnectionPreference({ schemaVersion: "1", podRoot: this.podRoot, oidcIssuer: this.oidcIssuer, sessionId });
     const port = input.port ?? 18765;
     this.callbackUrl = `http://127.0.0.1:${port}/solid/callback`;
     this.callbackServer = createServer2(async (request, response) => {
@@ -60430,9 +60765,9 @@ var PersonalStorageService = class {
     }
     if (!this.authorizationUrl) throw new Error("The Solid identity provider did not provide an authorization URL.");
     return {
-      ...this.status(),
+      ...this.statusSnapshot(),
       authorizationUrl: this.authorizationUrl,
-      instruction: "Open the authorization URL in your browser. Authenticate only on your Pod provider's page; never paste credentials or tokens into chat. Then call status until isLoggedIn is true."
+      instruction: "Open the authorization URL once and approve ASFAI on the Pod provider page. The authorization is then protected for this device user and reused across chats and restarts until the user explicitly forgets it or revokes it at the provider. Never paste credentials or tokens into chat. Then call status until isLoggedIn is true."
     };
   }
   async closeCallbackServer() {
@@ -60441,18 +60776,33 @@ var PersonalStorageService = class {
     this.callbackServer = void 0;
     await new Promise((resolve) => server2.close(() => resolve()));
   }
-  async disconnect() {
+  async forgetSolidAuthorization() {
     await this.closeCallbackServer();
-    if (this.session?.info.isLoggedIn) await this.session.logout({ logoutType: "app" });
+    const storage2 = this.solidSessionStorage();
+    await storage2.withSessionLease(async () => {
+      if (this.session?.info.isLoggedIn) await this.session.logout({ logoutType: "app" }).catch(() => void 0);
+      await this.dependencies.clearSessions(storage2).catch(() => void 0);
+      await storage2.clear();
+    });
+    await rm2(this.connectionPreferencePath(), { force: true });
     this.session = void 0;
     this.authorizationUrl = void 0;
     this.authError = void 0;
+    this.sessionRestored = false;
+    this.restorePromise = void 0;
+    this.restoreEnabled = false;
     this.mode = "local";
-    return this.status();
+    this.podRoot = void 0;
+    this.oidcIssuer = void 0;
+    this.callbackUrl = void 0;
+    return {
+      ...this.statusSnapshot(),
+      instruction: "This device has forgotten its reusable Pod authorization. This happens only after an explicit user request; ending a chat or MCP process never performs it."
+    };
   }
   localPath(kind) {
-    const target = path.resolve(this.baseDirectory, "asfai", FILES[kind]);
-    const root = `${this.baseDirectory}${path.sep}`;
+    const target = path2.resolve(this.baseDirectory, "asfai", FILES[kind]);
+    const root = `${this.baseDirectory}${path2.sep}`;
     if (!target.startsWith(root)) throw new Error("The personal storage path escaped its configured directory.");
     return target;
   }
@@ -60470,6 +60820,7 @@ var PersonalStorageService = class {
     }
   }
   async load(kind, ownerRole = "learner") {
+    await this.restoreSavedSession();
     let raw;
     let location;
     if (this.mode === "solid") {
@@ -60484,7 +60835,7 @@ var PersonalStorageService = class {
     } else {
       location = this.localPath(kind);
       try {
-        raw = JSON.parse(await readFile(location, "utf8"));
+        raw = JSON.parse(await readFile2(location, "utf8"));
       } catch (error51) {
         if (error51.code !== "ENOENT") throw error51;
       }
@@ -60506,11 +60857,11 @@ var PersonalStorageService = class {
       await overwriteFile(location, new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }), { contentType: "application/json", fetch: this.session.fetch });
     } else {
       location = this.localPath(kind);
-      await mkdir(path.dirname(location), { recursive: true });
+      await mkdir2(path2.dirname(location), { recursive: true });
       const temporary = `${location}.${crypto.randomUUID()}.tmp`;
-      await writeFile2(temporary, JSON.stringify(value, null, 2), { encoding: "utf8", mode: 384 });
-      await rename(temporary, location);
-      await chmod(location, 384).catch(() => void 0);
+      await writeFile3(temporary, JSON.stringify(value, null, 2), { encoding: "utf8", mode: 384 });
+      await rename2(temporary, location);
+      await chmod2(location, 384).catch(() => void 0);
     }
     const readBack = await this.load(kind);
     const digest = documentDigest(value);
@@ -60518,20 +60869,20 @@ var PersonalStorageService = class {
     return { kind, value, digest, location, verified: true, mode: this.mode, webId: this.session?.info.webId };
   }
   async identityFiles() {
-    const directory = path.resolve(this.baseDirectory, "asfai", "identity");
-    const privatePath = path.join(directory, "ed25519-private.pem");
-    const publicPath = path.join(directory, "ed25519-public.pem");
-    await mkdir(directory, { recursive: true });
+    const directory = path2.resolve(this.baseDirectory, "asfai", "identity");
+    const privatePath = path2.join(directory, "ed25519-private.pem");
+    const publicPath = path2.join(directory, "ed25519-public.pem");
+    await mkdir2(directory, { recursive: true });
     try {
-      return { privatePem: await readFile(privatePath, "utf8"), publicPem: await readFile(publicPath, "utf8") };
+      return { privatePem: await readFile2(privatePath, "utf8"), publicPem: await readFile2(publicPath, "utf8") };
     } catch (error51) {
       if (error51.code !== "ENOENT") throw error51;
       const pair = generateKeyPairSync("ed25519", {
         privateKeyEncoding: { type: "pkcs8", format: "pem" },
         publicKeyEncoding: { type: "spki", format: "pem" }
       });
-      await writeFile2(privatePath, pair.privateKey, { encoding: "utf8", mode: 384 });
-      await writeFile2(publicPath, pair.publicKey, { encoding: "utf8", mode: 420 });
+      await writeFile3(privatePath, pair.privateKey, { encoding: "utf8", mode: 384 });
+      await writeFile3(publicPath, pair.publicKey, { encoding: "utf8", mode: 420 });
       return { privatePem: pair.privateKey, publicPem: pair.publicKey };
     }
   }
@@ -60557,11 +60908,11 @@ var PersonalStorageService = class {
 };
 
 // scripts/personal-storage-mcp.ts
-var storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path2.join(homedir(), ".asfai-personal-storage"));
+var storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path3.join(homedir(), ".asfai-personal-storage"));
 var classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
-var server = new McpServer({ name: "asfai-private-companion", version: "1.2.0" });
+var server = new McpServer({ name: "asfai-private-companion", version: "1.3.0" });
 var documentSchema = external_exports.enum(personalDocumentKinds);
-var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"]).describe("Use status first. Then choose local configuration, Solid OIDC connection, document load/save, identity/signing, verification, or disconnect.");
+var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "forget_solid_authorization", "load", "save", "identity", "sign", "verify"]).describe("Use status first. Then choose local configuration, persistent Solid OIDC connection, document load/save, identity/signing, verification, or an explicitly user-requested authorization removal.");
 var payloadSchema = external_exports.object({
   baseDirectory: external_exports.string().optional().describe("configure_local: optional owner-approved directory; omit to keep the default private directory"),
   podRoot: external_exports.string().url().optional().describe("connect_solid: HTTPS Pod root, for example https://name.privatedatapod.com/"),
@@ -60573,12 +60924,12 @@ var payloadSchema = external_exports.object({
   expectedDigest: external_exports.string().regex(/^[a-f0-9]{64}$/i).optional().describe("save: digest returned by the preceding load, required for safe updates"),
   signature: external_exports.string().optional().describe("verify: base64 signature returned by sign"),
   publicKeyPem: external_exports.string().optional().describe("verify: signer public key returned by sign")
-}).optional().describe("Action-specific fields. status, disconnect, and identity need no payload.");
+}).optional().describe("Action-specific fields. status, forget_solid_authorization, and identity need no payload.");
 var payloadHelp = {
   status: "No payload.",
   configure_local: "payload: { baseDirectory? }",
   connect_solid: "payload: { podRoot, oidcIssuer, port? }",
-  disconnect: "No payload.",
+  forget_solid_authorization: "No payload. Use only after the user explicitly asks ASFAI to forget or revoke this device's saved Pod authorization.",
   load: "payload: { document, ownerRole? }",
   save: "payload: { document, value, expectedDigest? }; load first and use expectedDigest for updates.",
   identity: "No payload.",
@@ -60590,18 +60941,18 @@ function json2(data) {
 }
 server.registerTool("asfai_personal_storage", {
   title: "Connect and use PrivateDataPod or local ASFAI storage",
-  description: "Use whenever a user asks to connect, read, or write a PrivateDataPod/Solid Pod, or save ASFAI data locally. This is the installed Solid-to-MCP bridge: call status first, then connect_solid for browser OIDC; it also loads/saves verified personal documents and signs classroom envelopes. Do not say another connector or bridge is required.",
+  description: "Use whenever a user asks to connect, read, or write a PrivateDataPod/Solid Pod, or save ASFAI data locally. This is the installed Solid-to-MCP bridge: call status first; it silently restores device-protected Solid authorization across chats and restarts, and connect_solid needs browser approval only the first time or after provider revocation. Never call forget_solid_authorization merely because a chat ends; use it only after an explicit user request. The tool also loads/saves verified personal documents and signs classroom envelopes. Do not say another connector or bridge is required.",
   inputSchema: { action: actionSchema, payload: payloadSchema }
 }, async ({ action, payload }) => {
   try {
     const input = payload ?? {};
-    if (action === "status") return json2(storage.status());
-    if (action === "configure_local") return json2(storage.configureLocal(external_exports.string().optional().parse(input.baseDirectory)));
+    if (action === "status") return json2(await storage.status());
+    if (action === "configure_local") return json2(await storage.configureLocal(external_exports.string().optional().parse(input.baseDirectory)));
     if (action === "connect_solid") {
       const parsed2 = external_exports.object({ podRoot: external_exports.string().url(), oidcIssuer: external_exports.string().url(), port: external_exports.number().int().min(1024).max(65535).optional() }).parse(input);
       return json2(await storage.connectSolid(parsed2));
     }
-    if (action === "disconnect") return json2(await storage.disconnect());
+    if (action === "forget_solid_authorization") return json2(await storage.forgetSolidAuthorization());
     if (action === "load") {
       const parsed2 = external_exports.object({ document: documentSchema, ownerRole: external_exports.enum(["learner", "teacher"]).optional() }).parse(input);
       return json2(await storage.load(parsed2.document, parsed2.ownerRole));

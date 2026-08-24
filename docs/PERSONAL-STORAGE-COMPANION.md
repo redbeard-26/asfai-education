@@ -27,11 +27,13 @@ Call `connect_solid` with only:
 }
 ```
 
-The companion starts a loopback callback on `127.0.0.1:18765` and returns the provider authorization URL. Open that URL in the user's browser. Authentication and consent happen entirely on the provider page. The user must never paste a password, cookie, token, refresh token, client secret, or DPoP key into chat.
+On first use, the companion starts a loopback callback on `127.0.0.1:18765` and returns the provider authorization URL. Open that URL in the user's browser. Authentication and consent happen entirely on the provider page. The user must never paste a password, cookie, token, refresh token, client secret, or DPoP key into chat.
 
-Authorization remains usable while the companion process and provider session are valid. Restarting the companion requires a new OIDC round trip, but a still-active provider session can usually complete it without another password prompt. The companion intentionally does not persist refresh tokens to disk.
+After approval, the companion saves Solid's client registration, refresh token, and DPoP material in device-user-protected storage. On Windows the complete session map is encrypted with current-user DPAPI; on other supported hosts it is restricted to an owner-only file until a native vault is available. `status` silently refreshes and restores the session after a new chat, MCP process, application restart, or computer restart. A normal lifecycle event never logs out or deletes the saved grant.
 
-After `status` reports `isLoggedIn: true`, use `load` and `save` with document `learner`, `educator`, or `classroom`. `save` performs a write and independent read-back. Pass the digest returned by the prior `load` as `expectedDigest`; a conflict fails instead of silently overwriting newer data.
+The authorization remains available until the user explicitly calls `forget_solid_authorization` (which removes the local reusable grant) or revokes ASFAI through the Pod provider. A revoked, expired, or otherwise invalid grant requires one new browser approval if the user reconnects. Assistants must never call the forget action as end-of-chat or end-of-lesson cleanup.
+
+After `status` reports `isLoggedIn: true`, use `load` and `save` with document `learner`, `educator`, or `classroom`; do not call `connect_solid` again. `save` performs a write and independent read-back. Pass the digest returned by the prior `load` as `expectedDigest`; a conflict fails instead of silently overwriting newer data.
 
 ## Local fallback and classroom identity
 

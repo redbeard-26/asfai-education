@@ -16,10 +16,10 @@ import { PersonalStorageService, personalDocumentKinds } from "../src/lib/person
 
 const storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path.join(homedir(), ".asfai-personal-storage"));
 const classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
-const server = new McpServer({ name: "asfai-private-companion", version: "1.2.0" });
+const server = new McpServer({ name: "asfai-private-companion", version: "1.3.0" });
 const documentSchema = z.enum(personalDocumentKinds);
-const actionSchema = z.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"])
-  .describe("Use status first. Then choose local configuration, Solid OIDC connection, document load/save, identity/signing, verification, or disconnect.");
+const actionSchema = z.enum(["status", "configure_local", "connect_solid", "forget_solid_authorization", "load", "save", "identity", "sign", "verify"])
+  .describe("Use status first. Then choose local configuration, persistent Solid OIDC connection, document load/save, identity/signing, verification, or an explicitly user-requested authorization removal.");
 const payloadSchema = z.object({
   baseDirectory: z.string().optional().describe("configure_local: optional owner-approved directory; omit to keep the default private directory"),
   podRoot: z.string().url().optional().describe("connect_solid: HTTPS Pod root, for example https://name.privatedatapod.com/"),
@@ -31,13 +31,13 @@ const payloadSchema = z.object({
   expectedDigest: z.string().regex(/^[a-f0-9]{64}$/i).optional().describe("save: digest returned by the preceding load, required for safe updates"),
   signature: z.string().optional().describe("verify: base64 signature returned by sign"),
   publicKeyPem: z.string().optional().describe("verify: signer public key returned by sign"),
-}).optional().describe("Action-specific fields. status, disconnect, and identity need no payload.");
+}).optional().describe("Action-specific fields. status, forget_solid_authorization, and identity need no payload.");
 
 const payloadHelp: Record<z.infer<typeof actionSchema>, string> = {
   status: "No payload.",
   configure_local: "payload: { baseDirectory? }",
   connect_solid: "payload: { podRoot, oidcIssuer, port? }",
-  disconnect: "No payload.",
+  forget_solid_authorization: "No payload. Use only after the user explicitly asks ASFAI to forget or revoke this device's saved Pod authorization.",
   load: "payload: { document, ownerRole? }",
   save: "payload: { document, value, expectedDigest? }; load first and use expectedDigest for updates.",
   identity: "No payload.",
@@ -51,18 +51,18 @@ function json(data: unknown) {
 
 server.registerTool("asfai_personal_storage", {
   title: "Connect and use PrivateDataPod or local ASFAI storage",
-  description: "Use whenever a user asks to connect, read, or write a PrivateDataPod/Solid Pod, or save ASFAI data locally. This is the installed Solid-to-MCP bridge: call status first, then connect_solid for browser OIDC; it also loads/saves verified personal documents and signs classroom envelopes. Do not say another connector or bridge is required.",
+  description: "Use whenever a user asks to connect, read, or write a PrivateDataPod/Solid Pod, or save ASFAI data locally. This is the installed Solid-to-MCP bridge: call status first; it silently restores device-protected Solid authorization across chats and restarts, and connect_solid needs browser approval only the first time or after provider revocation. Never call forget_solid_authorization merely because a chat ends; use it only after an explicit user request. The tool also loads/saves verified personal documents and signs classroom envelopes. Do not say another connector or bridge is required.",
   inputSchema: { action: actionSchema, payload: payloadSchema },
 }, async ({ action, payload }) => {
   try {
     const input = payload ?? {};
-    if (action === "status") return json(storage.status());
-    if (action === "configure_local") return json(storage.configureLocal(z.string().optional().parse(input.baseDirectory)));
+    if (action === "status") return json(await storage.status());
+    if (action === "configure_local") return json(await storage.configureLocal(z.string().optional().parse(input.baseDirectory)));
     if (action === "connect_solid") {
       const parsed = z.object({ podRoot: z.string().url(), oidcIssuer: z.string().url(), port: z.number().int().min(1024).max(65535).optional() }).parse(input);
       return json(await storage.connectSolid(parsed));
     }
-    if (action === "disconnect") return json(await storage.disconnect());
+    if (action === "forget_solid_authorization") return json(await storage.forgetSolidAuthorization());
     if (action === "load") {
       const parsed = z.object({ document: documentSchema, ownerRole: z.enum(["learner", "teacher"]).optional() }).parse(input);
       return json(await storage.load(parsed.document, parsed.ownerRole));
