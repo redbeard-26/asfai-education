@@ -41,6 +41,8 @@ The education MCP server is also in this repository. Its default surface is eigh
 
 The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. The public server does not durably persist learner identity, progress, educator workspaces, sessions, room membership, or jobs.
 
+For clients that support local MCP processes, the optional one-tool personal companion (`npm run personal-storage:mcp`) performs actual verified local JSON or Solid Pod storage and owner-controlled classroom signatures without sending credentials to AWS. See [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md).
+
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
 See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
 
@@ -54,7 +56,7 @@ The Next.js app uses `/education` as its base path so it can be independently de
 https://constitution.asfai.org/education
 ```
 
-The `asfai-constitution` project rewrites `/education/*` to the separately running education service. Production is released manually to the shared ASFAI AWS host using the deployment package in `redbeard-26/asfai-constitution`; GitHub pushes do not deploy either service. The public education origin is `https://education.asfai.org`, while the constitution container reaches this service over the private Docker network.
+The `asfai-constitution` project rewrites `/education/*` to the separately running education service. Production is released manually to the shared ASFAI AWS host using the deployment package in `redbeard-26/asfai-constitution`; GitHub pushes do not deploy either service. Until a custom education hostname is moved, the stack's AWS-issued `TemporaryMcpOrigin` serves both `/education` and `/education/api/mcp`. The constitution container reaches education over the private Docker network.
 
 The repository-level `Dockerfile` produces the standalone Next.js image consumed by that release. The competency graph continues to use the upstream GitHub fetch/cache implementation; taxonomy files are not copied into the deployment repository or image beyond normal application source.
 
@@ -67,7 +69,7 @@ The MCP endpoint is:
 Production requires a non-secret public origin and a secret used only to sign one-hour artifact launches:
 
 ```text
-NEXT_PUBLIC_SITE_ORIGIN=https://education.asfai.org
+ASFAI_SITE_ORIGIN=https://<api-id>.execute-api.<region>.amazonaws.com
 ASFAI_ARTIFACT_LAUNCH_SECRET=<at least 32 random characters>
 ```
 
@@ -104,6 +106,7 @@ No student records are committed to this repository.
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
 - [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
+- [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md)
 - [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
 - [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)
 - [Block Algebra pilot](docs/BLOCK-ALGEBRA-PILOT.md)

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { getPriorityCapabilitySpec } from "@/lib/capabilities/priority-capabilities";
 
 export const capabilityAudienceSchema = z.enum(["platform", "educator", "student"]);
 export const capabilityModeSchema = z.enum(["one-shot", "interactive", "async-job", "control-plane"]);
@@ -290,6 +291,7 @@ function fromSeed(seed: CatalogSeed, audience: CapabilityDefinition["audience"])
   const requiredScopes = access === "district" ? ["district:admin"] : access === "educator" ? ["educator:workspace"] : access === "personal" ? ["learner:own"] : [];
   const mediaOutput = /image|podcast|song|presentation|audio/i.test(seed.name);
   const externalHandoffs = seed.id === "P25" ? ["oauth" as const] : seed.id === "P13" ? ["game" as const] : mediaOutput ? ["artifact-view" as const] : [];
+  const priority = getPriorityCapabilitySpec(seed.id);
   const inputSchema = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     type: "object",
@@ -324,17 +326,17 @@ function fromSeed(seed: CatalogSeed, audience: CapabilityDefinition["audience"])
   return capabilityDefinitionSchema.parse({
     id: seed.id,
     slug: slugify(seed.name),
-    version: "1.0.0",
+    version: priority ? "1.1.0" : "1.0.0",
     name: seed.name,
     audience,
     category: seed.category,
     description: seed.description,
-    guidance: defaultGuidance(audience, seed.description, risk),
+    guidance: priority?.guidance ?? defaultGuidance(audience, seed.description, risk),
     mode,
     risk,
-    inputSchema,
-    outputSchema,
-    evaluators: [
+    inputSchema: priority?.inputSchema ?? inputSchema,
+    outputSchema: priority?.outputSchema ?? outputSchema,
+    evaluators: priority?.evaluators ?? [
       "schema",
       "factual-support-and-source-limitations",
       "accessibility-and-non-web-fallback",

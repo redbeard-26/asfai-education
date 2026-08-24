@@ -43,6 +43,10 @@ Quizzes keep answer keys in the teacher-owned definition and omit them from lear
 
 `asfai_storage` supports browser IndexedDB, a host-local JSON file, and a learner or educator Solid Pod. The public MCP never receives passwords, tokens, DPoP keys, or cookies. A write is successful only after an independent read-back produces the same digest.
 
+Clients that support a private local MCP process can install the one-tool personal storage companion. It turns those instructions into actual atomic local JSON or authenticated Solid operations and owner-controlled classroom signatures without expanding the public eight-tool context. See [Personal storage MCP companion](PERSONAL-STORAGE-COMPANION.md).
+
+Five production slices have specialized contracts rather than only generic generation guidance: T18 proofreader validates exact edit offsets and reconstructed text; T24 rubric validates objective coverage, descriptors, and weights; T41 worksheet validates item/answer-key coverage and accessibility structure; T48 lesson plan validates the full lesson package; and S25 Quiz Me uses private answer keys, one-item delivery, assistance-aware attempts, and provisional evidence. Preparation and validation remain actions behind existing gateway tools.
+
 OAuth, viewing media, playing a visual game, physical performance, and human signatures may require an external handoff. The MCP initiates or describes the handoff, preserves continuation state, and provides a text/structured fallback. No workflow requires the ASFAI website as coordinator.
 
 ## Compatibility mapping

@@ -31,6 +31,16 @@ import {
 } from "@/lib/capabilities/workspace";
 import { cancelCapabilityJob, capabilityJobSchema, startCapabilityJob, updateCapabilityJob } from "@/lib/capabilities/jobs";
 import { createStudentRoom, joinStudentRoom, setStudentRoomStatus, studentRoomSchema, updateStudentRoom } from "@/lib/capabilities/classroom";
+import {
+  acceptClassroomEnvelope,
+  classroomExchangeStoreSchema,
+  classroomExchangeSummary,
+  newClassroomExchangeStore,
+  putClassroomMembership,
+  putClassroomRoom,
+  queueClassroomEnvelope,
+  signedProgressEnvelopeSchema,
+} from "@/lib/capabilities/personal-state";
 import { answerQuizItem, createQuiz, finishQuizAttempt, publishQuiz, quizAttemptSchema, quizDefinitionSchema, retireQuiz, startQuizAttempt, updateQuiz } from "@/lib/capabilities/quiz";
 import { advanceWorkflow, cancelWorkflow, createWorkflow, startWorkflow, workflowCheckpointSchema, workflowDefinitionSchema } from "@/lib/capabilities/workflows";
 import { prepareCustomCapabilityPublication, validateCustomCapability } from "@/lib/capabilities/custom";
@@ -133,10 +143,10 @@ const evidenceActionSchema = z.enum([
 ]);
 
 const resourceActionSchema = z.enum([
-  "initialize", "search", "get", "create", "version", "delete", "publish", "retire", "create_collection", "update_collection", "share_collection", "revoke_collection", "export", "start_job", "get_job", "update_job", "cancel_job", "create_room", "update_room", "publish_room", "close_room", "create_quiz", "update_quiz", "publish_quiz", "retire_quiz", "create_workflow", "start_workflow", "advance_workflow", "cancel_workflow",
+  "initialize", "search", "get", "create", "version", "delete", "publish", "retire", "create_collection", "update_collection", "share_collection", "revoke_collection", "export", "start_job", "get_job", "update_job", "cancel_job", "create_room", "update_room", "publish_room", "close_room", "create_quiz", "update_quiz", "publish_quiz", "retire_quiz", "create_workflow", "start_workflow", "advance_workflow", "cancel_workflow", "initialize_classroom", "store_room", "store_membership", "queue_exchange", "accept_exchange", "classroom_summary",
 ]);
 
-const storageActionSchema = z.enum(["instructions", "verify", "export", "initialize"]);
+const storageActionSchema = z.enum(["instructions", "companion", "verify", "export", "initialize"]);
 
 function persistenceNotice(owner: "learner" | "educator") {
   return {
@@ -151,8 +161,8 @@ function persistenceNotice(owner: "learner" | "educator") {
 async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, payload: Record<string, unknown>, siteOrigin: string) {
   if (action === "manifest") {
     return {
-      server: { name: "asfai-education", version: "1.0.0" },
-      catalog: { version: "1.0.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
+      server: { name: "asfai-education", version: "1.1.0" },
+      catalog: { version: "1.1.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
       defaultTools: ASFAI_DEFAULT_TOOL_NAMES,
       contextBudget: { defaultToolCount: 8, maximumToolCount: 12, serializedCharacterTarget: 6000, serializedCharacterMaximum: 8000 },
       state: "Public graph and capability metadata are cacheable; learner and educator state remains caller-owned.",
@@ -373,6 +383,24 @@ async function evidenceAction(action: z.infer<typeof evidenceActionSchema>, payl
 }
 
 function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: Record<string, unknown>) {
+  if (action === "initialize_classroom") {
+    const input = z.object({ ownerRole: z.enum(["learner", "teacher"]), ownerId: z.string().optional() }).parse(payload);
+    return { store: newClassroomExchangeStore(input.ownerRole, input.ownerId), ...persistenceNotice(input.ownerRole === "teacher" ? "educator" : "learner") };
+  }
+  if (action === "store_room") {
+    const input = z.object({ store: classroomExchangeStoreSchema, room: studentRoomSchema }).parse(payload);
+    return { ...putClassroomRoom(input.store, input.room), ...persistenceNotice("educator") };
+  }
+  if (action === "store_membership") {
+    const input = z.object({ store: classroomExchangeStoreSchema, membership: z.unknown() }).parse(payload);
+    return { ...putClassroomMembership(input.store, input.membership), ...persistenceNotice("learner") };
+  }
+  if (action === "queue_exchange" || action === "accept_exchange") {
+    const input = z.object({ store: classroomExchangeStoreSchema, signedEnvelope: signedProgressEnvelopeSchema }).parse(payload);
+    const result = action === "queue_exchange" ? queueClassroomEnvelope(input.store, input.signedEnvelope) : acceptClassroomEnvelope(input.store, input.signedEnvelope);
+    return { ...result, ...persistenceNotice(input.store.ownerRole === "teacher" ? "educator" : "learner") };
+  }
+  if (action === "classroom_summary") return classroomExchangeSummary(payload.store);
   if (action === "create_workflow") {
     const input = z.object({ title: z.string(), steps: z.array(z.unknown()).min(1).max(100) }).parse(payload);
     return { ...createWorkflow(input), ...persistenceNotice("educator") };
@@ -482,6 +510,16 @@ function educatorPersistence(target?: { mode?: string; location?: string }) {
 }
 
 function storageAction(action: z.infer<typeof storageActionSchema>, payload: Record<string, unknown>) {
+  if (action === "companion") {
+    return {
+      tool: "asfai_personal_storage",
+      publicToolCountImpact: 0,
+      installSkill: { tool: "asfai_capability", action: "install_skill", payload: { name: "asfai-personal-storage" } },
+      launch: { repository: "https://github.com/redbeard-26/asfai-education", command: "npm run personal-storage:mcp", transport: "stdio" },
+      actions: ["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"],
+      boundary: "The private companion runs in the user's MCP client. The public AWS MCP never receives Solid credentials or private signing keys.",
+    };
+  }
   if (action === "initialize") {
     const owner = z.enum(["learner", "educator"]).parse(payload.owner);
     return owner === "learner" ? { state: migrateLearnerProfile(), ...persistenceNotice("learner") } : { state: newEducatorWorkspace(), ...persistenceNotice("educator") };
@@ -511,7 +549,7 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
   server.registerTool("asfai_graph", { title: "Use the public learning graph", description: "Search objectives, prerequisites, frontiers, programs, and paths.", inputSchema: { action: graphActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(await graphAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_run", { title: "Prepare an ASFAI capability run", description: "Returns versioned instructions and safety contracts for one-shot or job capabilities.", inputSchema: { capabilityId: z.string(), input: z.record(z.string(), z.unknown()), options: compactPayloadSchema } }, async ({ capabilityId, input, options }) => {
+  server.registerTool("asfai_run", { title: "Prepare or validate an ASFAI capability run", description: "Returns versioned instructions, specialized workflows, validation, and safety contracts for one-shot or job capabilities.", inputSchema: { capabilityId: z.string(), input: z.record(z.string(), z.unknown()), options: compactPayloadSchema } }, async ({ capabilityId, input, options }) => {
     try { return json(prepareCapabilityRun(capabilityRunInputSchema.parse({ capabilityId, input, ...(options ?? {}) }))); } catch (error) { return err(error); }
   });
   server.registerTool("asfai_session", { title: "Continue an interactive learning session", description: "Start, resume, advance, or finish portable learner-facing session state.", inputSchema: { action: sessionActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
@@ -548,7 +586,7 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
   server.registerTool("asfai_resource", { title: "Manage educator-owned resources", description: "Portable versioned resources, collections, sharing previews, and export.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_storage", { title: "Persist and verify caller-owned data", description: "Host-side IndexedDB, local JSON, or Solid Pod instructions and read-back verification.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_storage", { title: "Persist and verify caller-owned data", description: "Discover the private companion or verify host-side IndexedDB, local JSON, and Solid Pod storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(storageAction(action, data(payload))); } catch (error) { return err(error); }
   });
 }
