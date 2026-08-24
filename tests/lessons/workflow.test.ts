@@ -32,6 +32,7 @@ describe("lesson workflow", () => {
         objectiveId: lesson.objectives[0].objectiveId,
         occurredAt: new Date().toISOString(),
         verb: "demonstrated",
+        artifactIds: [],
       },
       {
         id: "urn:test:excluded",
@@ -39,6 +40,7 @@ describe("lesson workflow", () => {
         objectiveId: lesson.objectives[0].objectiveId,
         occurredAt: new Date().toISOString(),
         verb: "demonstrated",
+        artifactIds: [],
       },
     );
     const report = buildLessonReport(lesson, run, profile);

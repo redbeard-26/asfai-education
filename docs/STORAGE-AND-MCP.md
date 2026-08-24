@@ -10,7 +10,7 @@ Learner progress is private, user-controlled state. The initial implementation s
 2. **Solid Pod** — portable cloud persistence using Solid OIDC. PrivateDataPod is the first tested provider, but the implementation uses Solid standards rather than provider-specific APIs.
 3. **Local JSON** — a host-approved `asfai/learner.json` file when the AI chat environment has persistent filesystem access.
 
-The learner profile retains a pseudonymous learner UUID, evidence events, assessment claims, derived learner-objective states, lesson runs, and lesson reports. Moving a profile from IndexedDB to a Pod preserves the same learner UUID. Schema `0.2` migrates existing `0.1` profiles in place.
+The learner profile retains a pseudonymous learner UUID, evidence events, learner-owned artifact metadata and short transcripts, assessment claims, derived learner-objective states, lesson runs, and lesson reports. Moving a profile from IndexedDB to a Pod preserves the same learner UUID. Schema `0.2` migrates existing `0.1` profiles in place. Inline artifact transcripts are capped at 8 KiB of UTF-8 text; larger or binary artifacts stay in their owner-controlled source and are referenced from the profile.
 
 The Solid implementation stores the current portable profile at:
 

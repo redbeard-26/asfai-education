@@ -14,9 +14,30 @@ export interface EvidenceEvent {
   occurredAt: string;
   activityId?: string;
   verb: string;
+  artifactIds: string[];
   result?: unknown;
   assistance?: unknown;
   source?: { system: string; version?: string };
+}
+
+export interface EvidenceArtifact {
+  id: string;
+  createdAt: string;
+  kind: "document" | "image" | "audio" | "video" | "code" | "performance" | "other";
+  title?: string;
+  mediaType?: string;
+  byteLength?: number;
+  sha256?: string;
+  provenance: { system: string; externalId?: string; url?: string; retrievedAt?: string };
+  transcript?: {
+    text?: string;
+    summary?: string;
+    language?: string;
+    method: "learner-authored" | "human-transcribed" | "ai-transcribed" | "provider-extracted";
+    reviewStatus: "unreviewed" | "reviewed" | "learner-confirmed";
+    confidence?: number;
+    complete: boolean;
+  };
 }
 
 export interface AssessmentClaim {
@@ -49,6 +70,7 @@ export interface LearnerProfile {
   createdAt: string;
   updatedAt: string;
   evidence: EvidenceEvent[];
+  artifacts: Record<string, EvidenceArtifact>;
   assessmentClaims: AssessmentClaim[];
   objectiveStates: Record<string, LearnerObjectiveState>;
   lessonRuns: Record<string, LessonRun>;
@@ -71,6 +93,7 @@ export function assertStoredProfileMatches(expected: LearnerProfile, actual: Lea
   if (!actual) throw new Error("Learner profile was not found after the write completed.");
   const expectedCounts = [
     expected.evidence.length,
+    Object.keys(expected.artifacts).length,
     expected.assessmentClaims.length,
     Object.keys(expected.objectiveStates).length,
     Object.keys(expected.lessonRuns).length,
@@ -78,6 +101,7 @@ export function assertStoredProfileMatches(expected: LearnerProfile, actual: Lea
   ];
   const actualCounts = [
     actual.evidence.length,
+    Object.keys(actual.artifacts).length,
     actual.assessmentClaims.length,
     Object.keys(actual.objectiveStates).length,
     Object.keys(actual.lessonRuns).length,
@@ -101,6 +125,7 @@ export function newLearnerProfile(learnerId = `urn:uuid:${crypto.randomUUID()}`)
     createdAt: now,
     updatedAt: now,
     evidence: [],
+    artifacts: {},
     assessmentClaims: [],
     objectiveStates: {},
     lessonRuns: {},
@@ -117,7 +142,8 @@ export function migrateLearnerProfile(profile: unknown): LearnerProfile {
     learnerId: value.learnerId,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
-    evidence: Array.isArray(value.evidence) ? value.evidence : [],
+    evidence: Array.isArray(value.evidence) ? value.evidence.map((event) => ({ ...event, artifactIds: event.artifactIds ?? [] })) : [],
+    artifacts: value.artifacts ?? {},
     assessmentClaims: Array.isArray(value.assessmentClaims) ? value.assessmentClaims : [],
     objectiveStates: value.objectiveStates ?? {},
     lessonRuns: value.lessonRuns ?? {},

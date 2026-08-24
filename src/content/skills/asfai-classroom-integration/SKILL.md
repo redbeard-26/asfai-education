@@ -48,6 +48,8 @@ Before returning a grade or feedback, save the concise objective-level evidence 
 4. Save the complete updated document with the prior digest as `expectedDigest`.
 5. Treat it as saved only when the result has `verified:true`.
 
+If the original file remains in Classroom, add one learner-owned entry to the profile's top-level `artifacts` map with `{ id, createdAt, kind, title?, mediaType?, byteLength?, sha256?, provenance:{ system, externalId?, url?, retrievedAt? }, transcript?:{ text?, summary?, language?, method, reviewStatus, confidence?, complete } }`, and add that artifact ID to each relevant evidence event's `artifactIds`. Preserve the full transcript only when it is at most 8,192 UTF-8 bytes. For larger transcripts, preserve a summary of at most 2,000 characters and the Classroom reference; do not embed the original binary or a base64 copy. Record how the transcript was produced, review status, confidence when available, and whether it is complete. An uncertain handwriting transcription stays `ai-transcribed`, `unreviewed`, and incomplete until confirmed. Do not send the transcript or complete learner profile to the public ASFAI MCP.
+
 If saving fails, say that the result remains unsaved. Do not return a grade that implies the private evidence record was saved when it was not.
 
 ## Export with explicit confirmation

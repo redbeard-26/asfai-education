@@ -60197,6 +60197,42 @@ function newEducatorWorkspace(educatorId = uuidUrn()) {
 }
 
 // src/lib/learner-workflow.ts
+var INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES = 8 * 1024;
+var inlineTranscriptTextSchema = external_exports.string().min(1).superRefine((value, context) => {
+  const byteLength = new TextEncoder().encode(value).byteLength;
+  if (byteLength > INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES) {
+    context.addIssue({
+      code: "custom",
+      message: `Inline evidence transcripts are limited to ${INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES} UTF-8 bytes. Store a summary and external reference instead.`
+    });
+  }
+});
+var evidenceArtifactSchema = external_exports.object({
+  id: external_exports.string(),
+  createdAt: external_exports.string(),
+  kind: external_exports.enum(["document", "image", "audio", "video", "code", "performance", "other"]),
+  title: external_exports.string().max(500).optional(),
+  mediaType: external_exports.string().max(200).optional(),
+  byteLength: external_exports.number().int().min(0).optional(),
+  sha256: external_exports.string().regex(/^[a-f0-9]{64}$/i).optional(),
+  provenance: external_exports.object({
+    system: external_exports.string().min(1).max(200),
+    externalId: external_exports.string().max(2e3).optional(),
+    url: external_exports.string().url().max(4e3).optional(),
+    retrievedAt: external_exports.string().optional()
+  }),
+  transcript: external_exports.object({
+    text: inlineTranscriptTextSchema.optional(),
+    summary: external_exports.string().min(1).max(2e3).optional(),
+    language: external_exports.string().max(100).optional(),
+    method: external_exports.enum(["learner-authored", "human-transcribed", "ai-transcribed", "provider-extracted"]),
+    reviewStatus: external_exports.enum(["unreviewed", "reviewed", "learner-confirmed"]),
+    confidence: external_exports.number().min(0).max(1).optional(),
+    complete: external_exports.boolean()
+  }).refine((value) => value.text || value.summary, {
+    message: "A transcript must contain inline text or a summary."
+  }).optional()
+});
 var masteryLevelSchema = external_exports.enum([
   "not_observed",
   "emerging",
@@ -60211,6 +60247,7 @@ var evidenceEventSchema = external_exports.object({
   occurredAt: external_exports.string(),
   activityId: external_exports.string().optional(),
   verb: external_exports.string(),
+  artifactIds: external_exports.array(external_exports.string()).default([]),
   result: external_exports.unknown().optional(),
   assistance: external_exports.unknown().optional(),
   source: external_exports.object({ system: external_exports.string(), version: external_exports.string().optional() }).optional()
@@ -60247,6 +60284,7 @@ var learnerProfileSchema = external_exports.object({
   createdAt: external_exports.string(),
   updatedAt: external_exports.string(),
   evidence: external_exports.array(evidenceEventSchema),
+  artifacts: external_exports.record(external_exports.string(), evidenceArtifactSchema).default({}),
   assessmentClaims: external_exports.array(assessmentClaimSchema),
   objectiveStates: external_exports.record(external_exports.string(), learnerObjectiveStateSchema),
   lessonRuns: external_exports.record(external_exports.string(), lessonRunSchema).default({}),
@@ -60273,6 +60311,7 @@ function newLearnerProfile(learnerId = uuidUrn2()) {
     createdAt: now,
     updatedAt: now,
     evidence: [],
+    artifacts: {},
     assessmentClaims: [],
     objectiveStates: {},
     lessonRuns: {},
@@ -60284,6 +60323,7 @@ function migrateLearnerProfile(profile) {
   return {
     ...profile,
     schemaVersion: "0.2",
+    artifacts: profile.artifacts ?? {},
     lessonRuns: profile.lessonRuns ?? {},
     lessonReports: profile.lessonReports ?? {}
   };

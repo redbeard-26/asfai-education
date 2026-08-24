@@ -23,7 +23,7 @@ asfai_personal_storage verified save
 asfai_classroom export_work / return_evaluation
 ```
 
-The public AWS MCP remains stateless. Classroom passwords, authorization codes, access and refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles never go to it. The local companion keeps OAuth material only in memory; disconnecting or restarting it requires authorization again. Detailed evidence is saved to the learner's or educator's local JSON/Solid Pod document, not retained by the classroom bridge.
+The public AWS MCP remains stateless. Classroom passwords, authorization codes, access and refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles never go to it. The local companion keeps OAuth material only in memory; disconnecting or restarting it requires authorization again. Detailed evidence is saved to the learner's or educator's local JSON/Solid Pod document, not retained by the classroom bridge. When the original artifact remains in Classroom, the learner record may retain its provider reference and an inline transcript of at most 8 KiB; larger transcripts use a concise summary and reference instead.
 
 ## Tool actions
 

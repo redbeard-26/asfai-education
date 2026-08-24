@@ -20,4 +20,6 @@ The companion exposes one tool, `asfai_personal_storage`:
 
 Pod documents are stored at `<pod-root>/asfai/learner.json`, `<pod-root>/asfai/educator.json`, and `<pod-root>/asfai/classroom.json`. Local documents use the same names under the configured directory. Say that data is saved only when the tool returns `verified: true` after read-back.
 
+The learner document may contain a top-level `artifacts` map. Evidence events link entries through `artifactIds`. Keep full transcript text inline only through the 8,192-byte UTF-8 cutoff; otherwise retain a summary of at most 2,000 characters and a provider/object reference. Binary artifact content stays outside `learner.json`.
+
 For teacher/student exchange, use `asfai_evidence` to create an integrity-protected progress envelope, `asfai_personal_storage` to sign the exact envelope, and `asfai_resource` to queue or accept the signed envelope. Share only the scoped envelope the learner approved, never the full profile or raw conversation.

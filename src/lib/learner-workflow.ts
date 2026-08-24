@@ -2,6 +2,44 @@ import { z } from "zod";
 import { lessonReportSchema, lessonRunSchema } from "@/lib/lessons/schemas";
 
 export const ASSESSMENT_POLICY_VERSION = "asfai-assessment-0.2";
+export const INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES = 8 * 1024;
+
+const inlineTranscriptTextSchema = z.string().min(1).superRefine((value, context) => {
+  const byteLength = new TextEncoder().encode(value).byteLength;
+  if (byteLength > INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES) {
+    context.addIssue({
+      code: "custom",
+      message: `Inline evidence transcripts are limited to ${INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES} UTF-8 bytes. Store a summary and external reference instead.`,
+    });
+  }
+});
+
+export const evidenceArtifactSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  kind: z.enum(["document", "image", "audio", "video", "code", "performance", "other"]),
+  title: z.string().max(500).optional(),
+  mediaType: z.string().max(200).optional(),
+  byteLength: z.number().int().min(0).optional(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
+  provenance: z.object({
+    system: z.string().min(1).max(200),
+    externalId: z.string().max(2000).optional(),
+    url: z.string().url().max(4000).optional(),
+    retrievedAt: z.string().optional(),
+  }),
+  transcript: z.object({
+    text: inlineTranscriptTextSchema.optional(),
+    summary: z.string().min(1).max(2000).optional(),
+    language: z.string().max(100).optional(),
+    method: z.enum(["learner-authored", "human-transcribed", "ai-transcribed", "provider-extracted"]),
+    reviewStatus: z.enum(["unreviewed", "reviewed", "learner-confirmed"]),
+    confidence: z.number().min(0).max(1).optional(),
+    complete: z.boolean(),
+  }).refine((value) => value.text || value.summary, {
+    message: "A transcript must contain inline text or a summary.",
+  }).optional(),
+});
 
 export const masteryLevelSchema = z.enum([
   "not_observed",
@@ -18,6 +56,7 @@ export const evidenceEventSchema = z.object({
   occurredAt: z.string(),
   activityId: z.string().optional(),
   verb: z.string(),
+  artifactIds: z.array(z.string()).default([]),
   result: z.unknown().optional(),
   assistance: z.unknown().optional(),
   source: z.object({ system: z.string(), version: z.string().optional() }).optional(),
@@ -59,6 +98,7 @@ export const learnerProfileSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   evidence: z.array(evidenceEventSchema),
+  artifacts: z.record(z.string(), evidenceArtifactSchema).default({}),
   assessmentClaims: z.array(assessmentClaimSchema),
   objectiveStates: z.record(z.string(), learnerObjectiveStateSchema),
   lessonRuns: z.record(z.string(), lessonRunSchema).default({}),
@@ -85,6 +125,7 @@ export const storageTargetSchema = z.object({
 });
 
 export type MasteryLevel = z.infer<typeof masteryLevelSchema>;
+export type EvidenceArtifact = z.infer<typeof evidenceArtifactSchema>;
 export type LearnerProfileInput = z.infer<typeof learnerProfileSchema>;
 export type LearnerProfile = Omit<LearnerProfileInput, "schemaVersion"> & { schemaVersion: "0.2" };
 export type LearningInteraction = z.infer<typeof learningInteractionSchema>;
@@ -116,6 +157,7 @@ export function newLearnerProfile(learnerId = uuidUrn()): LearnerProfile {
     createdAt: now,
     updatedAt: now,
     evidence: [],
+    artifacts: {},
     assessmentClaims: [],
     objectiveStates: {},
     lessonRuns: {},
@@ -128,6 +170,7 @@ export function migrateLearnerProfile(profile?: LearnerProfileInput): LearnerPro
   return {
     ...profile,
     schemaVersion: "0.2",
+    artifacts: profile.artifacts ?? {},
     lessonRuns: profile.lessonRuns ?? {},
     lessonReports: profile.lessonReports ?? {},
   };
@@ -158,6 +201,7 @@ export function summarizeLearnerProfile(profile?: LearnerProfileInput) {
     schemaVersion: current.schemaVersion,
     updatedAt: current.updatedAt,
     evidenceEventCount: current.evidence.length,
+    artifactCount: Object.keys(current.artifacts).length,
     assessmentClaimCount: current.assessmentClaims.length,
     objectiveCount: Object.keys(current.objectiveStates).length,
     byLevel,
@@ -275,6 +319,7 @@ export function recordLearningEvidence(input: RecordEvidenceInput) {
     occurredAt: now,
     activityId: uuidUrn(),
     verb: "demonstrated",
+    artifactIds: [],
     result: {
       level: input.level,
       confidence: input.confidence,
