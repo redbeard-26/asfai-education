@@ -13,7 +13,7 @@ ASFAI lessons are public, immutable plans that coordinate objectives, activities
 
 The learner-profile schema is `0.2`. Existing `0.1` profiles are upgraded without changing the learner identifier or existing evidence and claims. Lesson runs and reports are added as separate collections.
 
-Large telemetry bundles and student artifacts should be stored separately from `learner.json` and referenced by digest or private URL. The current browser and Solid stores continue to serialize the portable snapshot in one resource; separate blob stores are the next storage-adapter increment.
+Small textual representations of student artifacts may be retained in `learner.json`: inline transcript text is capped at 8 KiB of UTF-8 text per artifact. The artifact stays in the top-level learner-owned `artifacts` map and evidence events refer to it by ID. Larger text uses an inline summary of at most 2,000 characters plus its private provider/object reference. Binary files and large telemetry bundles stay outside `learner.json`; images, audio, video, and documents must not be base64-encoded into the profile. The current browser and Solid stores continue to serialize the portable snapshot in one resource; separate blob stores are the next storage-adapter increment.
 
 ## MCP workflow
 

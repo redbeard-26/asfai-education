@@ -110,6 +110,7 @@ export function recordLessonEvidence(input: RecordLessonEvidenceInput) {
       occurredAt: observation.occurredAt,
       activityId: `${input.lesson.id}:${input.lesson.version}:${input.activityId}`,
       verb: "demonstrated",
+      artifactIds: [],
       result: {
         lessonRunId: parsedRun.id,
         evidenceType: observation.evidenceType,

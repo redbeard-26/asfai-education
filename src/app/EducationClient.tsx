@@ -146,6 +146,7 @@ export default function EducationClient() {
       objectiveId: objective.id,
       occurredAt: now,
       verb: "self-assessment-recorded",
+      artifactIds: [],
       result: { selfReported: true, claimedLevel: "mastered" },
       source: { system: "asfai-education", version: "0.1.0" },
     });
