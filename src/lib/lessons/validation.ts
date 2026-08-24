@@ -28,6 +28,16 @@ function canonical(value: unknown): string {
 export function lessonContentDigest(lesson: LessonDefinition) {
   const content = {
     ...lesson,
+    artifacts: lesson.artifacts.map((artifact) => {
+      let url = artifact.url;
+      try {
+        const parsed = new URL(url);
+        if (parsed.pathname.startsWith("/education/artifacts/")) url = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch {
+        // Stable relative artifact paths are already in digest form.
+      }
+      return { ...artifact, url };
+    }),
     provenance: { ...lesson.provenance, contentDigest: undefined },
   };
   return createHash("sha256").update(canonical(content)).digest("hex");

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import blockAlgebra from "@/content/lessons/block-algebra/1.0.0/lesson.json";
 import { validateLesson } from "@/lib/lessons/validation";
+import { lessonForOrigin } from "@/lib/lessons/catalog";
 
 describe("lesson validation", () => {
   it("accepts the bundled Block Algebra lesson", () => {
@@ -10,6 +11,12 @@ describe("lesson validation", () => {
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
     expect(result.lesson?.activities).toHaveLength(7);
+  });
+
+  it("preserves the immutable digest when internal artifact URLs are made absolute for a deployment origin", () => {
+    const parsed = validateLesson(blockAlgebra);
+    expect(parsed.valid).toBe(true);
+    expect(validateLesson(lessonForOrigin(parsed.lesson!, "https://example.execute-api.us-west-2.amazonaws.com"))).toMatchObject({ valid: true, errors: [] });
   });
 
   it("rejects an activity with an unknown artifact", () => {
