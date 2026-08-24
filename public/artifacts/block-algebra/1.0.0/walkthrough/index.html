@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Block Algebra — Walkthrough</title>
+<style>
+  :root{
+    --bg:#FBFAF7; --panel:#FFFFFF; --ink:#23252B; --muted:#8B8A82; --line:#E6E4DC;
+    --u-fill:#FCF0D6; --u-line:#C99A38; --u-ink:#8A6716;
+    --x-fill:#DEEAF1; --x-line:#5C88A7; --x-ink:#3B637E;
+    --x2-fill:#E9E4F4; --x2-line:#7C6BAA; --x2-ink:#5A4B85;
+    --ok:#2E7D5B; --ok-bg:#EAF4EF;
+    --bad:#A85B3C; --bad-bg:#F7EEE9;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.45 ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  .math{ font-family:Georgia, "Times New Roman", serif; }
+  .math i{ font-style:italic; }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; border-bottom:1px solid var(--line); background:var(--bg);
+  }
+  .wordmark{ font-weight:600; letter-spacing:.01em; font-size:15px; }
+  .wordmark span{ color:var(--muted); font-weight:400; }
+  .dots{ display:flex; gap:7px; margin-left:auto; align-items:center; }
+  .dot{
+    width:11px; height:11px; border-radius:50%; padding:0; border:1.5px solid var(--muted);
+    background:transparent; cursor:pointer;
+  }
+  .dot[disabled]{ opacity:.35; cursor:default; }
+  .dot.done{ background:var(--ink); border-color:var(--ink); }
+  .dot.cur{ outline:2px solid var(--ink); outline-offset:2px; }
+  .dot:focus-visible{ outline:2px solid var(--x-line); outline-offset:2px; }
+
+  /* ---------- target strip ---------- */
+  .strip{
+    display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap;
+    padding:16px 20px 14px; border-bottom:1px solid var(--line);
+  }
+  .goal .eyebrow{
+    text-transform:uppercase; letter-spacing:.12em; font-size:11px; color:var(--muted);
+    margin-bottom:2px;
+  }
+  .goal .target{ font-size:30px; line-height:1.1; }
+  .goal .hint{ color:var(--muted); font-size:13px; margin-top:4px; max-width:52ch; }
+  .actions{ margin-left:auto; display:flex; gap:8px; align-items:center; }
+  button.btn{
+    font:inherit; font-size:14px; padding:8px 18px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  button.btn.small{ font-size:13px; padding:6px 12px; }
+  button.btn:hover{ opacity:.88; }
+  button.btn:focus-visible{ outline:2px solid var(--x-line); outline-offset:2px; }
+
+  /* ---------- board ---------- */
+  .board-wrap{ flex:1; display:flex; padding:16px 20px 0; min-height:0; }
+  #board{
+    position:relative; flex:1; min-height:440px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; touch-action:none;
+  }
+  .tile{
+    position:absolute; display:flex; align-items:center; justify-content:center;
+    border-radius:5px; cursor:grab; user-select:none; touch-action:none;
+    font-family:Georgia, "Times New Roman", serif;
+  }
+  .tile.dragging{ cursor:grabbing; box-shadow:0 8px 22px rgba(30,30,40,.14); }
+  .tile.t1 { background:var(--u-fill);  border:1.5px solid var(--u-line);  color:var(--u-ink);  font-size:15px; }
+  .tile.tx { background:var(--x-fill);  border:1.5px solid var(--x-line);  color:var(--x-ink);  font-size:17px; }
+  .tile.tx2{ background:var(--x2-fill); border:1.5px solid var(--x2-line); color:var(--x2-ink); font-size:22px; }
+  .tile i{ font-style:italic; }
+
+  #outline{
+    position:absolute; border:2px solid var(--ok); border-radius:4px; pointer-events:none;
+    display:none;
+  }
+  #outline .side{
+    position:absolute; color:var(--ok); font-size:15px; white-space:nowrap;
+    background:var(--panel); padding:0 6px;
+  }
+  #outline .top{ left:50%; top:-11px; transform:translateX(-50%); }
+  #outline .left{ left:-11px; top:50%; transform:translate(-50%,-50%) rotate(-90deg); }
+
+  #banner{
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    display:none; align-items:center; gap:14px; max-width:calc(100% - 28px);
+    padding:10px 16px; border-radius:10px; font-size:15px;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    #banner.show{ animation:rise .18s ease-out; }
+    @keyframes rise{ from{ transform:translate(-50%,8px); opacity:0; } to{ transform:translate(-50%,0); opacity:1; } }
+  }
+  #banner.ok { display:flex; background:var(--ok-bg); border:1px solid var(--ok); color:var(--ok); }
+  #banner.bad{ display:flex; background:var(--bad-bg); border:1px solid var(--bad); color:var(--bad); }
+  #banner .msg{ font-size:17px; }
+  #banner button.btn{ background:var(--ok); border-color:var(--ok); padding:6px 14px; }
+
+  #tray{
+    display:flex; align-items:center; gap:26px; flex-wrap:wrap;
+    margin:12px 20px 16px; padding:12px 18px;
+    background:var(--panel); border:1px dashed var(--line); border-radius:12px;
+  }
+  #tray.hidden{ display:none; }
+  .pal{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:grab; touch-action:none; user-select:none;
+  }
+  .pal .chip{
+    display:flex; align-items:center; justify-content:center; border-radius:4px;
+    font-family:Georgia,serif;
+  }
+  .pal .lbl{ font-size:12px; color:var(--muted); }
+  .tray-hint{ margin-left:auto; color:var(--muted); font-size:12.5px; max-width:34ch; text-align:right; }
+  @media (max-width:560px){ .tray-hint{ margin-left:0; text-align:left; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Block Algebra <span>— Walkthrough</span></div>
+  <nav class="dots" id="dots" aria-label="Levels"></nav>
+  <button class="btn ghost small" id="dataBtn" title="Download this session's telemetry as JSON">Data &#8595;</button>
+</header>
+
+<div class="strip">
+  <div class="goal">
+    <div class="eyebrow" id="kind"></div>
+    <div class="target math" id="target"></div>
+    <div class="hint" id="hint"></div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" id="resetBtn">Reset</button>
+    <button class="btn" id="checkBtn">Check</button>
+  </div>
+</div>
+
+<div class="board-wrap">
+  <div id="board">
+    <div id="outline"><span class="side top math"></span><span class="side left math"></span></div>
+    <div id="banner" role="status"><span class="msg math"></span><button class="btn" id="nextBtn">Next</button></div>
+  </div>
+</div>
+
+<div id="tray"></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   Block Algebra — Walkthrough (instrumented guided/level build for the
+   ASFAI learning platform demonstrator). Gameplay matches the original
+   puzzle game; this build additionally emits an evidence event stream
+   documented in LEARNING-EVIDENCE-GUIDE.md. Because every Check press
+   is an explicit, deliberate attempt, this variant needs no luck
+   filtering — attempts and failure reasons ARE the evidence.
+   ===================================================================== */
+
+const GAME = 'block-algebra-puzzle', GAME_VER = '1.1.1';
+
+/* ---------- constants ---------- */
+const U  = 44;                    // 1-block side, px
+const XF = 2.6180339887;          // x in units — irrational, so ones can never fake an x
+const XP = U * XF;
+const SNAP = 12, NEAR = 26, TOL = 4.5;
+
+const SIZES = { '1':[U,U], 'x':[XP,U], 'x2':[XP,XP] };
+const LABEL = { '1':'1', 'x':'<i>x</i>', 'x2':'<i>x</i>&sup2;' };
+
+/* ---------- levels ---------- */
+const LEVELS = [
+  { kind:'build',  a:0,b:1,c:2 },
+  { kind:'build',  a:0,b:2,c:3 },
+  { kind:'build',  a:1,b:2,c:1 },
+  { kind:'rect',   a:1,b:2,c:0 },
+  { kind:'rect',   a:1,b:3,c:2 },
+  { kind:'rect',   a:1,b:4,c:4 },
+  { kind:'rect',   a:1,b:5,c:6 },
+  { kind:'square', a:1,b:6,c:0 },
+  { kind:'rect',   a:2,b:5,c:2 },
+  { kind:'rect',   a:2,b:7,c:3 },
+  { kind:'sandbox' }
+];
+const KIND_TEXT = {
+  build:  ['Build it',            'Place exactly the tiles the target calls for \u2014 arrange them however you like.'],
+  rect:   ['Factor it',           'Arrange all the tiles into one solid rectangle, no gaps and no overlaps.'],
+  square: ['Complete the square', 'Add unit tiles from the tray until everything forms one perfect square.'],
+  sandbox:['Sandbox',             'Unlimited tiles. Build anything.']
+};
+
+/* ---------- string forms (telemetry) ---------- */
+function polyStr(a,b,c){
+  const p = [];
+  if(a) p.push((a===1?'':a)+'x^2');
+  if(b) p.push((b===1?'':b)+'x');
+  if(c) p.push(''+c);
+  return p.length ? p.join(' + ') : '0';
+}
+function sideStr(a,b){
+  if(a===0) return ''+b;
+  const ax = (a===1?'':a)+'x';
+  return b===0 ? ax : '('+ax+' + '+b+')';
+}
+function factoredStr(dw,dh){
+  let s1 = sideStr(dh.a,dh.b), s2 = sideStr(dw.a,dw.b);
+  if(s2.indexOf('(')<0 && s1.indexOf('(')>=0) [s1,s2]=[s2,s1];
+  return (s1===s2 && s1.indexOf('(')===0) ? s1+'^2' : s1+s2;
+}
+function levelPoly(L){
+  if(L.kind==='sandbox') return null;
+  if(L.kind==='square')  return polyStr(L.a,L.b,0) + ' + ?';
+  return polyStr(L.a,L.b,L.c);
+}
+
+/* ---------- telemetry ---------- */
+const qs = new URLSearchParams(location.search);
+for(const [key,value] of new URLSearchParams(location.hash.slice(1))) qs.set(key,value);
+const T0 = performance.now();
+const nowS = () => +((performance.now() - T0)/1000).toFixed(2);
+const TLM = {
+  game: GAME, version: GAME_VER, schema: 1,
+  learner: null,
+  launch: qs.get('launch') || null,
+  session: (crypto.randomUUID ? crypto.randomUUID()
+            : 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2,8)),
+  started: new Date().toISOString(),
+  events: []
+};
+
+/* Telemetry level (?telemetry=full|standard|summary — default standard):
+   - full     : every event, incl. per-tile grab/drop/rotate/spawn/delete
+   - standard : attempt-level evidence only; per-tile activity as counters
+   - summary  : session_start + summary rows only
+   Aggregates (AGG) are always maintained, so getSummary() is identical
+   at every level. */
+const TLEVEL = ['full','standard','summary'].indexOf(qs.get('telemetry')) >= 0
+             ? qs.get('telemetry') : 'standard';
+const VERBOSE = new Set(['tile_spawn','tile_grab','tile_drop','tile_rotate','tile_delete']);
+const SUMMARY_ONLY = new Set(['session_start','summary']);
+const MAX_EVENTS = 6000;
+let truncated = false;
+const RELAY_TOKEN = qs.get('token');
+const PARENT_ORIGIN = qs.get('parentOrigin');
+let relayTimer = null;
+
+function sendRelayResult(summary){
+  if(!TLM.launch || !RELAY_TOKEN) return;
+  if(relayTimer) clearTimeout(relayTimer);
+  relayTimer = setTimeout(()=>{
+    fetch('/education/api/artifact-results?launch='+encodeURIComponent(TLM.launch), {
+      method:'POST', credentials:'omit', cache:'no-store',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+RELAY_TOKEN},
+      body:JSON.stringify({ source:GAME, version:GAME_VER, schema:TLM.schema,
+        session:TLM.session, summary, completedAt:new Date().toISOString() })
+    }).catch(()=>{});
+  }, 150);
+}
+
+const AGG = {
+  perLevel: LEVELS.map((L,i)=>({
+    level:i+1, kind:L.kind, poly:levelPoly(L),
+    attempts:0, resets:0, completed:false, attemptsToComplete:null, elapsedS:null
+  })),
+  reasons:{},                       // failure-reason histogram across all attempts
+  grabs:0, drops:0, rotations:0, traySpawns:0, deletes:0
+};
+function aggregate(type, d){
+  switch(type){
+    case 'check_attempt': {
+      const r = AGG.perLevel[d.level-1];
+      r.attempts++;
+      if(!d.ok && d.reason) AGG.reasons[d.reason] = (AGG.reasons[d.reason]||0)+1;
+      break;
+    }
+    case 'level_complete': {
+      const r = AGG.perLevel[d.level-1];
+      if(!r.completed){ r.completed = true; r.attemptsToComplete = d.attempts; r.elapsedS = d.elapsedS; }
+      break;
+    }
+    case 'level_reset':  AGG.perLevel[d.level-1].resets++; break;
+    case 'tile_spawn':   AGG.traySpawns++; break;
+    case 'tile_grab':    AGG.grabs++; break;
+    case 'tile_drop':    AGG.drops++; break;
+    case 'tile_rotate':  AGG.rotations++; break;
+    case 'tile_delete':  AGG.deletes++; break;
+  }
+}
+function keepEvent(type){
+  if(TLEVEL === 'summary')  return SUMMARY_ONLY.has(type);
+  if(TLEVEL === 'standard') return !VERBOSE.has(type);
+  return true;
+}
+function logE(type, data){
+  const d = data || {};
+  aggregate(type, d);
+  if(!keepEvent(type)) return;
+  if(TLM.events.length >= MAX_EVENTS){
+    if(!truncated){ truncated = true; TLM.events.push({ t:nowS(), type:'telemetry_truncated', max:MAX_EVENTS }); }
+    if(VERBOSE.has(type)) return;
+  }
+  const ev = Object.assign({ t: nowS(), type }, d);
+  if(type === 'summary'){   // store only the latest summary; hosts still get each via postMessage
+    for(let i = TLM.events.length-1; i >= 0; i--)
+      if(TLM.events[i].type === 'summary'){ TLM.events.splice(i,1); break; }
+  }
+  TLM.events.push(ev);
+  try{
+    if(window.parent !== window && PARENT_ORIGIN && URL.canParse(PARENT_ORIGIN))
+      window.parent.postMessage({ source: GAME, session: TLM.session, learner: null, event: ev }, PARENT_ORIGIN);
+  }catch(_){}
+  if(type === 'summary') sendRelayResult(d);
+}
+function getSummary(){
+  return {
+    session: TLM.session, learner: TLM.learner, telemetryLevel: TLEVEL,
+    durationS: nowS(),
+    levelsCompleted: AGG.perLevel.filter(r=>r.completed).length,
+    perLevel: AGG.perLevel.map(r=>Object.assign({},r)),
+    failureReasons: Object.assign({}, AGG.reasons),
+    grabs: AGG.grabs, drops: AGG.drops, rotations: AGG.rotations,
+    traySpawns: AGG.traySpawns, deletes: AGG.deletes
+  };
+}
+function downloadData(){
+  const payload = { meta:{ game:GAME, version:GAME_VER, schema:TLM.schema, level:TLEVEL,
+                           session:TLM.session, learner:TLM.learner, started:TLM.started,
+                           exported:new Date().toISOString() },
+                    summary:getSummary(), events:TLM.events };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = GAME + '-' + TLM.session.slice(0,8) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+}
+window.BlockAlgebraTelemetry = {
+  getEvents: () => TLM.events.slice(),
+  getSummary, download: downloadData,
+  session: TLM.session, learner: TLM.learner, level: TLEVEL
+};
+
+/* ---------- state ---------- */
+const board  = document.getElementById('board');
+const banner = document.getElementById('banner');
+const bMsg   = banner.querySelector('.msg');
+const nextBtn= document.getElementById('nextBtn');
+const outline= document.getElementById('outline');
+const tray   = document.getElementById('tray');
+const dotsEl = document.getElementById('dots');
+
+let tiles = [], Z = 10, cur = 0, unlocked = 0, tileSeq = 0;
+let levelEnteredAt = 0;
+const done = LEVELS.map(()=>false);
+let drag = null;
+
+/* ---------- math formatting (display) ---------- */
+function exprHTML(a,b,c){
+  const p = [];
+  if(a) p.push((a===1?'':a)+'<i>x</i>&sup2;');
+  if(b) p.push((b===1?'':b)+'<i>x</i>');
+  if(c) p.push(''+c);
+  return p.length ? p.join(' + ') : '0';
+}
+function sideHTML(a,b){
+  if(a===0) return ''+b;
+  const ax = (a===1?'':a)+'<i>x</i>';
+  return b===0 ? ax : '('+ax+' + '+b+')';
+}
+function factoredHTML(dw,dh){
+  let s1 = sideHTML(dh.a,dh.b), s2 = sideHTML(dw.a,dw.b);
+  if(s2.indexOf('(')<0 && s1.indexOf('(')>=0) [s1,s2]=[s2,s1];
+  return s1+s2;
+}
+
+/* ---------- tiles ---------- */
+function makeTile(type,x,y,rotV){
+  const el = document.createElement('div');
+  el.className = 'tile ' + (type==='1'?'t1':type==='x'?'tx':'tx2');
+  el.innerHTML = LABEL[type];
+  let [w,h] = SIZES[type];
+  if(type==='x' && rotV) [w,h]=[h,w];
+  const t = { el, id:++tileSeq, type, x, y, w, h };
+  setPos(t,x,y); sizeEl(t);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); startDrag(t,e,false); });
+  board.appendChild(el);
+  tiles.push(t);
+  return t;
+}
+function sizeEl(t){ t.el.style.width = t.w+'px'; t.el.style.height = t.h+'px'; }
+function setPos(t,x,y){
+  t.x = Math.max(0, Math.min(x, board.clientWidth  - t.w));
+  t.y = Math.max(0, Math.min(y, board.clientHeight - t.h));
+  t.el.style.left = t.x+'px'; t.el.style.top = t.y+'px';
+}
+function removeTile(t){
+  board.removeChild(t.el);
+  tiles.splice(tiles.indexOf(t),1);
+}
+
+/* ---------- drag / rotate / delete ---------- */
+function startDrag(t,e,fromTray){
+  hideBanner(); outline.style.display='none';
+  const r = board.getBoundingClientRect();
+  drag = { t, id:e.pointerId, gx:e.clientX - r.left - t.x, gy:e.clientY - r.top - t.y,
+           sx:e.clientX, sy:e.clientY, moved:false };
+  t.el.style.zIndex = ++Z;
+  t.el.classList.add('dragging');
+  if(!fromTray) logE('tile_grab', { id:t.id, kind:t.type, level:cur+1 });
+  try{ t.el.setPointerCapture(e.pointerId); }catch(_){}
+}
+window.addEventListener('pointermove', e => {
+  if(!drag || e.pointerId!==drag.id) return;
+  const t = drag.t, r = board.getBoundingClientRect();
+  if(Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > 5) drag.moved = true;
+  let nx = e.clientX - r.left - drag.gx;
+  let ny = e.clientY - r.top  - drag.gy;
+  const s = snap(t,nx,ny);
+  setPos(t, s[0], s[1]);
+});
+window.addEventListener('pointerup', e => {
+  if(!drag || e.pointerId!==drag.id) return;
+  const t = drag.t;
+  t.el.classList.remove('dragging');
+  if(!drag.moved){
+    if(t.type==='x'){ rotate(t); logE('tile_rotate', { id:t.id, level:cur+1 }); }
+  } else if(overTray(e) && paletteHas(t.type)){
+    removeTile(t);
+    logE('tile_delete', { id:t.id, kind:t.type, level:cur+1 });
+  } else {
+    logE('tile_drop', { id:t.id, kind:t.type, level:cur+1 });
+  }
+  drag = null;
+});
+window.addEventListener('pointercancel', () => {
+  if(drag){ drag.t.el.classList.remove('dragging'); drag = null; }
+});
+function rotate(t){
+  const cx = t.x + t.w/2, cy = t.y + t.h/2;
+  [t.w,t.h] = [t.h,t.w];
+  sizeEl(t);
+  setPos(t, cx - t.w/2, cy - t.h/2);
+}
+function overTray(e){
+  if(tray.classList.contains('hidden')) return false;
+  const r = tray.getBoundingClientRect();
+  return e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom;
+}
+function rangesNear(a,al,b,bl,pad){ return a < b+bl+pad && b < a+al+pad; }
+function snap(t,nx,ny){
+  let bx = null, by = null;
+  for(const o of tiles){
+    if(o===t) continue;
+    if(rangesNear(ny,t.h,o.y,o.h,NEAR)){
+      for(const d of [o.x-nx, o.x+o.w-nx, o.x-(nx+t.w), o.x+o.w-(nx+t.w)])
+        if(Math.abs(d)<SNAP && (bx===null || Math.abs(d)<Math.abs(bx))) bx = d;
+    }
+    if(rangesNear(nx,t.w,o.x,o.w,NEAR)){
+      for(const d of [o.y-ny, o.y+o.h-ny, o.y-(ny+t.h), o.y+o.h-(ny+t.h)])
+        if(Math.abs(d)<SNAP && (by===null || Math.abs(d)<Math.abs(by))) by = d;
+    }
+  }
+  return [nx + (bx||0), ny + (by||0)];
+}
+
+/* ---------- validation ---------- */
+function inter(a,b){
+  const w = Math.min(a.x+a.w,b.x+b.w) - Math.max(a.x,b.x);
+  const h = Math.min(a.y+a.h,b.y+b.h) - Math.max(a.y,b.y);
+  return (w>0 && h>0) ? w*h : 0;
+}
+function anyOverlap(){
+  for(let i=0;i<tiles.length;i++)
+    for(let j=i+1;j<tiles.length;j++)
+      if(inter(tiles[i],tiles[j]) > 30) return true;
+  return false;
+}
+function counts(){
+  const n = {'1':0,'x':0,'x2':0};
+  for(const t of tiles) n[t.type]++;
+  return n;
+}
+function decomp(L){
+  for(let a=0;a<=9;a++){
+    const rem = L - a*XP;
+    if(rem < -TOL) break;
+    const b = Math.round(rem/U);
+    if(b>=0 && Math.abs(a*XP + b*U - L) < TOL) return {a,b};
+  }
+  return null;
+}
+function rectCheck(requireSquare){
+  if(!tiles.length) return {ok:false, reason:'empty', msg:'Place some tiles on the board first.'};
+  if(anyOverlap())  return {ok:false, reason:'overlap', msg:'Some tiles overlap \u2014 spread them out.'};
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,sum=0;
+  for(const t of tiles){
+    x0=Math.min(x0,t.x); y0=Math.min(y0,t.y);
+    x1=Math.max(x1,t.x+t.w); y1=Math.max(y1,t.y+t.h);
+    sum += t.w*t.h;
+  }
+  const W=x1-x0, H=y1-y0;
+  if(W*H - sum > Math.max(140, W*H*0.015))
+    return {ok:false, reason:'gaps', msg:'There are gaps \u2014 the shape has to be filled solid.'};
+  const dw = decomp(W), dh = decomp(H);
+  if(!dw || !dh) return {ok:false, reason:'ragged', msg:'The outline isn\u2019t a clean rectangle yet.'};
+  if(requireSquare && Math.abs(W-H) > TOL)
+    return {ok:false, reason:'not_square', msg:'A solid rectangle \u2014 but not a square yet.'};
+  return {ok:true, dw, dh, x0, y0, W, H};
+}
+
+/* ---------- check ---------- */
+function attempt(ok, reason, extra){
+  const n = counts();
+  logE('check_attempt', Object.assign({
+    level: cur+1, kind: LEVELS[cur].kind, ok, reason: ok ? undefined : reason,
+    placed: { x2:n['x2'], x:n['x'], ones:n['1'] },
+    elapsedS: +(nowS() - levelEnteredAt).toFixed(1)
+  }, extra || {}));
+}
+function complete(factored){
+  const L = LEVELS[cur], r = AGG.perLevel[cur];
+  logE('level_complete', {
+    level: cur+1, kind: L.kind, poly: r.poly, factored: factored || null,
+    attempts: r.attempts, elapsedS: +(nowS() - levelEnteredAt).toFixed(1)
+  });
+  logE('summary', getSummary());
+}
+function check(){
+  const L = LEVELS[cur];
+  if(L.kind==='build'){
+    const n = counts();
+    if(n['x2']!==L.a || n['x']!==L.b || n['1']!==L.c){
+      attempt(false,'wrong_counts');
+      showBanner(false,'Not it yet \u2014 compare your tiles with the target.'); return;
+    }
+    if(anyOverlap()){
+      attempt(false,'overlap');
+      showBanner(false,'Right tiles \u2014 but lay them out without overlaps.'); return;
+    }
+    attempt(true);
+    complete(null);
+    win('That\u2019s ' + exprHTML(L.a,L.b,L.c) + ' &nbsp;\u2713');
+  }
+  else if(L.kind==='rect'){
+    const r = rectCheck(false);
+    if(!r.ok){ attempt(false,r.reason); showBanner(false,r.msg); return; }
+    attempt(true);
+    complete(factoredStr(r.dw,r.dh));
+    showOutline(r);
+    win(exprHTML(L.a,L.b,L.c) + ' &nbsp;=&nbsp; ' + factoredHTML(r.dw,r.dh));
+  }
+  else if(L.kind==='square'){
+    const c = counts()['1'];
+    const r = rectCheck(true);
+    if(!r.ok){ attempt(false,r.reason,{ addedOnes:c }); showBanner(false,r.msg); return; }
+    attempt(true, undefined, { addedOnes:c });
+    complete(sideStr(r.dw.a,r.dw.b)+'^2');
+    showOutline(r);
+    win(exprHTML(L.a,L.b,c) + ' &nbsp;=&nbsp; ' + factoredHTML(r.dw,r.dh).replace(/\)\(.*$/,')') + '&sup2;');
+  }
+}
+function win(html){
+  done[cur] = true;
+  unlocked = Math.max(unlocked, Math.min(cur+1, LEVELS.length-1));
+  renderDots();
+  showBanner(true, html);
+}
+function showOutline(r){
+  outline.style.display = 'block';
+  outline.style.left = (r.x0-2)+'px'; outline.style.top = (r.y0-2)+'px';
+  outline.style.width = r.W+'px';     outline.style.height = r.H+'px';
+  outline.querySelector('.top').innerHTML  = sideHTML(r.dw.a, r.dw.b).replace(/[()]/g,'');
+  outline.querySelector('.left').innerHTML = sideHTML(r.dh.a, r.dh.b).replace(/[()]/g,'');
+}
+function showBanner(ok, html){
+  banner.className = (ok?'ok':'bad') + ' show';
+  bMsg.innerHTML = html;
+  nextBtn.style.display = (ok && cur < LEVELS.length-1) ? '' : 'none';
+}
+function hideBanner(){ banner.className = ''; }
+
+/* ---------- level setup ---------- */
+function paletteHas(type){
+  const L = LEVELS[cur];
+  if(L.kind==='build' || L.kind==='sandbox') return true;
+  if(L.kind==='square') return type==='1';
+  return false;
+}
+function buildTray(){
+  tray.innerHTML = '';
+  const kinds = ['x2','x','1'].filter(paletteHas);
+  if(!kinds.length){ tray.classList.add('hidden'); return; }
+  tray.classList.remove('hidden');
+  const MINI = { '1':[26,26,'t1'], 'x':[60,23,'tx'], 'x2':[52,52,'tx2'] };
+  for(const k of kinds){
+    const [w,h,cls] = MINI[k];
+    const p = document.createElement('div');
+    p.className = 'pal';
+    p.innerHTML = '<div class="chip tile '+cls+'" style="position:static;width:'+w+'px;height:'+h+'px;font-size:'+(k==='x2'?18:14)+'px">'+LABEL[k]+'</div><div class="lbl math">'+LABEL[k]+'</div>';
+    p.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const r = board.getBoundingClientRect();
+      const [tw,th] = SIZES[k];
+      const t = makeTile(k, e.clientX-r.left-tw/2, e.clientY-r.top-th/2, false);
+      logE('tile_spawn', { id:t.id, kind:k, level:cur+1 });
+      startDrag(t,e,true);
+      drag.moved = true;
+      drag.gx = tw/2; drag.gy = th/2;
+      try{ t.el.setPointerCapture(e.pointerId); }catch(_){}
+    });
+    tray.appendChild(p);
+  }
+  const hint = document.createElement('div');
+  hint.className = 'tray-hint';
+  hint.textContent = 'Drag a tile out to use it \u00b7 drop one back here to remove it';
+  tray.appendChild(hint);
+}
+function spawnSet(a,b,c){
+  const gap = 18, bwv = board.clientWidth;
+  let cx = 18, cy = 18, rowH = 0;
+  const list = [];
+  for(let i=0;i<a;i++) list.push('x2');
+  for(let i=0;i<b;i++) list.push('x');
+  for(let i=0;i<c;i++) list.push('1');
+  for(const k of list){
+    const [w,h] = SIZES[k];
+    if(cx + w > bwv - 18){ cx = 18; cy += rowH + gap; rowH = 0; }
+    makeTile(k, cx, cy, false);
+    cx += w + gap; rowH = Math.max(rowH, h);
+  }
+}
+function initLevel(i, viaReset){
+  cur = i;
+  for(const t of tiles) board.removeChild(t.el);
+  tiles = []; Z = 10;
+  hideBanner(); outline.style.display = 'none';
+  const L = LEVELS[i], kt = KIND_TEXT[L.kind][0], kh = KIND_TEXT[L.kind][1];
+  document.getElementById('kind').textContent = 'Level ' + (i+1) + ' \u00b7 ' + kt;
+  const tgt = document.getElementById('target');
+  if(L.kind==='sandbox'){
+    document.getElementById('kind').textContent = kt;
+    tgt.innerHTML = '<i>anything you like</i>';
+  } else if(L.kind==='square'){
+    tgt.innerHTML = exprHTML(L.a,L.b,0) + ' + \u25a2';
+  } else {
+    tgt.innerHTML = exprHTML(L.a,L.b,L.c);
+  }
+  document.getElementById('hint').textContent = kh +
+    (i===0 ? ' Tap an x tile to rotate it.' : '');
+  document.getElementById('checkBtn').style.display = (L.kind==='sandbox') ? 'none' : '';
+  buildTray();
+  if(L.kind==='rect')   spawnSet(L.a,L.b,L.c);
+  if(L.kind==='square') spawnSet(L.a,L.b,0);
+  renderDots();
+  levelEnteredAt = nowS();
+  logE('level_start', { level:i+1, kind:L.kind, poly:levelPoly(L),
+                        revisit: done[i] || undefined, afterReset: viaReset || undefined });
+}
+
+/* ---------- dots ---------- */
+function renderDots(){
+  dotsEl.innerHTML = '';
+  LEVELS.forEach((_,i)=>{
+    const d = document.createElement('button');
+    d.className = 'dot' + (done[i]?' done':'') + (i===cur?' cur':'');
+    d.setAttribute('aria-label','Level '+(i+1));
+    if(i>unlocked) d.disabled = true;
+    else d.addEventListener('click',()=>initLevel(i));
+    dotsEl.appendChild(d);
+  });
+}
+
+/* ---------- wiring ---------- */
+document.getElementById('checkBtn').addEventListener('click', check);
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  logE('level_reset', { level:cur+1 });
+  initLevel(cur, true);
+});
+document.getElementById('dataBtn').addEventListener('click', downloadData);
+nextBtn.addEventListener('click', ()=>initLevel(cur+1));
+window.addEventListener('resize', ()=>{ for(const t of tiles) setPos(t,t.x,t.y); });
+
+logE('session_start', {});
+initLevel(0);
+</script>
+</body>
+</html>

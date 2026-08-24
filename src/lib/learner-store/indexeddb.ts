@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  assertStoredProfileMatches,
+  migrateLearnerProfile,
   newLearnerProfile,
   type AssessmentClaim,
   type EvidenceEvent,
@@ -8,6 +10,7 @@ import {
   type LearnerProfile,
   type LearnerStore,
 } from "./types";
+import type { LessonReport, LessonRun } from "@/lib/lessons/schemas";
 
 const DB_NAME = "asfai-education";
 const DB_VERSION = 1;
@@ -44,6 +47,7 @@ async function writeProfile(profile: LearnerProfile): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  assertStoredProfileMatches(profile, await readProfile());
 }
 
 export class IndexedDbLearnerStore implements LearnerStore {
@@ -51,14 +55,18 @@ export class IndexedDbLearnerStore implements LearnerStore {
 
   async load(): Promise<LearnerProfile> {
     const existing = await readProfile();
-    if (existing) return existing;
+    if (existing) {
+      const migrated = migrateLearnerProfile(existing);
+      if (existing.schemaVersion !== migrated.schemaVersion) await writeProfile(migrated);
+      return migrated;
+    }
     const profile = newLearnerProfile();
     await writeProfile(profile);
     return profile;
   }
 
   async save(profile: LearnerProfile): Promise<void> {
-    await writeProfile({ ...profile, updatedAt: new Date().toISOString() });
+    await writeProfile(profile);
   }
 
   async appendEvidence(event: EvidenceEvent): Promise<LearnerProfile> {
@@ -85,6 +93,28 @@ export class IndexedDbLearnerStore implements LearnerStore {
       ...profile,
       updatedAt: new Date().toISOString(),
       objectiveStates: { ...profile.objectiveStates, [state.objectiveId]: state },
+    };
+    await writeProfile(next);
+    return next;
+  }
+
+  async putLessonRun(run: LessonRun): Promise<LearnerProfile> {
+    const profile = await this.load();
+    const next = {
+      ...profile,
+      updatedAt: new Date().toISOString(),
+      lessonRuns: { ...profile.lessonRuns, [run.id]: run },
+    };
+    await writeProfile(next);
+    return next;
+  }
+
+  async putLessonReport(report: LessonReport): Promise<LearnerProfile> {
+    const profile = await this.load();
+    const next = {
+      ...profile,
+      updatedAt: new Date().toISOString(),
+      lessonReports: { ...profile.lessonReports, [report.id]: report },
     };
     await writeProfile(next);
     return next;

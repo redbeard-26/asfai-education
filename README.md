@@ -2,7 +2,7 @@
 
 Open, standards-based architecture and reference implementation for AI-mediated learning, evidence, and mastery.
 
-> **Status:** Early implementation. The repository now contains a deployable Next.js education service and MCP server, but it is not yet a production learner-record system or assessment engine.
+> **Status:** Working pilot implementation. The repository contains a deployable Next.js education service, MCP server, learner-owned evidence workflow, and a first versioned lesson. It is not a production high-stakes assessment or managed classroom-record system.
 
 ASFAI Education is intended to let students learn through AI tutors, courses, games, and hands-on projects while maintaining a coherent picture of what each student has attempted, demonstrated, and mastered.
 
@@ -28,16 +28,26 @@ Learner state is accessed through a common `LearnerStore` interface with two ini
 - **IndexedDB** — the zero-setup default, stored in the current browser profile.
 - **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
 
-The education MCP server is also in this repository. It contains **education graph tools only** and does not persist learner identity or progress. It can:
+The education MCP server is also in this repository. It does not durably persist learner identity or progress. It can:
 
 - list learning programs;
 - search and retrieve objectives;
 - identify prerequisite and downstream neighboring objectives;
 - return objectives within a subject/domain learning program;
 - compute a learner's current frontier from client-supplied mastered objective IDs; and
-- find a prerequisite path to a target objective.
+- find a prerequisite path to a target objective;
+- prepare and record conversational assessments;
+- install ASFAI workflow skills;
+- return exact, capability-checked IndexedDB, local JSON, or Solid Pod persistence instructions;
+- author, validate, review, search, and run versioned lessons;
+- launch hosted artifacts through short-lived pseudonymous capabilities;
+- normalize and record lesson evidence;
+- generate lesson-specific reports; and
+- export and verify consent-scoped teacher/student progress envelopes.
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
+
+The first bundled lesson is [Block Algebra](docs/BLOCK-ALGEBRA-PILOT.md), with a guided walkthrough and a fluency game. Chat remains the primary interface; a game opens only for the activity that needs it.
 
 ## Deployment
 
@@ -57,11 +67,19 @@ The MCP endpoint is:
 /education/api/mcp
 ```
 
+Production requires a non-secret public origin and a secret used only to sign one-hour artifact launches:
+
+```text
+NEXT_PUBLIC_SITE_ORIGIN=https://education.asfai.org
+ASFAI_ARTIFACT_LAUNCH_SECRET=<at least 32 random characters>
+```
+
 For local development:
 
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
 Then open `http://localhost:3000/education`.
@@ -88,6 +106,9 @@ No student records are committed to this repository.
 - [Core data model](docs/DATA-MODEL.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
+- [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
+- [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)
+- [Block Algebra pilot](docs/BLOCK-ALGEBRA-PILOT.md)
 - [Licensing policy](docs/LICENSING.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 

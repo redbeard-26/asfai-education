@@ -15,6 +15,7 @@ import {
   learningInteractionSchema,
   masteryLevelSchema,
   masteredIds,
+  persistenceFor,
   recordLearningEvidence,
   resolveMasteredIds,
   storageTargetSchema,
@@ -30,6 +31,46 @@ function err(message: string) {
 }
 
 export function registerEducationTools(server: McpServer) {
+  server.registerTool(
+    "get_learner_storage_instructions",
+    {
+      title: "Get learner-owned storage instructions",
+      description:
+        "Returns exact host-side write and verification steps for ASFAI IndexedDB, a local learner.json file, or the learner's Solid Pod. It does not receive credentials or write the profile.",
+      inputSchema: {
+        storage: storageTargetSchema,
+        hostCapabilities: z
+          .array(z.enum(["browser_indexeddb", "local_filesystem", "authenticated_solid_fetch"]))
+          .max(3)
+          .optional(),
+      },
+    },
+    async ({ storage, hostCapabilities }) => {
+      try {
+        const persistence = persistenceFor(storage);
+        const required = storage.mode === "indexeddb"
+          ? "browser_indexeddb"
+          : storage.mode === "solid_pod"
+            ? "authenticated_solid_fetch"
+            : "local_filesystem";
+        const capable = hostCapabilities ? hostCapabilities.includes(required) : null;
+        return json({
+          persistence,
+          capabilityCheck: {
+            required,
+            capable,
+            rule:
+              "Confirm the required host capability before beginning. A public MCP call cannot itself access browser IndexedDB, a local filesystem, or a private Pod session.",
+          },
+          confirmationRule:
+            "Say that progress was saved only after the host completes the write and read-back verification. Otherwise say that saving is still pending and offer an available storage target or downloadable JSON.",
+        });
+      } catch (error) {
+        return err(error instanceof Error ? error.message : String(error));
+      }
+    },
+  );
+
   server.registerTool(
     "list_learning_programs",
     {
@@ -171,6 +212,12 @@ export function registerEducationTools(server: McpServer) {
         seedPrompt: objective.assessmentPrompt.replace(/\{\{name\}\}/g, objective.name),
         privateRubric: objective.evidence,
         rubricVisibility: "Keep the rubric private; give targeted feedback without reciting an answer key.",
+        learnerDialogue: {
+          rule:
+            "Speak naturally about the subject. Ask the actual question and give ordinary teaching feedback. Do not mention an interaction, skill, workflow, tool call, MCP, rubric, evidence event, assessment claim, or other orchestration machinery unless the learner explicitly asks how the system works.",
+          openingPattern: `Let's work on ${objective.name}. ${objective.assessmentPrompt.replace(/\{\{name\}\}/g, objective.name)}`,
+          keepPrivate: ["privateRubric", "eligibility", "interactionPlan", "recording"],
+        },
         eligibility: {
           eligible: unmetHardPrerequisites.length === 0,
           alreadyMastered: currentMastered.has(id),
@@ -190,7 +237,7 @@ export function registerEducationTools(server: McpServer) {
           tool: "record_learning_evidence",
           policyVersion: ASSESSMENT_POLICY_VERSION,
           rule:
-            "Record interactions as an evidence event and a linked assessment claim; never set a bare mastery boolean.",
+            "Privately record the learner's demonstrated work as an evidence event and linked assessment claim; never set a bare mastery boolean or narrate this record-building step to the learner.",
         },
       });
     },

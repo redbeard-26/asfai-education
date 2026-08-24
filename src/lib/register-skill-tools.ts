@@ -12,6 +12,9 @@ function err(message: string) {
 }
 
 export function registerSkillTools(server: McpServer, siteOrigin: string) {
+  const educationBaseUrl = siteOrigin.replace(/\/$/, "").endsWith("/education")
+    ? siteOrigin.replace(/\/$/, "")
+    : `${siteOrigin.replace(/\/$/, "")}/education`;
   server.registerTool(
     "get_skills",
     {
@@ -77,7 +80,7 @@ export function registerSkillTools(server: McpServer, siteOrigin: string) {
             "Install each file at its given relative path in the AI host's supported skills directory, then follow SKILL.md.",
         });
       }
-      const downloadUrl = `${siteOrigin.replace(/\/$/, "")}/api/skills/${skill}.skill`;
+      const downloadUrl = `${educationBaseUrl}/api/skills/${skill}.skill`;
       return json({
         skill,
         version: selected.version,
