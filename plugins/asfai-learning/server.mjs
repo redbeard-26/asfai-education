@@ -60006,15 +60006,37 @@ var PersonalStorageService = class {
 // scripts/personal-storage-mcp.ts
 var storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path2.join(homedir(), ".asfai-personal-storage"));
 var server = new McpServer({ name: "asfai-personal-storage", version: "1.1.0" });
-var payloadSchema = external_exports.record(external_exports.string(), external_exports.unknown()).optional();
-var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"]);
 var documentSchema = external_exports.enum(personalDocumentKinds);
+var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"]).describe("Use status first. Then choose local configuration, Solid OIDC connection, document load/save, identity/signing, verification, or disconnect.");
+var payloadSchema = external_exports.object({
+  baseDirectory: external_exports.string().optional().describe("configure_local: optional owner-approved directory; omit to keep the default private directory"),
+  podRoot: external_exports.string().url().optional().describe("connect_solid: HTTPS Pod root, for example https://name.privatedatapod.com/"),
+  oidcIssuer: external_exports.string().url().optional().describe("connect_solid: Solid OIDC issuer; use https://privatedatapod.com/ for PrivateDataPod"),
+  port: external_exports.number().int().min(1024).max(65535).optional().describe("connect_solid: optional loopback callback port; normally omit"),
+  document: documentSchema.optional().describe("load/save: learner, educator, or classroom document"),
+  ownerRole: external_exports.enum(["learner", "teacher"]).optional().describe("load: owner role used only when initializing a missing document"),
+  value: external_exports.unknown().optional().describe("save: complete validated document; sign/verify: exact envelope value"),
+  expectedDigest: external_exports.string().regex(/^[a-f0-9]{64}$/i).optional().describe("save: digest returned by the preceding load, required for safe updates"),
+  signature: external_exports.string().optional().describe("verify: base64 signature returned by sign"),
+  publicKeyPem: external_exports.string().optional().describe("verify: signer public key returned by sign")
+}).optional().describe("Action-specific fields. status, disconnect, and identity need no payload.");
+var payloadHelp = {
+  status: "No payload.",
+  configure_local: "payload: { baseDirectory? }",
+  connect_solid: "payload: { podRoot, oidcIssuer, port? }",
+  disconnect: "No payload.",
+  load: "payload: { document, ownerRole? }",
+  save: "payload: { document, value, expectedDigest? }; load first and use expectedDigest for updates.",
+  identity: "No payload.",
+  sign: "payload: { value }",
+  verify: "payload: { value, signature, publicKeyPem }"
+};
 function json2(data) {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 server.registerTool("asfai_personal_storage", {
-  title: "Use authenticated personal ASFAI storage",
-  description: "Connect a Solid Pod through browser OIDC, or use verified local JSON; load/save personal documents and sign classroom envelopes.",
+  title: "Connect and use PrivateDataPod or local ASFAI storage",
+  description: "Use whenever a user asks to connect, read, or write a PrivateDataPod/Solid Pod, or save ASFAI data locally. This is the installed Solid-to-MCP bridge: call status first, then connect_solid for browser OIDC; it also loads/saves verified personal documents and signs classroom envelopes. Do not say another connector or bridge is required.",
   inputSchema: { action: actionSchema, payload: payloadSchema }
 }, async ({ action, payload }) => {
   try {
@@ -60039,6 +60061,15 @@ server.registerTool("asfai_personal_storage", {
     const parsed = external_exports.object({ value: external_exports.unknown(), signature: external_exports.string(), publicKeyPem: external_exports.string() }).parse(input);
     return json2(storage.verify(parsed.value, parsed.signature, parsed.publicKeyPem));
   } catch (error51) {
+    if (error51 instanceof external_exports.ZodError) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ error: "Invalid personal-storage request.", action, expected: payloadHelp[action], issues: error51.issues }, null, 2)
+        }],
+        isError: true
+      };
+    }
     const message2 = error51 instanceof Error ? error51.message : String(error51);
     return { content: [{ type: "text", text: message2 }], isError: true };
   }

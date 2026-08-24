@@ -1,7 +1,7 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.0",
-  "description": "Plan and facilitate ASFAI lessons while keeping learner and teacher data in owner-controlled local storage or a Solid Pod.",
+  "version": "0.1.0+codex.20260824074834",
+  "description": "Teach and plan with ASFAI, or connect PrivateDataPod and other Solid Pods directly through the bundled private-storage MCP bridge.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
@@ -9,15 +9,25 @@
   "homepage": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education",
   "repository": "https://github.com/redbeard-26/asfai-education",
   "license": "Apache-2.0",
-  "keywords": ["education", "learning", "lessons", "solid", "private-data"],
+  "keywords": [
+    "education",
+    "learning",
+    "lessons",
+    "solid",
+    "private-data"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "ASFAI Learning",
-    "shortDescription": "Private, conversational learning and lesson planning.",
-    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, and save learner or teacher records locally or in an authorized Solid Pod. Private credentials and signing keys remain on the user's device.",
+    "shortDescription": "ASFAI learning with built-in PrivateDataPod access.",
+    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, and connect, read, or write PrivateDataPod and other Solid Pods through the included local MCP bridge. No separate Solid connector is required. Private credentials and signing keys remain on the user's device.",
     "developerName": "ASFAI",
     "category": "Education",
-    "capabilities": ["Learning", "Lesson planning", "Private storage"],
+    "capabilities": [
+      "Learning",
+      "Lesson planning",
+      "Private storage"
+    ],
     "defaultPrompt": [
       "Connect my private Pod and continue my lesson.",
       "Help me learn a concept and save my progress.",
