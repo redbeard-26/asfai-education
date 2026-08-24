@@ -17,7 +17,7 @@ Storage and consent messages may be direct, but keep them plain: “Where would 
 
 ## 1. Establish learner-owned storage
 
-Inspect the host's available capabilities first, then ask the learner only about storage choices the host can actually use. Call `get_learner_storage_instructions` with the selected target and the capabilities you have confirmed.
+Inspect the host's available capabilities first, then ask the learner only about storage choices the host can actually use. Call `asfai_storage` with action `instructions`, `owner: "learner"`, the selected target, and the capabilities you have confirmed.
 
 - IndexedDB: use database `asfai-education`, version `1`, object store `learner-profile`, key `current`. This requires browser JavaScript executing on the ASFAI Education origin; an ordinary remote MCP server or chat without browser execution cannot access it.
 - Local file: use a persistent, user-approved path such as `asfai/learner.json`. This requires a host filesystem tool.
@@ -32,13 +32,13 @@ Do not ask for an email or create an ASFAI account.
 
 ## 2. Choose an objective
 
-- Search with `search_learning_objectives` and confirm the intended result.
-- If the learner wants a recommendation, load their profile and call `get_learning_frontier` with `learnerProfile`.
-- For a target, call `find_learning_path` with the profile.
+- Search with `asfai_graph` action `search_objectives` and confirm the intended result.
+- If the learner wants a recommendation, derive mastered objective IDs from their profile and call `asfai_graph` action `get_frontier` with `masteredIds`.
+- For a target, call `asfai_graph` action `find_path` with `masteredIds`.
 
 ## 3. Prepare privately
 
-Call `prepare_learning_assessment` with the objective id and profile. Treat `privateRubric` as evaluator-only material: provide useful feedback, but do not recite an answer key.
+Call `asfai_evidence` action `prepare_assessment` with the objective id and mastered objective IDs. Treat `privateRubric` as evaluator-only material: provide useful feedback, but do not recite an answer key.
 
 If hard prerequisites are unmet, explain that and offer a prerequisite. The learner may still demonstrate advanced knowledge; recording out-of-sequence mastery requires an explicit exception.
 
@@ -56,7 +56,7 @@ Adapt to the learner's replies. Track whether help was none, light, or substanti
 
 ## 5. Create evidence and persist it
 
-Call `record_learning_evidence` only after the learner has actually responded. Supply concise response summaries, the evidence observed, level, confidence, rationale, assistance, and your host/model name as `assessorSystem`. Avoid unnecessary personal details and verbatim answers unless the learner wants them retained. These are internal fields; do not repeat their names to the learner.
+Call `asfai_evidence` action `record_learning` only after the learner has actually responded. Supply concise response summaries, the evidence observed, level, confidence, rationale, assistance, and your host/model name as `assessorSystem`. Avoid unnecessary personal details and verbatim answers unless the learner wants them retained. These are internal fields; do not repeat their names to the learner.
 
 For `storage`:
 
@@ -70,4 +70,4 @@ Never replace this evidence/claim process with a bare mastery boolean. Never cla
 
 ## 6. Continue
 
-Tell the learner what they showed, what to strengthen, and what to learn next. Use `newlyUnlocked`, `get_learning_frontier`, or `find_learning_path` privately to choose the suggestion. Keep all system terminology and the private rubric out of learner-facing messages.
+Tell the learner what they showed, what to strengthen, and what to learn next. Use `newlyUnlocked` or `asfai_graph` actions `get_frontier` and `find_path` privately to choose the suggestion. Keep all system terminology and the private rubric out of learner-facing messages.

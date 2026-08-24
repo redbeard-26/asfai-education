@@ -2,7 +2,7 @@
 
 Open, standards-based architecture and reference implementation for AI-mediated learning, evidence, and mastery.
 
-> **Status:** Working pilot implementation. The repository contains a deployable Next.js education service, MCP server, learner-owned evidence workflow, and a first versioned lesson. It is not a production high-stakes assessment or managed classroom-record system.
+> **Status:** MCP-first reference implementation. The repository contains a deployable Next.js education service, a compact versioned capability catalog, caller-owned educator and learner state, lessons, rooms, quizzes, evidence workflows, and hosted artifacts. Restricted and district operations remain draft/human-review workflows until an authenticated institutional control plane is configured.
 
 ASFAI Education is intended to let students learn through AI tutors, courses, games, and hands-on projects while maintaining a coherent picture of what each student has attempted, demonstrated, and mastered.
 
@@ -28,24 +28,21 @@ Learner state is accessed through a common `LearnerStore` interface with two ini
 - **IndexedDB** — the zero-setup default, stored in the current browser profile.
 - **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
 
-The education MCP server is also in this repository. It does not durably persist learner identity or progress. It can:
+The education MCP server is also in this repository. Its default surface is eight compact gateways rather than one tool for each feature:
 
-- list learning programs;
-- search and retrieve objectives;
-- identify prerequisite and downstream neighboring objectives;
-- return objectives within a subject/domain learning program;
-- compute a learner's current frontier from client-supplied mastered objective IDs; and
-- find a prerequisite path to a target objective;
-- prepare and record conversational assessments;
-- install ASFAI workflow skills;
-- return exact, capability-checked IndexedDB, local JSON, or Solid Pod persistence instructions;
-- author, validate, review, search, and run versioned lessons;
-- launch hosted artifacts through short-lived pseudonymous capabilities;
-- normalize and record lesson evidence;
-- generate lesson-specific reports; and
-- export and verify consent-scoped teacher/student progress envelopes.
+- `asfai_capability` discovers 33 platform, 88 educator, and 51 student capabilities and delivers workflow guidance;
+- `asfai_graph` searches the upstream learning graph and computes neighbors, frontiers, and paths;
+- `asfai_run` prepares versioned one-shot and control-plane work with validation and review contracts;
+- `asfai_session` runs resumable learner dialogue, room joins, and formative quizzes with caller-owned state;
+- `asfai_lesson` authors, validates, reviews, publishes, assigns, and facilitates versioned lessons and games;
+- `asfai_evidence` prepares assessment, records justified observations and claims, reports, and exchanges scoped progress;
+- `asfai_resource` manages immutable educator resources, collections, rooms, quizzes, sharing, publication previews, and resumable artifact jobs; and
+- `asfai_storage` returns and verifies IndexedDB, local JSON, or Solid Pod persistence procedures.
+
+The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. The public server does not durably persist learner identity, progress, educator workspaces, sessions, room membership, or jobs.
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
+See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
 
 The first bundled lesson is [Block Algebra](docs/BLOCK-ALGEBRA-PILOT.md), with a guided walkthrough and a fluency game. Chat remains the primary interface; a game opens only for the activity that needs it.
 
@@ -106,6 +103,7 @@ No student records are committed to this repository.
 - [Core data model](docs/DATA-MODEL.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
+- [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
 - [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
 - [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)
 - [Block Algebra pilot](docs/BLOCK-ALGEBRA-PILOT.md)

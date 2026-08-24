@@ -1,5 +1,6 @@
+import { generateKeyPairSync, sign } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createReportEnvelope, verifyProgressEnvelope } from "@/lib/lessons/progress";
+import { createReportEnvelope, prepareProgressEnvelopeSignature, verifyProgressEnvelope, verifySignedProgressEnvelope } from "@/lib/lessons/progress";
 import { lessonAssignmentSchema, lessonReportSchema } from "@/lib/lessons/schemas";
 
 const assignment = lessonAssignmentSchema.parse({
@@ -43,5 +44,15 @@ describe("progress envelopes", () => {
     const envelope = createReportEnvelope(assignment, report, "assignment-pseudonym-7");
     const changed = { ...envelope, payload: { ...envelope.payload, status: "changed" } };
     expect(verifyProgressEnvelope(changed).integrityValid).toBe(false);
+  });
+
+  it("prepares owner-side signing and verifies an Ed25519 signature", () => {
+    const envelope = createReportEnvelope(assignment, report, "assignment-pseudonym-7");
+    const prepared = prepareProgressEnvelopeSignature(envelope);
+    const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+    const signature = sign(null, Buffer.from(prepared.signatureRequest.message, "utf8"), privateKey).toString("base64");
+    const verified = verifySignedProgressEnvelope({ envelope, signature, publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString() });
+    expect(verified).toMatchObject({ integrityValid: true, signatureValid: true });
+    expect("signerFingerprint" in verified ? verified.signerFingerprint : undefined).toMatch(/^[a-f0-9]{64}$/);
   });
 });

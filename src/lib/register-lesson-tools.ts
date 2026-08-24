@@ -30,7 +30,7 @@ function err(message: string) {
   return { content: [{ type: "text" as const, text: message }], isError: true };
 }
 
-function reviewLesson(input: unknown) {
+export function reviewLesson(input: unknown) {
   const validation = validateLesson(input);
   if (!validation.lesson) return validation;
   const lesson = validation.lesson;

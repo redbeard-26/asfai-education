@@ -29,10 +29,10 @@ All orchestration stays out of learner-facing dialogue. Student instructions say
 
 The bundled Block Algebra games use a short-lived capability:
 
-1. `create_artifact_launch` returns a game URL, launch ID, token, and expiry.
+1. `asfai_lesson` action `create_artifact_launch` returns a game URL, launch ID, token, and expiry.
 2. The game posts a minimized summary to `/education/api/artifact-results`.
-3. `claim_artifact_result` consumes the summary once and normalizes it.
-4. The chat host records justified observations through `record_lesson_evidence` and saves the returned profile.
+3. `asfai_lesson` action `claim_artifact_result` consumes the summary once and normalizes it.
+4. The chat host records justified observations through `asfai_evidence` action `record_lesson` and saves the returned profile.
 
 The launch contains no learner identifier. The relay accepts at most 128 KB, expires launches after at most one hour, deletes result content after a successful claim, and requires `ASFAI_ARTIFACT_LAUNCH_SECRET` in production.
 
