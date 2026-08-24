@@ -1,6 +1,6 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.0+codex.20260824174107",
+  "version": "0.1.0+codex.20260824220336",
   "description": "Teach and plan with ASFAI, connect private storage, and exchange work with configurable classroom providers through bundled local MCP tools.",
   "author": {
     "name": "ASFAI",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "ASFAI Learning",
     "shortDescription": "ASFAI learning, private data, and classroom exchange.",
-    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, connect PrivateDataPod and other Solid Pods with one-time device authorization, and exchange work with configurable classroom providers through included local MCP bridges. The callable tools use asfai_* gateway names rather than the plugin display name. Private credentials, device-protected authorization, signing keys, and imported work remain on the user's device.",
+    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, connect PrivateDataPod and other Solid Pods, and exchange work with configurable classroom providers through included local MCP bridges. Reusable Pod and Google Classroom authorization is protected for the current Windows user and restored across chats and restarts until explicit revocation. The callable tools use asfai_* gateway names rather than the plugin display name. Private credentials, device-protected authorization, signing keys, and imported work remain on the user's device.",
     "developerName": "ASFAI",
     "category": "Education",
     "capabilities": [

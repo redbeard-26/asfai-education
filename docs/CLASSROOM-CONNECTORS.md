@@ -23,15 +23,16 @@ asfai_personal_storage verified save
 asfai_classroom export_work / return_evaluation
 ```
 
-The public AWS MCP remains stateless. Classroom passwords, authorization codes, access and refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles never go to it. The local companion keeps OAuth material only in memory; disconnecting or restarting it requires authorization again. Detailed evidence is saved to the learner's or educator's local JSON/Solid Pod document, not retained by the classroom bridge. When the original artifact remains in Classroom, the learner record may retain its provider reference and an inline transcript of at most 8 KiB; larger transcripts use a concise summary and reference instead.
+The public AWS MCP remains stateless. Classroom passwords, authorization codes, access and refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles never go to it. The local companion protects the reusable Google refresh grant for the current device user and restores it silently across chats, MCP exits, application restarts, and computer restarts. On Windows the complete authorization record is encrypted with current-user DPAPI. It remains available until the user explicitly chooses `forget_authorization` or revokes ASFAI in their Google Account. Detailed evidence is saved to the learner's or educator's local JSON/Solid Pod document, not retained by the classroom bridge. When the original artifact remains in Classroom, the learner record may retain its provider reference and an inline transcript of at most 8 KiB; larger transcripts use a concise summary and reference instead.
 
 ## Tool actions
 
 | Action | Purpose | External mutation |
 |---|---|---|
-| `status` | Report provider configuration, connection, scopes, and limitations | No |
-| `connect` | Start local browser OAuth with learner/teacher and read-only/write scope choices | Opens provider authorization |
-| `disconnect` | Clear the provider session held by this companion process | Local session only |
+| `status` | Restore and report provider configuration, connection, scopes, and limitations | No |
+| `connect` | Reuse sufficient saved permission or start local browser OAuth for missing permission | Opens provider authorization only when needed |
+| `disconnect` | Close a pending browser authorization without forgetting the saved grant | Local pending state only |
+| `forget_authorization` | Remove the reusable grant from this device after an explicit user request | Deletes protected local authorization |
 | `list_courses` | Select a course | No |
 | `list_learners` | Select a learner from a teacher-authorized course roster | No |
 | `list_assignments` | Select an assignment | No |
@@ -44,15 +45,15 @@ The bridge does not decide mastery. The AI maps work to learning objectives, use
 
 ## Google configuration
 
-The Google adapter uses a Desktop OAuth client and a loopback callback. The administrator enables the Google Classroom API and Google Drive API, configures the OAuth consent screen and permitted users, and supplies these environment variables to the local plugin host:
+The Google adapter uses a Desktop OAuth client and a loopback callback. The administrator enables the Google Classroom API and Google Drive API, configures the OAuth consent screen and permitted users, and downloads the Desktop client JSON once. Install that file into the plugin without printing its values:
 
 ```text
-ASFAI_GOOGLE_CLASSROOM_CLIENT_ID=<OAuth desktop client ID>
-ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET=<OAuth desktop client secret>
-ASFAI_CLASSROOM_OAUTH_PORT=18766            # optional
+npm run configure:google-classroom -- <downloaded-desktop-client.json>
 ```
 
-The adapter asks for the least access selected at connection time. Read-only import does not request write access. Drive attachment text is opt-in because reading arbitrary Drive files can require a broader restricted scope. Assignment creation and work/grade writes require writable Classroom scopes; creating an ASFAI text attachment also uses `drive.file`.
+The configured plugin can then be installed or distributed without requiring each learner to edit environment variables. For development and managed-host overrides, the adapter also accepts `ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE` or the existing client ID and client secret environment variables. `ASFAI_CLASSROOM_OAUTH_PORT=18766` remains optional.
+
+The adapter defaults to read-only access. Drive attachment text is opt-in because reading arbitrary Drive files can require a broader restricted scope. Assignment creation and work/grade writes require a new consent for writable Classroom scopes; creating an ASFAI text attachment also uses `drive.file`. A sufficient saved grant is reused without opening another consent page.
 
 Google restricts attachment access, submission attachment changes, and grade passback to coursework associated with the same Google Developer project. When an imported third-party assignment does not meet that condition, ASFAI retains the private evidence and falls back to a teacher-readable report or manual attachment. The Classroom API used here does not expose private feedback comments, so detailed objective-level feedback remains owner-side while Classroom receives only the explicitly approved grade and state.
 

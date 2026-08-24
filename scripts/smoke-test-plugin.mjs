@@ -1,16 +1,21 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const pluginRoot = path.resolve(process.env.ASFAI_PLUGIN_ROOT ?? "plugins/asfai-learning");
+const smokeDataDirectory = await mkdtemp(path.join(tmpdir(), "asfai-plugin-smoke-"));
+const launchEnvironment = { ...process.env, ASFAI_PERSONAL_DATA_DIR: smokeDataDirectory };
 const launch = process.platform === "win32"
   ? {
       command: "cmd.exe",
       args: ["/d", "/s", "/c", "call", "./scripts/launch-personal-storage.cmd", "./server.mjs"],
       cwd: pluginRoot,
+      env: launchEnvironment,
     }
-  : { command: process.execPath, args: ["./server.mjs"], cwd: pluginRoot };
+  : { command: process.execPath, args: ["./server.mjs"], cwd: pluginRoot, env: launchEnvironment };
 
 const client = new Client({ name: "asfai-plugin-smoke-test", version: "1.0.0" });
 await client.connect(new StdioClientTransport(launch));
@@ -69,4 +74,5 @@ try {
   process.stdout.write(`ASFAI plugin MCP smoke test passed (${serializedDefinitions.length} serialized tool-definition characters).\n`);
 } finally {
   await client.close();
+  await rm(smokeDataDirectory, { recursive: true, force: true });
 }

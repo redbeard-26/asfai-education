@@ -54,13 +54,13 @@ async function runWindowsDpapi(operation: "protect" | "unprotect", value: Buffer
     child.once("close", (code) => {
       if (code !== 0) {
         const detail = Buffer.concat(stderr).toString("utf8").trim();
-        reject(new Error(`Windows could not protect the saved Solid authorization.${detail ? ` ${detail}` : ""}`));
+        reject(new Error(`Windows could not protect the saved authorization.${detail ? ` ${detail}` : ""}`));
         return;
       }
       try {
         resolve(Buffer.from(Buffer.concat(stdout).toString("utf8").trim(), "base64"));
       } catch {
-        reject(new Error("Windows returned invalid protected Solid authorization data."));
+        reject(new Error("Windows returned invalid protected authorization data."));
       }
     });
     child.stdin.end(value.toString("base64"));
@@ -89,9 +89,9 @@ type StorageEnvelope = {
 };
 
 /**
- * Persistent storage for Solid's client registration, refresh token, and DPoP
- * material. Windows encrypts the complete map with current-user DPAPI. Other
- * platforms rely on an owner-only (0600) file until a native vault is added.
+ * Persistent storage for provider authorization material. Windows encrypts the
+ * complete map with current-user DPAPI. Other platforms rely on an owner-only
+ * (0600) file until a native vault is added.
  */
 export class DeviceProtectedStorage implements SolidSessionStorage {
   readonly protection: StorageProtector["id"];
@@ -161,7 +161,7 @@ export class DeviceProtectedStorage implements SolidSessionStorage {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         this.values = {};
       } else {
-        throw new Error("The saved Solid authorization could not be opened for this device user.", { cause: error });
+        throw new Error("The saved authorization could not be opened for this device user.", { cause: error });
       }
     }
     return this.values;
