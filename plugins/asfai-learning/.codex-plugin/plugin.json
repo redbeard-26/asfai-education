@@ -1,7 +1,7 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.0+codex.20260824074834",
-  "description": "Teach and plan with ASFAI, or connect PrivateDataPod and other Solid Pods directly through the bundled private-storage MCP bridge.",
+  "version": "0.1.0+codex.20260824082916",
+  "description": "Teach and plan with ASFAI, connect private storage, and exchange work with configurable classroom providers through bundled local MCP tools.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
@@ -19,19 +19,21 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "ASFAI Learning",
-    "shortDescription": "ASFAI learning with built-in PrivateDataPod access.",
-    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, and connect, read, or write PrivateDataPod and other Solid Pods through the included local MCP bridge. No separate Solid connector is required. Private credentials and signing keys remain on the user's device.",
+    "shortDescription": "ASFAI learning, private data, and classroom exchange.",
+    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, connect PrivateDataPod and other Solid Pods, and exchange work with configurable classroom providers through included local MCP bridges. Private credentials, tokens, signing keys, and imported work remain on the user's device.",
     "developerName": "ASFAI",
     "category": "Education",
     "capabilities": [
       "Learning",
       "Lesson planning",
-      "Private storage"
+      "Private storage",
+      "Classroom exchange"
     ],
     "defaultPrompt": [
       "Connect my private Pod and continue my lesson.",
       "Help me learn a concept and save my progress.",
-      "Create a lesson for my class."
+      "Create a lesson for my class.",
+      "Import my work from Google Classroom and evaluate it."
     ]
   },
   "mcpServers": "./.mcp.json"

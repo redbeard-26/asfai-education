@@ -27147,7 +27147,7 @@ var require_cjs = __commonJS({
 var require_lib2 = __commonJS({
   "node_modules/oidc-token-hash/lib/index.js"(exports, module) {
     var { strict: assert2 } = __require("assert");
-    var { createHash: createHash2 } = __require("crypto");
+    var { createHash: createHash3 } = __require("crypto");
     var { format } = __require("util");
     var encode5;
     if (Buffer.isEncoding("base64url")) {
@@ -27163,30 +27163,30 @@ var require_lib2 = __commonJS({
         case "PS256":
         case "ES256":
         case "ES256K":
-          return createHash2("sha256");
+          return createHash3("sha256");
         case "HS384":
         case "RS384":
         case "PS384":
         case "ES384":
-          return createHash2("sha384");
+          return createHash3("sha384");
         case "HS512":
         case "RS512":
         case "PS512":
         case "ES512":
         case "Ed25519":
-          return createHash2("sha512");
+          return createHash3("sha512");
         case "Ed448":
-          return createHash2("shake256", { outputLength: 114 });
+          return createHash3("shake256", { outputLength: 114 });
         case "ML-DSA-44":
         case "ML-DSA-65":
         case "ML-DSA-87":
-          return createHash2("shake256", { outputLength: 64 });
+          return createHash3("shake256", { outputLength: 64 });
         case "EdDSA":
           switch (crv) {
             case "Ed25519":
-              return createHash2("sha512");
+              return createHash3("sha512");
             case "Ed448":
-              return createHash2("shake256", { outputLength: 114 });
+              return createHash3("shake256", { outputLength: 114 });
             default:
               throw new TypeError("unrecognized or invalid EdDSA curve provided");
           }
@@ -27482,15 +27482,15 @@ var require_token_set = __commonJS({
 // node_modules/openid-client/lib/helpers/generators.js
 var require_generators = __commonJS({
   "node_modules/openid-client/lib/helpers/generators.js"(exports, module) {
-    var { createHash: createHash2, randomBytes } = __require("crypto");
+    var { createHash: createHash3, randomBytes: randomBytes2 } = __require("crypto");
     var base64url3 = require_base64url3();
-    var random = (bytes = 32) => base64url3.encode(randomBytes(bytes));
+    var random = (bytes = 32) => base64url3.encode(randomBytes2(bytes));
     module.exports = {
       random,
       state: random,
       nonce: random,
       codeVerifier: random,
-      codeChallenge: (codeVerifier) => base64url3.encode(createHash2("sha256").update(codeVerifier).digest())
+      codeChallenge: (codeVerifier) => base64url3.encode(createHash3("sha256").update(codeVerifier).digest())
     };
   }
 });
@@ -29485,7 +29485,7 @@ var require_client2 = __commonJS({
     var { strict: assert2 } = __require("assert");
     var querystring = __require("querystring");
     var url2 = __require("url");
-    var { URL: URL2, URLSearchParams } = __require("url");
+    var { URL: URL2, URLSearchParams: URLSearchParams2 } = __require("url");
     var jose = require_cjs();
     var tokenHash = require_lib2();
     var isKeyObject2 = require_is_key_object2();
@@ -30516,7 +30516,7 @@ var require_client2 = __commonJS({
         if (via === "body") {
           options.headers.Authorization = void 0;
           options.headers["Content-Type"] = "application/x-www-form-urlencoded";
-          options.body = new URLSearchParams();
+          options.body = new URLSearchParams2();
           options.body.append(
             "access_token",
             accessToken instanceof TokenSet2 ? accessToken.access_token : accessToken
@@ -30532,7 +30532,7 @@ var require_client2 = __commonJS({
               options.body.append(key, value);
             });
           } else {
-            options.body = new URLSearchParams();
+            options.body = new URLSearchParams2();
             options.headers["Content-Type"] = "application/x-www-form-urlencoded";
             Object.entries(params).forEach(([key, value]) => {
               options.body.append(key, value);
@@ -55329,9 +55329,522 @@ var StdioServerTransport = class {
 import { homedir } from "node:os";
 import path2 from "node:path";
 
-// src/lib/personal-storage.ts
-import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign as sign2, verify as verify2 } from "node:crypto";
+// src/lib/classroom-connectors/contract.ts
+var classroomProviderSchema = external_exports.string().trim().min(1).max(64).regex(/^[a-z0-9][a-z0-9_-]*$/);
+var classroomRoleSchema = external_exports.enum(["learner", "teacher"]);
+var classroomMaterialSchema = external_exports.discriminatedUnion("type", [
+  external_exports.object({ type: external_exports.literal("link"), url: external_exports.string().url(), title: external_exports.string().max(500).optional() }),
+  external_exports.object({ type: external_exports.literal("drive_file"), id: external_exports.string().min(1), title: external_exports.string().max(500).optional() }),
+  external_exports.object({ type: external_exports.literal("youtube_video"), id: external_exports.string().min(1), title: external_exports.string().max(500).optional() })
+]);
+var classroomAssignmentExportSchema = external_exports.object({
+  title: external_exports.string().min(1).max(300),
+  description: external_exports.string().max(3e4).optional(),
+  state: external_exports.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
+  maxPoints: external_exports.number().min(0).max(1e5).optional(),
+  dueDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  materials: external_exports.array(classroomMaterialSchema).max(20).default([])
+});
+var classroomWorkExportSchema = external_exports.object({
+  content: external_exports.string().max(2e5).optional(),
+  fileName: external_exports.string().min(1).max(250).optional(),
+  contentType: external_exports.enum(["text/plain", "text/markdown", "application/json"]).default("text/plain"),
+  links: external_exports.array(external_exports.object({ url: external_exports.string().url(), title: external_exports.string().max(500).optional() })).max(20).default([]),
+  driveFileIds: external_exports.array(external_exports.string().min(1)).max(20).default([]),
+  turnIn: external_exports.boolean().default(false)
+}).refine((value) => Boolean(value.content || value.links.length || value.driveFileIds.length), {
+  message: "Exported work requires content, a link, or a Drive file ID."
+}).refine((value) => value.links.length + value.driveFileIds.length + (value.content ? 1 : 0) <= 20, {
+  message: "A classroom work export may contain at most 20 total attachments."
+});
+var classroomEvaluationExportSchema = external_exports.object({
+  score: external_exports.number().min(0),
+  publishGrade: external_exports.boolean().default(false),
+  returnSubmission: external_exports.boolean().default(false)
+});
+var ClassroomConnectorService = class {
+  constructor(adapters) {
+    this.adapters = /* @__PURE__ */ new Map();
+    for (const adapter of adapters) this.adapters.set(adapter.provider, adapter);
+  }
+  providers() {
+    return [...this.adapters.values()].map((adapter) => ({ provider: adapter.provider, status: adapter.status() }));
+  }
+  adapter(provider) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter) {
+      throw new Error(`Unsupported classroom provider '${provider}'. Available providers: ${[...this.adapters.keys()].join(", ") || "none"}.`);
+    }
+    return adapter;
+  }
+};
+
+// src/lib/classroom-connectors/google.ts
+import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
+var CLASSROOM_API = "https://classroom.googleapis.com/v1";
+var DRIVE_API = "https://www.googleapis.com/drive/v3";
+var DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
+var GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
+var GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
+var GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v3/userinfo";
+function base64Url(value) {
+  return value.toString("base64url");
+}
+function scopesFor(input) {
+  const scopes = /* @__PURE__ */ new Set(["openid", "email", "https://www.googleapis.com/auth/classroom.courses.readonly"]);
+  if (input.role === "teacher") {
+    scopes.add(`https://www.googleapis.com/auth/classroom.coursework.students${input.readOnly ? ".readonly" : ""}`);
+    scopes.add("https://www.googleapis.com/auth/classroom.student-submissions.students.readonly");
+    scopes.add("https://www.googleapis.com/auth/classroom.rosters.readonly");
+  } else {
+    scopes.add(`https://www.googleapis.com/auth/classroom.coursework.me${input.readOnly ? ".readonly" : ""}`);
+    scopes.add("https://www.googleapis.com/auth/classroom.student-submissions.me.readonly");
+  }
+  if (!input.readOnly) scopes.add("https://www.googleapis.com/auth/drive.file");
+  if (input.includeDriveContent) scopes.add("https://www.googleapis.com/auth/drive.readonly");
+  return [...scopes];
+}
+function normalizeCourse(course) {
+  return {
+    id: course.id,
+    name: course.name,
+    section: course.section,
+    descriptionHeading: course.descriptionHeading,
+    room: course.room,
+    state: course.courseState,
+    url: course.alternateLink
+  };
+}
+function normalizeAssignment(assignment) {
+  const dueDate = assignment.dueDate?.year && assignment.dueDate.month && assignment.dueDate.day ? `${assignment.dueDate.year}-${String(assignment.dueDate.month).padStart(2, "0")}-${String(assignment.dueDate.day).padStart(2, "0")}` : void 0;
+  return {
+    id: assignment.id,
+    courseId: assignment.courseId,
+    title: assignment.title,
+    description: assignment.description,
+    state: assignment.state,
+    workType: assignment.workType,
+    maxPoints: assignment.maxPoints,
+    dueDate,
+    createdAt: assignment.creationTime,
+    updatedAt: assignment.updateTime,
+    url: assignment.alternateLink,
+    associatedWithProviderApp: assignment.associatedWithDeveloper ?? false,
+    materials: (assignment.materials ?? []).map(normalizeAttachment)
+  };
+}
+function normalizeAttachment(attachment) {
+  if (attachment.driveFile) return { type: "drive_file", id: attachment.driveFile.id, title: attachment.driveFile.title, url: attachment.driveFile.alternateLink, thumbnailUrl: attachment.driveFile.thumbnailUrl };
+  if (attachment.link) return { type: "link", title: attachment.link.title, url: attachment.link.url, thumbnailUrl: attachment.link.thumbnailUrl };
+  if (attachment.youtubeVideo) return { type: "youtube_video", id: attachment.youtubeVideo.id, title: attachment.youtubeVideo.title, url: attachment.youtubeVideo.alternateLink, thumbnailUrl: attachment.youtubeVideo.thumbnailUrl };
+  if (attachment.form) return { type: "form", title: attachment.form.title, url: attachment.form.responseUrl ?? attachment.form.formUrl, thumbnailUrl: attachment.form.thumbnailUrl };
+  return { type: "unknown" };
+}
+function normalizeGoogleSubmission(submission) {
+  return {
+    id: submission.id,
+    courseId: submission.courseId,
+    assignmentId: submission.courseWorkId,
+    userId: submission.userId,
+    state: submission.state,
+    late: submission.late ?? false,
+    assignedGrade: submission.assignedGrade,
+    draftGrade: submission.draftGrade,
+    shortAnswer: submission.shortAnswerSubmission?.answer,
+    multipleChoiceAnswer: submission.multipleChoiceSubmission?.answer,
+    attachments: (submission.assignmentSubmission?.attachments ?? []).map(normalizeAttachment),
+    createdAt: submission.creationTime,
+    updatedAt: submission.updateTime,
+    url: submission.alternateLink
+  };
+}
+function materialForGoogle(material) {
+  if (material.type === "link") return { link: { url: material.url, title: material.title } };
+  if (material.type === "drive_file") return { driveFile: { id: material.id, title: material.title } };
+  return { youtubeVideo: { id: material.id, title: material.title } };
+}
+function dueDateForGoogle(value) {
+  if (!value) return void 0;
+  const [year, month, day] = value.split("-").map(Number);
+  return { year, month, day };
+}
+function cleanErrorBody(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed.error ? `${parsed.error.status ?? parsed.error.code ?? "Google API error"}: ${parsed.error.message ?? "Request failed"}` : value;
+  } catch {
+    return value.slice(0, 1e3);
+  }
+}
+var GoogleClassroomAdapter = class {
+  constructor(options = {}) {
+    this.provider = "google";
+    this.grantedScopes = [];
+    this.includeDriveContent = false;
+    this.clientId = options.clientId ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID;
+    this.clientSecret = options.clientSecret ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET;
+    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.accessToken = options.initialAccessToken;
+    this.expiresAt = options.initialAccessToken ? Date.now() + 36e5 : void 0;
+  }
+  status() {
+    return {
+      provider: this.provider,
+      configured: Boolean(this.clientId && this.clientSecret),
+      requiredEnvironment: this.clientId && this.clientSecret ? [] : ["ASFAI_GOOGLE_CLASSROOM_CLIENT_ID", "ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET"],
+      authorizationPending: Boolean(this.authorizationUrl),
+      isLoggedIn: Boolean(this.accessToken || this.refreshToken),
+      accountEmail: this.accountEmail,
+      role: this.role,
+      readOnly: this.readOnly,
+      includeDriveContent: this.includeDriveContent,
+      grantedScopes: this.grantedScopes,
+      error: this.authError,
+      capabilities: ["courses", "learners", "assignments", "submission-import", "assignment-export", "work-attachment-export", "grade-passback"],
+      limitations: [
+        "Google permits attachment access and submission modification only for coursework associated with the same Developer Console project.",
+        "Detailed ASFAI feedback is saved owner-side; the Classroom API supports grade/state passback but not private feedback comments."
+      ],
+      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output."
+    };
+  }
+  async closeCallbackServer() {
+    if (!this.callbackServer) return;
+    const server2 = this.callbackServer;
+    this.callbackServer = void 0;
+    await new Promise((resolve) => server2.close(() => resolve()));
+  }
+  async connect(input) {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error("Google Classroom is not configured. An administrator must set ASFAI_GOOGLE_CLASSROOM_CLIENT_ID and ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET for a Google Desktop OAuth client with the Classroom API enabled.");
+    }
+    await this.closeCallbackServer();
+    this.authorizationUrl = void 0;
+    this.authError = void 0;
+    this.accessToken = void 0;
+    this.refreshToken = void 0;
+    this.expiresAt = void 0;
+    this.accountEmail = void 0;
+    this.grantedScopes = [];
+    this.role = input.role;
+    this.readOnly = input.readOnly;
+    this.includeDriveContent = input.includeDriveContent;
+    const port = input.port ?? Number(process.env.ASFAI_CLASSROOM_OAUTH_PORT ?? 18766);
+    const callbackUrl = `http://127.0.0.1:${port}/classroom/callback`;
+    const state = base64Url(randomBytes(32));
+    const verifier = base64Url(randomBytes(48));
+    const challenge = base64Url(createHash("sha256").update(verifier).digest());
+    const scopes = scopesFor(input);
+    this.callbackServer = createServer(async (request, response) => {
+      const incoming = new URL(request.url ?? "/", callbackUrl);
+      if (incoming.pathname !== "/classroom/callback") {
+        response.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("Not found");
+        return;
+      }
+      try {
+        if (incoming.searchParams.get("state") !== state) throw new Error("Google OAuth state validation failed.");
+        const providerError = incoming.searchParams.get("error");
+        if (providerError) throw new Error(`Google authorization ended with ${providerError}.`);
+        const code = incoming.searchParams.get("code");
+        if (!code) throw new Error("Google did not return an authorization code.");
+        const tokenResponse = await this.fetchImpl(GOOGLE_TOKEN, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: this.clientId,
+            client_secret: this.clientSecret,
+            code,
+            code_verifier: verifier,
+            grant_type: "authorization_code",
+            redirect_uri: callbackUrl
+          })
+        });
+        const tokenText = await tokenResponse.text();
+        if (!tokenResponse.ok) throw new Error(cleanErrorBody(tokenText));
+        const token = JSON.parse(tokenText);
+        this.accessToken = token.access_token;
+        this.refreshToken = token.refresh_token;
+        this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1e3;
+        this.grantedScopes = token.scope?.split(/\s+/).filter(Boolean) ?? scopes;
+        this.authorizationUrl = void 0;
+        const userResponse = await this.fetchImpl(GOOGLE_USERINFO, { headers: { authorization: `Bearer ${this.accessToken}` } });
+        if (userResponse.ok) this.accountEmail = (await userResponse.json()).email;
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end("<!doctype html><title>ASFAI Classroom connected</title><h1>Classroom connected</h1><p>You can close this window and continue in chat.</p>");
+      } catch (error51) {
+        this.authError = error51 instanceof Error ? error51.message : String(error51);
+        this.authorizationUrl = void 0;
+        response.writeHead(400, { "content-type": "text/html; charset=utf-8" }).end("<!doctype html><title>ASFAI Classroom connection failed</title><h1>Classroom connection failed</h1><p>Return to chat for details.</p>");
+      } finally {
+        setTimeout(() => void this.closeCallbackServer(), 250);
+      }
+    });
+    await new Promise((resolve, reject) => {
+      this.callbackServer.once("error", reject);
+      this.callbackServer.listen(port, "127.0.0.1", resolve);
+    });
+    const authorization = new URL(GOOGLE_AUTH);
+    authorization.search = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: callbackUrl,
+      response_type: "code",
+      scope: scopes.join(" "),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      access_type: "offline",
+      prompt: "consent",
+      include_granted_scopes: "true"
+    }).toString();
+    this.authorizationUrl = authorization.toString();
+    return {
+      ...this.status(),
+      callbackUrl,
+      authorizationUrl: this.authorizationUrl,
+      requestedScopes: scopes,
+      instruction: "Open the authorization URL and approve access on Google's page. Never paste Google credentials, authorization codes, or tokens into chat. Then call status until isLoggedIn is true."
+    };
+  }
+  async disconnect() {
+    await this.closeCallbackServer();
+    this.accessToken = void 0;
+    this.refreshToken = void 0;
+    this.expiresAt = void 0;
+    this.authorizationUrl = void 0;
+    this.accountEmail = void 0;
+    this.grantedScopes = [];
+    this.role = void 0;
+    this.readOnly = void 0;
+    this.includeDriveContent = false;
+    return this.status();
+  }
+  async token() {
+    if (this.accessToken && (!this.expiresAt || this.expiresAt > Date.now() + 6e4)) return this.accessToken;
+    if (!this.refreshToken || !this.clientId || !this.clientSecret) throw new Error("Google Classroom is not authenticated. Call connect and complete browser authorization first.");
+    const response = await this.fetchImpl(GOOGLE_TOKEN, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: this.clientId, client_secret: this.clientSecret, refresh_token: this.refreshToken, grant_type: "refresh_token" })
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(cleanErrorBody(text));
+    const token = JSON.parse(text);
+    this.accessToken = token.access_token;
+    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1e3;
+    if (token.refresh_token) this.refreshToken = token.refresh_token;
+    if (token.scope) this.grantedScopes = token.scope.split(/\s+/).filter(Boolean);
+    return this.accessToken;
+  }
+  async requestJson(url2, init = {}) {
+    const headers = new Headers(init.headers);
+    headers.set("authorization", `Bearer ${await this.token()}`);
+    if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json");
+    const response = await this.fetchImpl(url2, { ...init, headers });
+    const text = await response.text();
+    if (!response.ok) throw new Error(cleanErrorBody(text));
+    return text ? JSON.parse(text) : {};
+  }
+  async listCourses(input) {
+    const url2 = new URL(`${CLASSROOM_API}/courses`);
+    url2.searchParams.set("courseStates", "ACTIVE");
+    url2.searchParams.set("pageSize", String(input.pageSize ?? 50));
+    if (input.pageToken) url2.searchParams.set("pageToken", input.pageToken);
+    const result = await this.requestJson(url2.toString());
+    return { provider: this.provider, courses: (result.courses ?? []).map(normalizeCourse), nextPageToken: result.nextPageToken };
+  }
+  async listLearners(input) {
+    if (this.role !== "teacher") throw new Error("Reconnect to Google Classroom with role:'teacher' to list the course roster.");
+    const url2 = new URL(`${CLASSROOM_API}/courses/${encodeURIComponent(input.courseId)}/students`);
+    url2.searchParams.set("pageSize", String(input.pageSize ?? 50));
+    if (input.pageToken) url2.searchParams.set("pageToken", input.pageToken);
+    const result = await this.requestJson(url2.toString());
+    return {
+      provider: this.provider,
+      courseId: input.courseId,
+      learners: (result.students ?? []).map((student) => ({
+        id: student.userId,
+        displayName: student.profile?.name?.fullName,
+        givenName: student.profile?.name?.givenName,
+        familyName: student.profile?.name?.familyName
+      })),
+      nextPageToken: result.nextPageToken
+    };
+  }
+  async listAssignments(input) {
+    const url2 = new URL(`${CLASSROOM_API}/courses/${encodeURIComponent(input.courseId)}/courseWork`);
+    url2.searchParams.set("pageSize", String(input.pageSize ?? 50));
+    url2.searchParams.set("orderBy", "updateTime desc");
+    if (input.pageToken) url2.searchParams.set("pageToken", input.pageToken);
+    const result = await this.requestJson(url2.toString());
+    return { provider: this.provider, courseId: input.courseId, assignments: (result.courseWork ?? []).map(normalizeAssignment), nextPageToken: result.nextPageToken };
+  }
+  assignmentUrl(courseId, assignmentId) {
+    return `${CLASSROOM_API}/courses/${encodeURIComponent(courseId)}/courseWork/${encodeURIComponent(assignmentId)}`;
+  }
+  async driveText(fileId, maxBytes) {
+    if (!this.includeDriveContent) return { warning: "Reconnect with includeDriveContent:true to import Drive attachment text." };
+    const metadata = await this.requestJson(
+      `${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,webViewLink,capabilities(canDownload)`
+    );
+    if (metadata.capabilities?.canDownload === false) return { name: metadata.name, mimeType: metadata.mimeType, url: metadata.webViewLink, warning: "The owner disabled downloading this attachment." };
+    let downloadUrl;
+    if (metadata.mimeType === "application/vnd.google-apps.document") downloadUrl = `${DRIVE_API}/files/${encodeURIComponent(fileId)}/export?mimeType=${encodeURIComponent("text/plain")}`;
+    else if (metadata.mimeType === "application/vnd.google-apps.spreadsheet") downloadUrl = `${DRIVE_API}/files/${encodeURIComponent(fileId)}/export?mimeType=${encodeURIComponent("text/csv")}`;
+    else if (metadata.mimeType?.startsWith("text/") || metadata.mimeType === "application/json") downloadUrl = `${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`;
+    if (!downloadUrl) return { name: metadata.name, mimeType: metadata.mimeType, url: metadata.webViewLink, warning: "This attachment type is preserved by reference; automatic text extraction is not supported." };
+    const headers = new Headers({ authorization: `Bearer ${await this.token()}` });
+    const response = await this.fetchImpl(downloadUrl, { headers });
+    if (!response.ok) throw new Error(cleanErrorBody(await response.text()));
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > maxBytes) return { name: metadata.name, mimeType: metadata.mimeType, url: metadata.webViewLink, warning: `Attachment exceeds the ${maxBytes}-byte import limit.` };
+    return { name: metadata.name, mimeType: metadata.mimeType, url: metadata.webViewLink, text: new TextDecoder().decode(bytes), digest: createHash("sha256").update(bytes).digest("hex") };
+  }
+  async importWork(input) {
+    const assignment = await this.requestJson(this.assignmentUrl(input.courseId, input.assignmentId));
+    const warnings = [];
+    if (!assignment.associatedWithDeveloper) warnings.push("Google may omit attachments or reject later modifications because this coursework was not created by the configured developer project.");
+    let submissions;
+    let nextPageToken;
+    if (input.submissionId) {
+      submissions = [await this.requestJson(`${this.assignmentUrl(input.courseId, input.assignmentId)}/studentSubmissions/${encodeURIComponent(input.submissionId)}`)];
+    } else {
+      const url2 = new URL(`${this.assignmentUrl(input.courseId, input.assignmentId)}/studentSubmissions`);
+      url2.searchParams.set("pageSize", String(input.pageSize ?? 50));
+      if (input.pageToken) url2.searchParams.set("pageToken", input.pageToken);
+      if (input.userId) url2.searchParams.append("userIds", input.userId);
+      const result = await this.requestJson(url2.toString());
+      submissions = result.studentSubmissions ?? [];
+      nextPageToken = result.nextPageToken;
+    }
+    const assignmentMaterialContent = {};
+    if (input.includeAttachmentContent) {
+      for (const material of assignment.materials ?? []) {
+        const normalizedMaterial = normalizeAttachment(material);
+        if (normalizedMaterial.type === "drive_file" && normalizedMaterial.id) {
+          try {
+            assignmentMaterialContent[normalizedMaterial.id] = await this.driveText(normalizedMaterial.id, input.maxContentBytes);
+          } catch (error51) {
+            assignmentMaterialContent[normalizedMaterial.id] = { warning: error51 instanceof Error ? error51.message : String(error51) };
+          }
+        }
+      }
+    }
+    const normalized = [];
+    for (const submission of submissions) {
+      const item = normalizeGoogleSubmission(submission);
+      const attachmentContent = {};
+      if (input.includeAttachmentContent) {
+        for (const attachment of item.attachments) {
+          if (attachment.type === "drive_file" && attachment.id) {
+            try {
+              attachmentContent[attachment.id] = await this.driveText(attachment.id, input.maxContentBytes);
+            } catch (error51) {
+              attachmentContent[attachment.id] = { warning: error51 instanceof Error ? error51.message : String(error51) };
+            }
+          }
+        }
+      }
+      normalized.push({ ...item, attachmentContent });
+    }
+    return {
+      schemaVersion: "0.1",
+      provider: this.provider,
+      courseId: input.courseId,
+      assignment: normalizeAssignment(assignment),
+      assignmentMaterialContent,
+      objectiveIds: input.objectiveIds,
+      submissions: normalized,
+      nextPageToken,
+      importedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      warnings,
+      serverRetainedStudentData: false,
+      next: "Evaluate only the selected learner's demonstrated work against the supplied objectives, create concise evidence, and save it owner-side before any optional grade passback."
+    };
+  }
+  async createAssignment(input) {
+    const body = {
+      title: input.assignment.title,
+      description: input.assignment.description,
+      state: input.assignment.state,
+      workType: "ASSIGNMENT",
+      maxPoints: input.assignment.maxPoints,
+      dueDate: dueDateForGoogle(input.assignment.dueDate),
+      materials: input.assignment.materials.map(materialForGoogle),
+      submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN"
+    };
+    if (!input.confirmed) return { provider: this.provider, preview: body, objectiveIds: input.objectiveIds, requiresConfirmation: true, externalMutationPerformed: false };
+    this.requireWritable("create an assignment");
+    if (this.role !== "teacher") throw new Error("Reconnect to Google Classroom with role:'teacher' to create an assignment.");
+    const created = await this.requestJson(`${CLASSROOM_API}/courses/${encodeURIComponent(input.courseId)}/courseWork`, { method: "POST", body: JSON.stringify(body) });
+    return { provider: this.provider, assignment: normalizeAssignment(created), objectiveIds: input.objectiveIds, externalMutationPerformed: true };
+  }
+  async createDriveTextFile(work) {
+    const boundary = `asfai-${base64Url(randomBytes(18))}`;
+    const metadata = JSON.stringify({ name: work.fileName ?? "ASFAI learner work.txt", mimeType: work.contentType });
+    const body = `--${boundary}\r
+Content-Type: application/json; charset=UTF-8\r
+\r
+${metadata}\r
+--${boundary}\r
+Content-Type: ${work.contentType}; charset=UTF-8\r
+\r
+${work.content}\r
+--${boundary}--`;
+    return this.requestJson(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,webViewLink`, {
+      method: "POST",
+      headers: { "content-type": `multipart/related; boundary=${boundary}` },
+      body
+    });
+  }
+  async exportWork(input) {
+    const preview = { attachmentCount: input.work.links.length + input.work.driveFileIds.length + (input.work.content ? 1 : 0), turnIn: input.work.turnIn, objectiveIds: input.objectiveIds };
+    if (!input.confirmed) return { provider: this.provider, preview, requiresConfirmation: true, externalMutationPerformed: false };
+    this.requireWritable("export or turn in work");
+    const assignment = await this.requestJson(this.assignmentUrl(input.courseId, input.assignmentId));
+    if (!assignment.associatedWithDeveloper) throw new Error("Google permits submission attachment changes only for coursework created by the same Developer Console project.");
+    const attachments = [
+      ...input.work.links.map((link) => ({ link })),
+      ...input.work.driveFileIds.map((id) => ({ driveFile: { id } }))
+    ];
+    let createdFile;
+    if (input.work.content) {
+      createdFile = await this.createDriveTextFile(input.work);
+      attachments.push({ driveFile: { id: createdFile.id, title: createdFile.name, alternateLink: createdFile.webViewLink } });
+    }
+    const submissionUrl = `${this.assignmentUrl(input.courseId, input.assignmentId)}/studentSubmissions/${encodeURIComponent(input.submissionId)}`;
+    let submission = await this.requestJson(`${submissionUrl}:modifyAttachments`, { method: "POST", body: JSON.stringify({ addAttachments: attachments }) });
+    if (input.work.turnIn) submission = await this.requestJson(`${submissionUrl}:turnIn`, { method: "POST", body: "{}" });
+    return { provider: this.provider, submission: normalizeGoogleSubmission(submission), createdFile, objectiveIds: input.objectiveIds, externalMutationPerformed: true };
+  }
+  async returnEvaluation(input) {
+    const preview = { score: input.evaluation.score, publishGrade: input.evaluation.publishGrade, returnSubmission: input.evaluation.returnSubmission, objectiveIds: input.objectiveIds };
+    if (!input.confirmed) return { provider: this.provider, preview, requiresConfirmation: true, externalMutationPerformed: false };
+    this.requireWritable("return an evaluation");
+    if (this.role !== "teacher") throw new Error("Reconnect to Google Classroom with role:'teacher' to return an evaluation.");
+    const assignment = await this.requestJson(this.assignmentUrl(input.courseId, input.assignmentId));
+    if (!assignment.associatedWithDeveloper) throw new Error("Google permits grade passback only for coursework created by the same Developer Console project.");
+    if (assignment.maxPoints !== void 0 && input.evaluation.score > assignment.maxPoints) throw new Error(`Score ${input.evaluation.score} exceeds the assignment maximum of ${assignment.maxPoints}.`);
+    const submissionUrl = `${this.assignmentUrl(input.courseId, input.assignmentId)}/studentSubmissions/${encodeURIComponent(input.submissionId)}`;
+    const grade = input.evaluation.publishGrade ? { draftGrade: input.evaluation.score, assignedGrade: input.evaluation.score } : { draftGrade: input.evaluation.score };
+    const updateMask = input.evaluation.publishGrade ? "draftGrade,assignedGrade" : "draftGrade";
+    let submission = await this.requestJson(`${submissionUrl}?updateMask=${encodeURIComponent(updateMask)}`, { method: "PATCH", body: JSON.stringify(grade) });
+    if (input.evaluation.returnSubmission) submission = await this.requestJson(`${submissionUrl}:return`, { method: "POST", body: "{}" });
+    return {
+      provider: this.provider,
+      submission: normalizeGoogleSubmission(submission),
+      objectiveIds: input.objectiveIds,
+      externalMutationPerformed: true,
+      detailedFeedbackLocation: "Save detailed objective-level evidence and feedback through asfai_personal_storage; Google Classroom receives only grade and submission state through this API."
+    };
+  }
+  requireWritable(action) {
+    if (this.readOnly !== false) throw new Error(`Reconnect to Google Classroom with readOnly:false to ${action}.`);
+  }
+};
+
+// src/lib/personal-storage.ts
+import { createHash as createHash2, createPrivateKey, createPublicKey, generateKeyPairSync, sign as sign2, verify as verify2 } from "node:crypto";
+import { createServer as createServer2 } from "node:http";
 import { chmod, mkdir, readFile, rename, writeFile as writeFile2 } from "node:fs/promises";
 import path from "node:path";
 
@@ -59794,7 +60307,7 @@ function canonical(value) {
   return JSON.stringify(value) ?? "null";
 }
 function documentDigest(value) {
-  return createHash("sha256").update(canonical(value)).digest("hex");
+  return createHash2("sha256").update(canonical(value)).digest("hex");
 }
 function parsePersonalDocument(kind, input, ownerRole = "learner") {
   if (kind === "learner") return input ? migrateLearnerProfile(learnerProfileSchema.parse(input)) : newLearnerProfile();
@@ -59841,7 +60354,7 @@ var PersonalStorageService = class {
     this.authError = void 0;
     const port = input.port ?? 18765;
     this.callbackUrl = `http://127.0.0.1:${port}/solid/callback`;
-    this.callbackServer = createServer(async (request, response) => {
+    this.callbackServer = createServer2(async (request, response) => {
       const incoming = new URL(request.url ?? "/", this.callbackUrl);
       if (incoming.pathname !== "/solid/callback") {
         response.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("Not found");
@@ -59984,7 +60497,7 @@ var PersonalStorageService = class {
   }
   async identity() {
     const { publicPem } = await this.identityFiles();
-    const fingerprint = createHash("sha256").update(createPublicKey(publicPem).export({ type: "spki", format: "der" })).digest("hex");
+    const fingerprint = createHash2("sha256").update(createPublicKey(publicPem).export({ type: "spki", format: "der" })).digest("hex");
     return { algorithm: "ed25519", publicKeyPem: publicPem, fingerprint, webId: this.session?.info.webId, privateKeyExported: false };
   }
   async sign(value) {
@@ -59998,14 +60511,15 @@ var PersonalStorageService = class {
     const publicKey = createPublicKey(publicKeyPem);
     if (publicKey.asymmetricKeyType !== "ed25519") throw new Error("Only Ed25519 classroom signatures are accepted.");
     const valid = verify2(null, Buffer.from(canonical(value), "utf8"), publicKey, Buffer.from(signature, "base64"));
-    const signerFingerprint = createHash("sha256").update(publicKey.export({ type: "spki", format: "der" })).digest("hex");
+    const signerFingerprint = createHash2("sha256").update(publicKey.export({ type: "spki", format: "der" })).digest("hex");
     return { valid, signerFingerprint };
   }
 };
 
 // scripts/personal-storage-mcp.ts
 var storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path2.join(homedir(), ".asfai-personal-storage"));
-var server = new McpServer({ name: "asfai-personal-storage", version: "1.1.0" });
+var classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
+var server = new McpServer({ name: "asfai-private-companion", version: "1.2.0" });
 var documentSchema = external_exports.enum(personalDocumentKinds);
 var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"]).describe("Use status first. Then choose local configuration, Solid OIDC connection, document load/save, identity/signing, verification, or disconnect.");
 var payloadSchema = external_exports.object({
@@ -60066,6 +60580,133 @@ server.registerTool("asfai_personal_storage", {
         content: [{
           type: "text",
           text: JSON.stringify({ error: "Invalid personal-storage request.", action, expected: payloadHelp[action], issues: error51.issues }, null, 2)
+        }],
+        isError: true
+      };
+    }
+    const message2 = error51 instanceof Error ? error51.message : String(error51);
+    return { content: [{ type: "text", text: message2 }], isError: true };
+  }
+});
+var classroomActionSchema = external_exports.enum([
+  "status",
+  "connect",
+  "disconnect",
+  "list_courses",
+  "list_learners",
+  "list_assignments",
+  "import_work",
+  "create_assignment",
+  "export_work",
+  "return_evaluation"
+]).describe("Choose a provider-neutral classroom operation. Always pass provider; Google is the first adapter.");
+var classroomPayloadSchema = external_exports.object({
+  provider: classroomProviderSchema.describe("Classroom provider adapter. Pass 'google' for Google Classroom."),
+  role: classroomRoleSchema.optional().describe("connect: learner for own work or teacher for course work"),
+  readOnly: external_exports.boolean().optional().describe("connect: true for import only; false when assignment, attachment, turn-in, or grade writes are needed"),
+  includeDriveContent: external_exports.boolean().optional().describe("connect: request extra permission to read Google Drive attachment text; leave false unless needed"),
+  port: external_exports.number().int().min(1024).max(65535).optional().describe("connect: optional local OAuth callback port; normally omit"),
+  courseId: external_exports.string().min(1).optional(),
+  assignmentId: external_exports.string().min(1).optional(),
+  submissionId: external_exports.string().min(1).optional(),
+  userId: external_exports.string().min(1).optional().describe("import_work: optional learner filter for a teacher"),
+  pageSize: external_exports.number().int().min(1).max(100).optional(),
+  pageToken: external_exports.string().min(1).optional(),
+  objectiveIds: external_exports.array(external_exports.string().min(1)).max(100).optional().describe("ASFAI learning objective IDs used to contextualize import/export; evaluate with asfai_evidence"),
+  includeAttachmentContent: external_exports.boolean().optional().describe("import_work: include supported Drive text after connecting with includeDriveContent:true"),
+  maxContentBytes: external_exports.number().int().min(1024).max(1e6).optional().describe("import_work: maximum bytes per imported Drive attachment; defaults to 200000"),
+  assignment: classroomAssignmentExportSchema.optional().describe("create_assignment: normalized provider-neutral assignment"),
+  work: classroomWorkExportSchema.optional().describe("export_work: learner work or references to attach"),
+  evaluation: classroomEvaluationExportSchema.optional().describe("return_evaluation: score and optional publish/return instructions; save detailed evidence owner-side first"),
+  confirmed: external_exports.boolean().optional().describe("Required true only after the user reviews a mutation preview and explicitly approves it")
+}).describe("Action-specific fields. The provider field is always required; currently pass provider:'google'.");
+var classroomPayloadHelp = {
+  status: "payload: { provider }; currently provider is 'google'.",
+  connect: "payload: { provider, role, readOnly, includeDriveContent?, port? }",
+  disconnect: "payload: { provider }",
+  list_courses: "payload: { provider, pageSize?, pageToken? }",
+  list_learners: "payload: { provider, courseId, pageSize?, pageToken? }; teacher connection only.",
+  list_assignments: "payload: { provider, courseId, pageSize?, pageToken? }",
+  import_work: "payload: { provider, courseId, assignmentId, submissionId?, userId?, objectiveIds?, includeAttachmentContent?, maxContentBytes?, pageSize?, pageToken? }",
+  create_assignment: "payload: { provider, courseId, assignment, objectiveIds?, confirmed }; call with confirmed:false for preview, then obtain explicit approval.",
+  export_work: "payload: { provider, courseId, assignmentId, submissionId, work, objectiveIds?, confirmed }; call with confirmed:false for preview, then obtain explicit approval.",
+  return_evaluation: "payload: { provider, courseId, assignmentId, submissionId, evaluation, objectiveIds?, confirmed }; save detailed evidence first and obtain explicit approval."
+};
+server.registerTool("asfai_classroom", {
+  title: "Exchange learning work with a classroom provider",
+  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Connect locally with OAuth, import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; this tool does not retain student work or OAuth credentials on the public ASFAI server.",
+  inputSchema: { action: classroomActionSchema, payload: classroomPayloadSchema }
+}, async ({ action, payload }) => {
+  try {
+    const adapter = classrooms.adapter(payload.provider);
+    const page = external_exports.object({ pageSize: external_exports.number().int().min(1).max(100).optional(), pageToken: external_exports.string().min(1).optional() }).parse(payload);
+    if (action === "status") return json2(adapter.status());
+    if (action === "connect") {
+      const parsed2 = external_exports.object({
+        role: classroomRoleSchema,
+        readOnly: external_exports.boolean(),
+        includeDriveContent: external_exports.boolean().default(false),
+        port: external_exports.number().int().min(1024).max(65535).optional()
+      }).parse(payload);
+      return json2(await adapter.connect(parsed2));
+    }
+    if (action === "disconnect") return json2(await adapter.disconnect());
+    if (action === "list_courses") return json2(await adapter.listCourses(page));
+    if (action === "list_learners") {
+      const parsed2 = external_exports.object({ courseId: external_exports.string().min(1) }).parse(payload);
+      return json2(await adapter.listLearners({ ...page, ...parsed2 }));
+    }
+    if (action === "list_assignments") {
+      const parsed2 = external_exports.object({ courseId: external_exports.string().min(1) }).parse(payload);
+      return json2(await adapter.listAssignments({ ...page, ...parsed2 }));
+    }
+    if (action === "import_work") {
+      const parsed2 = external_exports.object({
+        courseId: external_exports.string().min(1),
+        assignmentId: external_exports.string().min(1),
+        submissionId: external_exports.string().min(1).optional(),
+        userId: external_exports.string().min(1).optional(),
+        objectiveIds: external_exports.array(external_exports.string().min(1)).max(100).default([]),
+        includeAttachmentContent: external_exports.boolean().default(false),
+        maxContentBytes: external_exports.number().int().min(1024).max(1e6).default(2e5)
+      }).parse(payload);
+      return json2(await adapter.importWork({ ...page, ...parsed2 }));
+    }
+    if (action === "create_assignment") {
+      const parsed2 = external_exports.object({
+        courseId: external_exports.string().min(1),
+        assignment: classroomAssignmentExportSchema,
+        objectiveIds: external_exports.array(external_exports.string().min(1)).max(100).default([]),
+        confirmed: external_exports.boolean().default(false)
+      }).parse(payload);
+      return json2(await adapter.createAssignment(parsed2));
+    }
+    if (action === "export_work") {
+      const parsed2 = external_exports.object({
+        courseId: external_exports.string().min(1),
+        assignmentId: external_exports.string().min(1),
+        submissionId: external_exports.string().min(1),
+        work: classroomWorkExportSchema,
+        objectiveIds: external_exports.array(external_exports.string().min(1)).max(100).default([]),
+        confirmed: external_exports.boolean().default(false)
+      }).parse(payload);
+      return json2(await adapter.exportWork(parsed2));
+    }
+    const parsed = external_exports.object({
+      courseId: external_exports.string().min(1),
+      assignmentId: external_exports.string().min(1),
+      submissionId: external_exports.string().min(1),
+      evaluation: classroomEvaluationExportSchema,
+      objectiveIds: external_exports.array(external_exports.string().min(1)).max(100).default([]),
+      confirmed: external_exports.boolean().default(false)
+    }).parse(payload);
+    return json2(await adapter.returnEvaluation(parsed));
+  } catch (error51) {
+    if (error51 instanceof external_exports.ZodError) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ error: "Invalid classroom request.", action, expected: classroomPayloadHelp[action], issues: error51.issues }, null, 2)
         }],
         isError: true
       };

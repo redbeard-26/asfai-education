@@ -1,6 +1,6 @@
 # ASFAI Learning plugin
 
-This plugin packages the public ASFAI Education MCP, the private personal-storage MCP, and one compact routing skill. Students and teachers do not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths.
+This plugin packages the public ASFAI Education MCP, a two-tool private companion, and one compact routing skill. The companion provides personal storage and a provider-neutral classroom bridge; Google Classroom is the first adapter and is selected with `provider: "google"`. Students and teachers do not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths.
 
 ## Learner experience
 
@@ -9,6 +9,12 @@ This plugin packages the public ASFAI Education MCP, the private personal-storag
 3. For a Pod, approve access on the Pod provider page and return to chat.
 
 The private MCP runs on the learner's computer. Solid credentials and private signing keys never pass through the public AWS MCP. The local fallback writes under the learner's profile and verifies every save by reading it back.
+
+## Classroom exchange
+
+An administrator configures the Google OAuth application once. A learner or teacher can then ask chat to connect Google Classroom, import an assignment or submission, evaluate it against ASFAI learning objectives, save concise evidence privately, and export approved work or grades. Every classroom call includes the provider name, so future adapters can use the same workflow without adding more always-loaded MCP tools.
+
+OAuth tokens and imported student work stay in the local companion process. Any operation that creates an assignment, attaches or turns in work, or sends a grade is first returned as a preview and requires explicit user confirmation.
 
 ## Distribution status
 

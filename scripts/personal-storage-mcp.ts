@@ -3,10 +3,20 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { homedir } from "node:os";
 import path from "node:path";
 import { z } from "zod";
+import {
+  ClassroomConnectorService,
+  classroomAssignmentExportSchema,
+  classroomEvaluationExportSchema,
+  classroomProviderSchema,
+  classroomRoleSchema,
+  classroomWorkExportSchema,
+} from "../src/lib/classroom-connectors/contract";
+import { GoogleClassroomAdapter } from "../src/lib/classroom-connectors/google";
 import { PersonalStorageService, personalDocumentKinds } from "../src/lib/personal-storage";
 
 const storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path.join(homedir(), ".asfai-personal-storage"));
-const server = new McpServer({ name: "asfai-personal-storage", version: "1.1.0" });
+const classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
+const server = new McpServer({ name: "asfai-private-companion", version: "1.2.0" });
 const documentSchema = z.enum(personalDocumentKinds);
 const actionSchema = z.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"])
   .describe("Use status first. Then choose local configuration, Solid OIDC connection, document load/save, identity/signing, verification, or disconnect.");
@@ -71,6 +81,134 @@ server.registerTool("asfai_personal_storage", {
         content: [{
           type: "text" as const,
           text: JSON.stringify({ error: "Invalid personal-storage request.", action, expected: payloadHelp[action], issues: error.issues }, null, 2),
+        }],
+        isError: true,
+      };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return { content: [{ type: "text" as const, text: message }], isError: true };
+  }
+});
+
+const classroomActionSchema = z.enum([
+  "status",
+  "connect",
+  "disconnect",
+  "list_courses",
+  "list_learners",
+  "list_assignments",
+  "import_work",
+  "create_assignment",
+  "export_work",
+  "return_evaluation",
+]).describe("Choose a provider-neutral classroom operation. Always pass provider; Google is the first adapter.");
+
+const classroomPayloadSchema = z.object({
+  provider: classroomProviderSchema.describe("Classroom provider adapter. Pass 'google' for Google Classroom."),
+  role: classroomRoleSchema.optional().describe("connect: learner for own work or teacher for course work"),
+  readOnly: z.boolean().optional().describe("connect: true for import only; false when assignment, attachment, turn-in, or grade writes are needed"),
+  includeDriveContent: z.boolean().optional().describe("connect: request extra permission to read Google Drive attachment text; leave false unless needed"),
+  port: z.number().int().min(1024).max(65535).optional().describe("connect: optional local OAuth callback port; normally omit"),
+  courseId: z.string().min(1).optional(),
+  assignmentId: z.string().min(1).optional(),
+  submissionId: z.string().min(1).optional(),
+  userId: z.string().min(1).optional().describe("import_work: optional learner filter for a teacher"),
+  pageSize: z.number().int().min(1).max(100).optional(),
+  pageToken: z.string().min(1).optional(),
+  objectiveIds: z.array(z.string().min(1)).max(100).optional().describe("ASFAI learning objective IDs used to contextualize import/export; evaluate with asfai_evidence"),
+  includeAttachmentContent: z.boolean().optional().describe("import_work: include supported Drive text after connecting with includeDriveContent:true"),
+  maxContentBytes: z.number().int().min(1024).max(1_000_000).optional().describe("import_work: maximum bytes per imported Drive attachment; defaults to 200000"),
+  assignment: classroomAssignmentExportSchema.optional().describe("create_assignment: normalized provider-neutral assignment"),
+  work: classroomWorkExportSchema.optional().describe("export_work: learner work or references to attach"),
+  evaluation: classroomEvaluationExportSchema.optional().describe("return_evaluation: score and optional publish/return instructions; save detailed evidence owner-side first"),
+  confirmed: z.boolean().optional().describe("Required true only after the user reviews a mutation preview and explicitly approves it"),
+}).describe("Action-specific fields. The provider field is always required; currently pass provider:'google'.");
+
+type ClassroomAction = z.infer<typeof classroomActionSchema>;
+const classroomPayloadHelp: Record<ClassroomAction, string> = {
+  status: "payload: { provider }; currently provider is 'google'.",
+  connect: "payload: { provider, role, readOnly, includeDriveContent?, port? }",
+  disconnect: "payload: { provider }",
+  list_courses: "payload: { provider, pageSize?, pageToken? }",
+  list_learners: "payload: { provider, courseId, pageSize?, pageToken? }; teacher connection only.",
+  list_assignments: "payload: { provider, courseId, pageSize?, pageToken? }",
+  import_work: "payload: { provider, courseId, assignmentId, submissionId?, userId?, objectiveIds?, includeAttachmentContent?, maxContentBytes?, pageSize?, pageToken? }",
+  create_assignment: "payload: { provider, courseId, assignment, objectiveIds?, confirmed }; call with confirmed:false for preview, then obtain explicit approval.",
+  export_work: "payload: { provider, courseId, assignmentId, submissionId, work, objectiveIds?, confirmed }; call with confirmed:false for preview, then obtain explicit approval.",
+  return_evaluation: "payload: { provider, courseId, assignmentId, submissionId, evaluation, objectiveIds?, confirmed }; save detailed evidence first and obtain explicit approval.",
+};
+
+server.registerTool("asfai_classroom", {
+  title: "Exchange learning work with a classroom provider",
+  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Connect locally with OAuth, import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; this tool does not retain student work or OAuth credentials on the public ASFAI server.",
+  inputSchema: { action: classroomActionSchema, payload: classroomPayloadSchema },
+}, async ({ action, payload }) => {
+  try {
+    const adapter = classrooms.adapter(payload.provider);
+    const page = z.object({ pageSize: z.number().int().min(1).max(100).optional(), pageToken: z.string().min(1).optional() }).parse(payload);
+    if (action === "status") return json(adapter.status());
+    if (action === "connect") {
+      const parsed = z.object({
+        role: classroomRoleSchema,
+        readOnly: z.boolean(),
+        includeDriveContent: z.boolean().default(false),
+        port: z.number().int().min(1024).max(65535).optional(),
+      }).parse(payload);
+      return json(await adapter.connect(parsed));
+    }
+    if (action === "disconnect") return json(await adapter.disconnect());
+    if (action === "list_courses") return json(await adapter.listCourses(page));
+    if (action === "list_learners") {
+      const parsed = z.object({ courseId: z.string().min(1) }).parse(payload);
+      return json(await adapter.listLearners({ ...page, ...parsed }));
+    }
+    if (action === "list_assignments") {
+      const parsed = z.object({ courseId: z.string().min(1) }).parse(payload);
+      return json(await adapter.listAssignments({ ...page, ...parsed }));
+    }
+    if (action === "import_work") {
+      const parsed = z.object({
+        courseId: z.string().min(1),
+        assignmentId: z.string().min(1),
+        submissionId: z.string().min(1).optional(),
+        userId: z.string().min(1).optional(),
+        objectiveIds: z.array(z.string().min(1)).max(100).default([]),
+        includeAttachmentContent: z.boolean().default(false),
+        maxContentBytes: z.number().int().min(1024).max(1_000_000).default(200_000),
+      }).parse(payload);
+      return json(await adapter.importWork({ ...page, ...parsed }));
+    }
+    if (action === "create_assignment") {
+      const parsed = z.object({
+        courseId: z.string().min(1),
+        assignment: classroomAssignmentExportSchema,
+        objectiveIds: z.array(z.string().min(1)).max(100).default([]),
+        confirmed: z.boolean().default(false),
+      }).parse(payload);
+      return json(await adapter.createAssignment(parsed));
+    }
+    if (action === "export_work") {
+      const parsed = z.object({
+        courseId: z.string().min(1), assignmentId: z.string().min(1), submissionId: z.string().min(1),
+        work: classroomWorkExportSchema,
+        objectiveIds: z.array(z.string().min(1)).max(100).default([]),
+        confirmed: z.boolean().default(false),
+      }).parse(payload);
+      return json(await adapter.exportWork(parsed));
+    }
+    const parsed = z.object({
+      courseId: z.string().min(1), assignmentId: z.string().min(1), submissionId: z.string().min(1),
+      evaluation: classroomEvaluationExportSchema,
+      objectiveIds: z.array(z.string().min(1)).max(100).default([]),
+      confirmed: z.boolean().default(false),
+    }).parse(payload);
+    return json(await adapter.returnEvaluation(parsed));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ error: "Invalid classroom request.", action, expected: classroomPayloadHelp[action], issues: error.issues }, null, 2),
         }],
         isError: true,
       };

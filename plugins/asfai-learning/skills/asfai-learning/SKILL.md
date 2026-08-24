@@ -1,11 +1,11 @@
 ---
 name: asfai-learning
-description: Use ASFAI in chat to teach, learn, assess, plan lessons, save progress, or connect/read/write a PrivateDataPod or other Solid Pod through the bundled private-storage MCP tool. Trigger on requests such as "connect my private Pod," "save my learning progress," or "continue my ASFAI lesson."
+description: Use ASFAI in chat to teach, learn, assess, plan lessons, save progress, connect/read/write a PrivateDataPod or other Solid Pod, or import/export work through a configured classroom provider. Trigger on requests such as "connect my private Pod," "save my learning progress," "continue my ASFAI lesson," or "import my Classroom assignment."
 ---
 
 # ASFAI learning
 
-This installed plugin already includes both the public ASFAI education MCP and the private Solid-to-MCP bridge. Use the public ASFAI MCP for learning objectives, lesson guidance, assessment preparation, and portable record construction. Use the private `asfai_personal_storage` tool for actual learner-, teacher-, and classroom-owned storage. The public service must not receive Solid credentials, private signing keys, or complete private profiles.
+This installed plugin already includes the public ASFAI education MCP and a private local companion. Use the public ASFAI MCP for learning objectives, lesson guidance, assessment preparation, and portable record construction. Use private `asfai_personal_storage` for learner-, teacher-, and classroom-owned storage. Use private `asfai_classroom` to exchange work with a configured classroom provider. The public service must not receive Solid credentials, classroom OAuth tokens, raw private student work, private signing keys, or complete private profiles.
 
 When a user asks to connect, use, read, or write a private Pod, do not answer with generic connector architecture, search for a separate Solid connector, or say that a bridge must be built. Call `asfai_personal_storage` with action `status` immediately. Only explain a surface limitation if that tool is genuinely unavailable after checking the available tools.
 
@@ -27,3 +27,30 @@ Before relying on personal state, call `asfai_personal_storage` with action `sta
 - Say that data is saved only when `save` returns `verified: true` after read-back. If storage is unavailable, continue only as unsaved practice and say so plainly.
 
 Record concise learning evidence rather than a bare mastery flag. Avoid unnecessary personal details and verbatim conversation. Share progress with a teacher only after learner approval, using a scoped signed envelope instead of the complete learner profile.
+
+## Exchange classroom work
+
+Treat Classroom as a category, not a Google-specific tool. Every `asfai_classroom` call must include a provider identifier. Pass `{ "provider": "google" }` for Google Classroom today; use the provider requested by the user when another configured adapter becomes available.
+
+Keep the learner-facing conversation natural. Ask which class or assignment they mean in ordinary language when it cannot be inferred. Do not narrate connector, MCP, skill, schema, import pipeline, or persistence machinery unless the user asks how it works.
+
+### Connect and import
+
+1. Call `asfai_classroom` action `status` with payload `{ "provider": "google" }`.
+2. If it is configured but not connected, call `connect` with `role`, the least access needed, and the same provider. Use `readOnly:true` for import-only work. Set `includeDriveContent:true` only if reading attachment text is necessary. Show the returned link as “Connect classroom,” never ask for credentials or tokens in chat, and check `status` after the user approves.
+3. Use `list_courses`, teacher-only `list_learners`, and `list_assignments` only as needed to identify the target. Then call `import_work` with the provider, course and assignment, a specific learner or submission when known, and relevant `objectiveIds`. Import only the selected learner's work and only the attachment text needed for the requested evaluation.
+4. If the provider is not configured, explain that an administrator must configure that provider's OAuth application. Do not claim a separate Google-specific MCP tool is needed; `asfai_classroom` is the installed bridge.
+
+### Evaluate and save
+
+The classroom bridge transports work; it does not decide mastery. Resolve or confirm the intended objectives with `asfai_graph`, then use `asfai_evidence` to assess only what the work demonstrates. Preserve assistance, provenance, uncertainty, rubric references, and limitations. A grade or submission state alone is not learning evidence.
+
+Save concise evidence and any objective-level feedback through `asfai_personal_storage` before grade passback. Load the owner document, append the evidence or report, save with `expectedDigest`, and require `verified:true`. Do not persist the complete imported submission, OAuth material, unnecessary personally identifying data, or a verbatim chat transcript. If private saving fails, say plainly that the evaluation has not been saved and do not imply otherwise.
+
+When a newly created classroom assignment is linked to ASFAI objectives, save the provider/course/assignment-to-objective mapping in the educator or classroom document. Classroom providers may not offer portable custom metadata fields, so do not rely on the provider to retain that mapping.
+
+### Export or return results
+
+Use `create_assignment`, `export_work`, or `return_evaluation` first with `confirmed:false`. Explain the concrete external change in plain language and ask the affected learner or teacher to approve it. Only repeat the same call with `confirmed:true` after explicit approval. Never infer permission to publish an assignment, attach or turn in student work, publish a grade, or return a submission.
+
+Google currently permits attachment changes and grade passback only for coursework associated with the same Google Developer project. If the tool reports that limitation, preserve the local evidence and offer a non-destructive export or teacher-readable report. The Google Classroom API does not provide private feedback comments through this adapter, so store detailed objective-level feedback privately and send only the approved score and submission state to Classroom.
