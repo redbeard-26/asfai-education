@@ -1,16 +1,20 @@
 # Personal storage MCP companion
 
-The public ASFAI Education MCP is deliberately unable to read or write private learner and teacher data. A client that supports local MCP processes can add the private `asfai-personal-storage` companion alongside the public AWS MCP.
+The public ASFAI Education MCP is deliberately unable to read or write private learner and teacher data. The **ASFAI Learning** plugin packages the private `asfai-personal-storage` MCP alongside the public AWS MCP.
 
-## Run it
+## Learner installation
 
-Install repository dependencies, then run:
+The intended learner flow is:
 
-```text
-npm run personal-storage:mcp
-```
+1. Install **ASFAI Learning** from the plugin directory.
+2. Start a chat and say, “Connect my private Pod,” or begin learning with storage on this device.
+3. If using a Pod, approve access on the Pod provider page and return to chat.
 
-The process exposes one stdio MCP tool, `asfai_personal_storage`. Configure the MCP client to launch that command with this repository as its working directory. By default, private local state goes under `.asfai-personal-storage` in the current user's profile; `ASFAI_PERSONAL_DATA_DIR` may select a different approved local root.
+The learner does not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths. The plugin includes the compiled runtime and a compact skill that guides the assistant. The public MCP continues to supply specialized lesson and assessment guidance only when needed.
+
+Repository developers can still run `npm run personal-storage:mcp` directly. This is a development fallback, not a learner installation procedure.
+
+The plugin exposes one private stdio MCP tool, `asfai_personal_storage`. By default, private local state goes under `.asfai-personal-storage` in the current user's profile; `ASFAI_PERSONAL_DATA_DIR` may select a different approved local root for managed deployments.
 
 ## Solid authorization
 

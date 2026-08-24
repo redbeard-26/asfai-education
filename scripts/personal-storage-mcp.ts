@@ -6,7 +6,7 @@ import { z } from "zod";
 import { PersonalStorageService, personalDocumentKinds } from "../src/lib/personal-storage";
 
 const storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path.join(homedir(), ".asfai-personal-storage"));
-const server = new McpServer({ name: "asfai-personal-storage", version: "1.0.0" });
+const server = new McpServer({ name: "asfai-personal-storage", version: "1.1.0" });
 const payloadSchema = z.record(z.string(), z.unknown()).optional();
 const actionSchema = z.enum(["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"]);
 const documentSchema = z.enum(personalDocumentKinds);

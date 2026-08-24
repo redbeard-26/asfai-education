@@ -515,7 +515,14 @@ function storageAction(action: z.infer<typeof storageActionSchema>, payload: Rec
       tool: "asfai_personal_storage",
       publicToolCountImpact: 0,
       installSkill: { tool: "asfai_capability", action: "install_skill", payload: { name: "asfai-personal-storage" } },
-      launch: { repository: "https://github.com/redbeard-26/asfai-education", command: "npm run personal-storage:mcp", transport: "stdio" },
+      installation: {
+        plugin: "asfai-learning",
+        marketplace: "redbeard-26/asfai-education",
+        ref: "aws-hosting",
+        bundled: true,
+        userSetupAfterInstall: "Ask to connect private storage; no repository clone, dependency install, MCP settings, or filesystem path is required.",
+      },
+      developerFallback: { repository: "https://github.com/redbeard-26/asfai-education", command: "npm run personal-storage:mcp", transport: "stdio" },
       actions: ["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"],
       boundary: "The private companion runs in the user's MCP client. The public AWS MCP never receives Solid credentials or private signing keys.",
     };

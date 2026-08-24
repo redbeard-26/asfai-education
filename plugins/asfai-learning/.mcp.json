@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "asfai_education": {
+      "type": "http",
+      "url": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education/api/mcp"
+    },
+    "asfai_personal_storage": {
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/s",
+        "/c",
+        "call",
+        "./scripts/launch-personal-storage.cmd",
+        "./server.mjs"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "ASFAI_PERSONAL_DATA_DIR",
+        "CODEX_MCP_NODE_PATH",
+        "CODEX_BROWSER_USE_NODE_PATH",
+        "CODEX_ELECTRON_RESOURCES_PATH",
+        "CODEX_CLI_PATH",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "PATH"
+      ],
+      "startup_timeout_sec": 20,
+      "tool_timeout_sec": 300
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "asfai-learning",
+  "version": "0.1.0",
+  "description": "Plan and facilitate ASFAI lessons while keeping learner and teacher data in owner-controlled local storage or a Solid Pod.",
+  "author": {
+    "name": "ASFAI",
+    "url": "https://github.com/redbeard-26"
+  },
+  "homepage": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education",
+  "repository": "https://github.com/redbeard-26/asfai-education",
+  "license": "Apache-2.0",
+  "keywords": ["education", "learning", "lessons", "solid", "private-data"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ASFAI Learning",
+    "shortDescription": "Private, conversational learning and lesson planning.",
+    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, and save learner or teacher records locally or in an authorized Solid Pod. Private credentials and signing keys remain on the user's device.",
+    "developerName": "ASFAI",
+    "category": "Education",
+    "capabilities": ["Learning", "Lesson planning", "Private storage"],
+    "defaultPrompt": [
+      "Connect my private Pod and continue my lesson.",
+      "Help me learn a concept and save my progress.",
+      "Create a lesson for my class."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
