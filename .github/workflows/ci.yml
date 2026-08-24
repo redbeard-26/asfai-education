@@ -19,6 +19,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run build:plugin
+      - run: git diff --exit-code -- plugins/asfai-learning/server.mjs
+      - run: npm run test:plugin
       - run: npm test
       - run: npm run lint
       - run: npm run build
