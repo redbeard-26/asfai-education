@@ -41,7 +41,7 @@ The education MCP server is also in this repository. Its default surface is eigh
 
 The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. The public server does not durably persist learner identity, progress, educator workspaces, sessions, room membership, or jobs.
 
-The **ASFAI Learning** plugin packages the public MCP, one compact routing skill, and the one-tool private storage companion. After installation, a learner can connect a Solid Pod or use verified storage on the device without cloning this repository, installing dependencies, editing MCP settings, or choosing filesystem paths. See [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md).
+The **ASFAI Learning** plugin packages the public MCP, one compact routing skill, and a two-tool private companion. After installation, a learner can connect a Solid Pod or use verified storage on the device; a learner or teacher can also exchange work through one provider-neutral classroom bridge, with Google as the first adapter. No repository clone, dependency installation, or manual MCP configuration is required. See [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
 See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
@@ -107,6 +107,7 @@ No student records are committed to this repository.
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
 - [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
 - [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md)
+- [Classroom connectors](docs/CLASSROOM-CONNECTORS.md)
 - [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
 - [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)
 - [Block Algebra pilot](docs/BLOCK-ALGEBRA-PILOT.md)

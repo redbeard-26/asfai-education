@@ -120,6 +120,7 @@ describe("compact ASFAI MCP surface", () => {
   it("discovers workflow guidance for the complete compact surface", () => {
     expect(listSkills().map((skill) => skill.name)).toEqual(expect.arrayContaining([
       "asfai-capability-router",
+      "asfai-classroom-integration",
       "asfai-district-governance",
       "asfai-educator-workspace",
       "asfai-learning-outcomes",

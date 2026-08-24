@@ -17,13 +17,22 @@ await client.connect(new StdioClientTransport(launch));
 
 try {
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map((tool) => tool.name), ["asfai_personal_storage"]);
-  assert.match(tools.tools[0].description, /PrivateDataPod\/Solid Pod/);
-  assert.match(tools.tools[0].description, /installed Solid-to-MCP bridge/);
-  assert.match(tools.tools[0].description, /call status first/);
-  assert.equal(tools.tools[0].inputSchema.properties.payload.properties.podRoot.type, "string");
-  assert.equal(tools.tools[0].inputSchema.properties.payload.properties.oidcIssuer.type, "string");
-  assert.equal(tools.tools[0].inputSchema.properties.payload.properties.expectedDigest.type, "string");
+  assert.deepEqual(tools.tools.map((tool) => tool.name), ["asfai_personal_storage", "asfai_classroom"]);
+  const serializedDefinitions = JSON.stringify(tools.tools);
+  assert.ok(serializedDefinitions.length <= 8_000, `Private companion tool definitions use ${serializedDefinitions.length} characters`);
+  const personalTool = tools.tools.find((tool) => tool.name === "asfai_personal_storage");
+  const classroomTool = tools.tools.find((tool) => tool.name === "asfai_classroom");
+  assert.ok(personalTool);
+  assert.ok(classroomTool);
+  assert.match(personalTool.description, /PrivateDataPod\/Solid Pod/);
+  assert.match(personalTool.description, /installed Solid-to-MCP bridge/);
+  assert.match(personalTool.description, /call status first/);
+  assert.equal(personalTool.inputSchema.properties.payload.properties.podRoot.type, "string");
+  assert.equal(personalTool.inputSchema.properties.payload.properties.oidcIssuer.type, "string");
+  assert.equal(personalTool.inputSchema.properties.payload.properties.expectedDigest.type, "string");
+  assert.match(classroomTool.description, /Provider-neutral classroom bridge/);
+  assert.match(classroomTool.description, /provider.*google/i);
+  assert.equal(classroomTool.inputSchema.properties.payload.properties.provider.type, "string");
 
   const invalid = await client.callTool({
     name: "asfai_personal_storage",
@@ -40,7 +49,24 @@ try {
   const payload = JSON.parse(result.content[0].text);
   assert.equal(payload.mode, "local");
   assert.match(payload.credentialBoundary, /never accepted/i);
-  process.stdout.write("ASFAI plugin MCP smoke test passed.\n");
+
+  const classroomStatus = await client.callTool({
+    name: "asfai_classroom",
+    arguments: { action: "status", payload: { provider: "google" } },
+  });
+  assert.equal(classroomStatus.isError, undefined);
+  const classroomPayload = JSON.parse(classroomStatus.content[0].text);
+  assert.equal(classroomPayload.provider, "google");
+  assert.equal(typeof classroomPayload.configured, "boolean");
+  assert.match(classroomPayload.credentialBoundary, /never accepted/i);
+
+  const unavailableProvider = await client.callTool({
+    name: "asfai_classroom",
+    arguments: { action: "status", payload: { provider: "canvas" } },
+  });
+  assert.equal(unavailableProvider.isError, true);
+  assert.match(unavailableProvider.content[0].text, /Available providers: google/);
+  process.stdout.write(`ASFAI plugin MCP smoke test passed (${serializedDefinitions.length} serialized tool-definition characters).\n`);
 } finally {
   await client.close();
 }
