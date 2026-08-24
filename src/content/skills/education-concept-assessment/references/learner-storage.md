@@ -10,7 +10,7 @@ Before teaching begins, inspect available tools and identify which capability is
 - `local_filesystem`: the host can read, atomically replace, and reread a learner-approved file;
 - `authenticated_solid_fetch`: the host has a logged-in Solid session and fetch bound to that session.
 
-Call `get_learner_storage_instructions` with the target and confirmed capabilities. Do not offer an unavailable target as though it will work.
+Call `asfai_storage` action `instructions` with `owner: "learner"`, the target, and confirmed capabilities. Do not offer an unavailable target as though it will work.
 
 ## IndexedDB
 
@@ -21,7 +21,7 @@ IndexedDB is origin-bound. A generic chat or remote MCP process cannot write the
 3. Read key `current` before calling personalized tools. If absent, begin without `learnerProfile`.
 4. After a tool returns an updated profile, start a `readwrite` transaction and put the complete object at key `current`.
 5. Wait for the transaction's `complete` event. A successful request event alone does not prove the transaction committed.
-6. Open a new `readonly` transaction, read `current`, and compare `learnerId`, `schemaVersion`, `updatedAt`, and the evidence, claim, run, and report counts.
+6. Open a new `readonly` transaction, read `current`, and call `asfai_storage` action `verify` with the expected returned profile and actual read-back. Confirm that `verified` is true.
 
 If browser execution on the correct origin is unavailable, use a local JSON file or authenticated Pod instead.
 
@@ -31,7 +31,7 @@ If browser execution on the correct origin is unavailable, use a local JSON file
 2. Read and parse it before calling personalized tools. If it does not exist, omit `learnerProfile` on the first call.
 3. Write the complete returned profile to a temporary file in the same directory.
 4. Atomically replace `learner.json` with the temporary file.
-5. Reread and verify the identity, version, update time, and collection counts.
+5. Reread it and call `asfai_storage` action `verify` with the expected and actual profiles.
 
 If the host cannot write files, offer the returned profile as a downloadable JSON file and say saving is pending.
 
@@ -43,7 +43,7 @@ If the host cannot write files, offer the returned profile as a downloadable JSO
 4. Read it with authenticated fetch. A `404` means it can be initialized. A `401` or `403` means authorization is missing or expired; reconnect instead of writing anonymously.
 5. Create `<pod-root>/asfai/` with the authenticated Solid client if the container is absent.
 6. Write the complete profile as `application/json`. Use the prior ETag with `If-Match` when exposed. On `412 Precondition Failed`, reload and reconcile; never silently discard either version.
-7. Read the resource back with authenticated fetch and verify the identity, version, update time, and collection counts.
+7. Read the resource back with authenticated fetch and call `asfai_storage` action `verify` with the expected and actual profiles.
 
 Do not pass passwords, access tokens, refresh tokens, DPoP keys, or session cookies to any ASFAI MCP tool. If the chat host lacks authenticated Solid fetch, explain that it cannot save to the Pod yet and offer another target.
 

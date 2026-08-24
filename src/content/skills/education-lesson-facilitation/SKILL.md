@@ -17,7 +17,7 @@ Storage messages may be direct but plain: “Where would you like me to save you
 
 ## Establish learner-owned state
 
-Inspect the host's available capabilities first. Ask the learner only about storage choices the host can actually use, then call `get_learner_storage_instructions` with the selected target and confirmed capabilities.
+Inspect the host's available capabilities first. Ask the learner only about storage choices the host can actually use, then call `asfai_storage` action `instructions` with `owner: "learner"`, the selected target, and confirmed capabilities.
 
 - IndexedDB requires browser JavaScript executing on the ASFAI Education origin. Use database `asfai-education`, version `1`, object store `learner-profile`, key `current`.
 - A local JSON file requires a host filesystem tool that can atomically replace and reread a learner-approved path such as `asfai/learner.json`.
@@ -28,19 +28,19 @@ Read [references/learner-storage.md](references/learner-storage.md) before loadi
 
 ## Start or resume
 
-Use `search_lessons` or `get_lesson` to identify the exact lesson version. Call `start_lesson_run` for a new run or load the existing run from `learnerProfile.lessonRuns`. Save every returned profile immediately.
+Use `asfai_lesson` action `search` or `get` to identify the exact lesson version. Call action `start_run` for a new run or load the existing run from `learnerProfile.lessonRuns`. Save every returned profile immediately.
 
-Call `get_next_lesson_step` and follow the activity's learner and assistant instructions. Convert internal assistant directions into natural learner-facing teaching and questions. Adapt to the activity type using [references/facilitation-modes.md](references/facilitation-modes.md).
+Call `asfai_lesson` action `next_step` and follow the activity's learner and assistant instructions. Convert internal assistant directions into natural learner-facing teaching and questions. Adapt to the activity type using [references/facilitation-modes.md](references/facilitation-modes.md).
 
 ## Games and hosted artifacts
 
-For a game activity, call `create_artifact_launch`, give the learner its `launchUrl`, and retain the returned `launchId` and short-lived token for the result claim. Tell the learner simply what to do in the activity. When the learner returns, call `claim_artifact_result` privately.
+For a game activity, call `asfai_lesson` action `create_artifact_launch`, give the learner its `launchUrl`, and retain the returned `launchId` and short-lived token for the result claim. Tell the learner simply what to do in the activity. When the learner returns, call action `claim_artifact_result` privately.
 
 If the result is not ready, ask the learner to finish or close the game and retry once. Do not repeatedly poll. Ask about surprising results or relevant limitations in ordinary language before recording. Practice launches produce completion context but no proficiency judgement.
 
 ## Record evidence
 
-Call `record_lesson_evidence` after actual observation. Include concise modality-specific observations, assistance, validity flags, and justified judgements. Suggested telemetry judgements are non-binding. Combine telemetry with explanation or transfer evidence when the lesson requires it.
+Call `asfai_evidence` action `record_lesson` after actual observation. Include concise modality-specific observations, assistance, validity flags, and justified judgements. Suggested telemetry judgements are non-binding. Combine telemetry with explanation or transfer evidence when the lesson requires it.
 
 Save exactly the returned profile and lesson run. Never replace evidence and assessment claims with a bare mastery flag. Do not award mastery merely to be encouraging.
 
@@ -48,8 +48,8 @@ For every returned profile, perform the selected host-side write immediately, re
 
 ## Report and share
 
-At the end, call `generate_lesson_report` and persist the returned profile. Tell the learner what they completed, what they showed, what remains uncertain, and what to try next, without exposing internal record or scoring terminology.
+At the end, call `asfai_evidence` action `generate_report` and persist the returned profile. Tell the learner what they completed, what they showed, what remains uncertain, and what to try next, without exposing internal record or scoring terminology.
 
-Only call `export_progress_update` after the learner confirms the assignment and sharing scope. The progress envelope is lesson-specific; never send the teacher the learner's entire profile unless the learner explicitly requests that broader disclosure.
+Only call `asfai_evidence` action `export_progress` after the learner confirms the assignment and sharing scope. The progress envelope is lesson-specific; never send the teacher the learner's entire profile unless the learner explicitly requests that broader disclosure.
 
-Teacher or peer feedback received through `import_progress_update` is attributed evidence. It can support or supersede a claim through the normal evidence workflow but must not silently overwrite learner history.
+Teacher or peer feedback received through `asfai_evidence` action `import_progress` is attributed evidence. It can support or supersede a claim through the normal evidence workflow but must not silently overwrite learner history.

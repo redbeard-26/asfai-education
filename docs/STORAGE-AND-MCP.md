@@ -39,25 +39,25 @@ Do not put client secrets, passwords, access tokens, or session cookies in this 
 
 The Education MCP server is intentionally stateless with respect to durable learner identity. It hosts public graph operations, conversational assessment, lesson orchestration, evidence transformation, reporting, progress-envelope validation, and skill installation.
 
-Public graph operations are:
+Public graph actions use `asfai_graph`:
 
-- `list_learning_programs`
-- `search_learning_objectives`
-- `get_learning_objective`
-- `get_neighboring_objectives`
+- `list_programs`
+- `search_objectives`
+- `get_objective`
+- `get_neighbors`
 - `get_program_objectives`
-- `get_learning_frontier`
-- `find_learning_path`
+- `get_frontier`
+- `find_path`
 
 When personalized graph calculations are needed, the client reads its own learner store and sends only the required objective IDs (for example, `masteredIds`) to the MCP tool. The MCP server neither signs the learner into ASFAI nor writes learner records to an ASFAI database. Tools that change a profile return the complete updated JSON and tell the host to save it through browser IndexedDB, a local file, or the learner's authenticated Solid fetch.
 
-`get_learner_storage_instructions` returns the exact write and read-back procedure for the selected target. The AI host must first confirm that it actually has one of these capabilities:
+`asfai_storage` action `instructions` returns the exact write and read-back procedure for learner or educator state. The AI host must first confirm that it actually has one of these capabilities:
 
 - browser JavaScript executing on the ASFAI Education origin for IndexedDB;
 - a persistent filesystem writer for local JSON; or
 - a logged-in Solid session with authenticated fetch for a Pod.
 
-IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. A generic remote MCP client with neither browser execution, filesystem access, nor authenticated Solid fetch cannot persist the profile. It must return downloadable JSON and say saving is pending. A host may say progress is saved only after writing and reading it back successfully.
+IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. A generic remote MCP client with neither browser execution, filesystem access, nor authenticated Solid fetch cannot persist the profile. It must return downloadable JSON and say saving is pending. After writing, the host rereads the complete object and calls `asfai_storage` action `verify`; it may say progress is saved only when `verified` is true.
 
 Hosted game launches use an optional one-hour pseudonymous result relay. The relay receives a minimized game summary, not the learner profile, and deletes the result after one successful claim. Its process-local pilot implementation is not a durable learner-record store.
 

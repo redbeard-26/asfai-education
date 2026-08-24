@@ -15,7 +15,7 @@ Keep technical directions in the assistant or teacher fields. For example, write
 
 ## Begin with the evidence
 
-Call `prepare_lesson_authoring` with the teacher's idea, audience, constraints, and teaching modes. Ask only for missing choices that materially affect the lesson.
+Call `asfai_lesson` action `prepare_authoring` with the teacher's idea, audience, constraints, and teaching modes. Ask only for missing choices that materially affect the lesson.
 
 Use the learning-objective tools to find appropriate public objectives. When the public graph has no sufficiently specific objective, create a scoped ASFAI objective identifier and record sourced external alignments rather than copying taxonomy records.
 
@@ -41,8 +41,8 @@ For AI-created or uploaded artifacts, retain provenance and licensing, provide a
 
 ## Review and prepare publication
 
-Call `validate_lesson`, correct every error, then call `review_lesson_plan`. Discuss material warnings with the teacher. Preserve pilot or unvalidated assessment thresholds as explicit policy metadata and keep consequential assessment disabled until reviewed and calibrated.
+Call `asfai_lesson` action `validate`, correct every error, then call action `review`. Discuss material warnings with the teacher. Preserve pilot or unvalidated assessment thresholds as explicit policy metadata and keep consequential assessment disabled until reviewed and calibrated.
 
-Call `prepare_lesson_publication` only after the teacher confirms the final package. This produces a digest and immutable object keys; it does not perform the authenticated publication. Never tell the teacher that a lesson or artifact is hosted until the authenticated publisher confirms it.
+Call `asfai_lesson` action `prepare_publication` only after the teacher confirms the final package. This produces a digest and immutable object keys; it does not perform the authenticated publication. Never tell the teacher that a lesson or artifact is hosted until the authenticated publisher confirms it.
 
-After publication, call `create_lesson_assignment` when the teacher wants to distribute the lesson. Save the returned assignment in the teacher-owned store and share only the intended assignment fields.
+After publication, call `asfai_lesson` action `create_assignment` when the teacher wants to distribute the lesson. Save the returned assignment through `asfai_resource` and `asfai_storage`, and share only the intended assignment fields.
