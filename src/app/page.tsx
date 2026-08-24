@@ -1,4 +1,5 @@
 import EducationClient from "./EducationClient";
+import Link from "next/link";
 
 export default function Page() {
   return (
@@ -11,6 +12,11 @@ export default function Page() {
         </p>
       </section>
       <EducationClient />
+      <footer className="site-footer">
+        <Link href="/privacy">Privacy</Link>
+        <Link href="/terms">Terms</Link>
+        <a href="mailto:mike@fenix.ai">Contact</a>
+      </footer>
     </main>
   );
 }
