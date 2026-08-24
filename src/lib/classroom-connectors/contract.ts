@@ -67,9 +67,10 @@ export interface ClassroomImportInput extends ClassroomPageInput {
 
 export interface ClassroomConnectorAdapter {
   readonly provider: string;
-  status(): unknown;
+  status(): Promise<unknown>;
   connect(input: ClassroomConnectInput): Promise<unknown>;
   disconnect(): Promise<unknown>;
+  forgetAuthorization(): Promise<unknown>;
   listCourses(input: ClassroomPageInput): Promise<unknown>;
   listLearners(input: ClassroomPageInput & { courseId: string }): Promise<unknown>;
   listAssignments(input: ClassroomPageInput & { courseId: string }): Promise<unknown>;
@@ -86,8 +87,8 @@ export class ClassroomConnectorService {
     for (const adapter of adapters) this.adapters.set(adapter.provider, adapter);
   }
 
-  providers() {
-    return [...this.adapters.values()].map((adapter) => ({ provider: adapter.provider, status: adapter.status() }));
+  async providers() {
+    return await Promise.all([...this.adapters.values()].map(async (adapter) => ({ provider: adapter.provider, status: await adapter.status() })));
   }
 
   adapter(provider: string) {

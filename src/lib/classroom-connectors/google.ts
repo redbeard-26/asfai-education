@@ -1,5 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
+import { fileURLToPath } from "node:url";
+import { DeviceProtectedStorage } from "@/lib/device-protected-storage";
 import type {
   ClassroomAssignmentExport,
   ClassroomConnectInput,
@@ -84,8 +87,81 @@ interface GoogleSubmission {
 interface GoogleAdapterOptions {
   clientId?: string;
   clientSecret?: string;
+  credentialsFile?: string;
+  authorizationStorage?: DeviceProtectedStorage;
   fetchImpl?: typeof fetch;
   initialAccessToken?: string;
+  initialRefreshToken?: string;
+}
+
+type GoogleConfigurationSource = "options" | "environment" | "credentials-file" | "none";
+
+type SavedGoogleAuthorization = {
+  schemaVersion: "1";
+  refreshToken: string;
+  accountEmail?: string;
+  grantedScopes: string[];
+  role: ClassroomConnectInput["role"];
+  readOnly: boolean;
+  includeDriveContent: boolean;
+  savedAt: string;
+};
+
+export const GOOGLE_AUTHORIZATION_KEY = "google-classroom-authorization-v1";
+
+function readGoogleOAuthClient(filePath?: string) {
+  if (!filePath) return undefined;
+  try {
+    const parsed = JSON.parse(readFileSync(filePath, "utf8")) as {
+      installed?: { client_id?: string; client_secret?: string };
+    };
+    const clientId = parsed.installed?.client_id;
+    if (!clientId) return undefined;
+    return { clientId, clientSecret: parsed.installed?.client_secret };
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveGoogleOAuthClient(options: GoogleAdapterOptions) {
+  if (options.clientId !== undefined || options.clientSecret !== undefined) {
+    return { clientId: options.clientId, clientSecret: options.clientSecret, source: "options" as const };
+  }
+  if (process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID) {
+    return {
+      clientId: process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID,
+      clientSecret: process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET,
+      source: "environment" as const,
+    };
+  }
+  const candidates = [
+    options.credentialsFile,
+    process.env.ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE,
+    fileURLToPath(new URL("./google-oauth-client.json", import.meta.url)),
+  ];
+  for (const candidate of candidates) {
+    const credentials = readGoogleOAuthClient(candidate);
+    if (credentials) return { ...credentials, source: "credentials-file" as const };
+  }
+  return { clientId: undefined, clientSecret: undefined, source: "none" as const };
+}
+
+function parseSavedGoogleAuthorization(value: string): SavedGoogleAuthorization {
+  const parsed = JSON.parse(value) as Partial<SavedGoogleAuthorization>;
+  if (
+    parsed.schemaVersion !== "1"
+    || typeof parsed.refreshToken !== "string"
+    || !parsed.refreshToken
+    || !Array.isArray(parsed.grantedScopes)
+    || parsed.grantedScopes.some((scope) => typeof scope !== "string")
+    || (parsed.role !== "learner" && parsed.role !== "teacher")
+    || typeof parsed.readOnly !== "boolean"
+    || typeof parsed.includeDriveContent !== "boolean"
+    || typeof parsed.savedAt !== "string"
+  ) {
+    throw new Error("invalid saved Google authorization");
+  }
+  return parsed as SavedGoogleAuthorization;
 }
 
 function base64Url(value: Buffer) {
@@ -196,6 +272,8 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
   readonly provider = "google";
   private readonly clientId?: string;
   private readonly clientSecret?: string;
+  private readonly configurationSource: GoogleConfigurationSource;
+  private readonly authorizationStorage?: DeviceProtectedStorage;
   private readonly fetchImpl: typeof fetch;
   private accessToken?: string;
   private refreshToken?: string;
@@ -208,22 +286,30 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
   private callbackServer?: Server;
   private authorizationUrl?: string;
   private authError?: string;
+  private authorizationRestored = false;
+  private restoreAttempted = false;
+  private restorePromise?: Promise<void>;
 
   constructor(options: GoogleAdapterOptions = {}) {
-    this.clientId = options.clientId ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID;
-    this.clientSecret = options.clientSecret ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET;
+    const configuration = resolveGoogleOAuthClient(options);
+    this.clientId = configuration.clientId;
+    this.clientSecret = configuration.clientSecret;
+    this.configurationSource = configuration.source;
+    this.authorizationStorage = options.authorizationStorage;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.accessToken = options.initialAccessToken;
+    this.refreshToken = options.initialRefreshToken;
     this.expiresAt = options.initialAccessToken ? Date.now() + 3_600_000 : undefined;
   }
 
-  status() {
+  private statusSnapshot() {
     return {
       provider: this.provider,
-      configured: Boolean(this.clientId && this.clientSecret),
-      requiredEnvironment: this.clientId && this.clientSecret ? [] : ["ASFAI_GOOGLE_CLASSROOM_CLIENT_ID", "ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET"],
+      configured: Boolean(this.clientId),
+      configurationSource: this.configurationSource,
+      requiredConfiguration: this.clientId ? [] : ["Google Desktop OAuth client configuration"],
       authorizationPending: Boolean(this.authorizationUrl),
-      isLoggedIn: Boolean(this.accessToken || this.refreshToken),
+      isLoggedIn: Boolean((this.accessToken || this.refreshToken) && !this.authError),
       accountEmail: this.accountEmail,
       role: this.role,
       readOnly: this.readOnly,
@@ -235,8 +321,86 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
         "Google permits attachment access and submission modification only for coursework associated with the same Developer Console project.",
         "Detailed ASFAI feedback is saved owner-side; the Classroom API supports grade/state passback but not private feedback comments.",
       ],
-      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output.",
+      authorizationPersistence: {
+        persistsAcrossChatsAndRestarts: Boolean(this.authorizationStorage),
+        restoredFromDevice: this.authorizationRestored,
+        protectedBy: this.authorizationStorage?.protection,
+        removal: "Authorization remains available until the user explicitly asks ASFAI to forget Google Classroom on this device or revokes ASFAI in their Google Account.",
+      },
+      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output. Reusable Google authorization is protected for the current device user.",
     };
+  }
+
+  async status() {
+    await this.restoreSavedAuthorization();
+    return this.statusSnapshot();
+  }
+
+  private tokenClientParameters() {
+    if (!this.clientId) throw new Error("Google Classroom is not configured.");
+    const parameters: Record<string, string> = { client_id: this.clientId };
+    if (this.clientSecret) parameters.client_secret = this.clientSecret;
+    return parameters;
+  }
+
+  private async persistAuthorization() {
+    if (!this.authorizationStorage || !this.refreshToken || !this.role || this.readOnly === undefined) return;
+    const authorization: SavedGoogleAuthorization = {
+      schemaVersion: "1",
+      refreshToken: this.refreshToken,
+      accountEmail: this.accountEmail,
+      grantedScopes: this.grantedScopes,
+      role: this.role,
+      readOnly: this.readOnly,
+      includeDriveContent: this.includeDriveContent,
+      savedAt: new Date().toISOString(),
+    };
+    await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.set(GOOGLE_AUTHORIZATION_KEY, JSON.stringify(authorization)));
+  }
+
+  private async refreshAccessToken() {
+    if (!this.refreshToken) throw new Error("Google Classroom is not authenticated.");
+    const response = await this.fetchImpl(GOOGLE_TOKEN, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...this.tokenClientParameters(), refresh_token: this.refreshToken, grant_type: "refresh_token" }),
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(cleanErrorBody(text));
+    const token = JSON.parse(text) as GoogleTokenResponse;
+    this.accessToken = token.access_token;
+    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1000;
+    if (token.refresh_token) this.refreshToken = token.refresh_token;
+    if (token.scope) this.grantedScopes = token.scope.split(/\s+/).filter(Boolean);
+  }
+
+  private async restoreSavedAuthorization() {
+    if (this.accessToken || this.refreshToken || this.restoreAttempted || !this.authorizationStorage || !this.clientId) return;
+    if (this.restorePromise) return await this.restorePromise;
+    this.restoreAttempted = true;
+    this.restorePromise = (async () => {
+      try {
+        const raw = await this.authorizationStorage!.withSessionLease(() => this.authorizationStorage!.get(GOOGLE_AUTHORIZATION_KEY));
+        if (!raw) return;
+        const saved = parseSavedGoogleAuthorization(raw);
+        this.refreshToken = saved.refreshToken;
+        this.accountEmail = saved.accountEmail;
+        this.grantedScopes = saved.grantedScopes;
+        this.role = saved.role;
+        this.readOnly = saved.readOnly;
+        this.includeDriveContent = saved.includeDriveContent;
+        await this.refreshAccessToken();
+        this.authorizationRestored = true;
+        this.authError = undefined;
+        await this.persistAuthorization();
+      } catch {
+        this.accessToken = undefined;
+        this.refreshToken = undefined;
+        this.expiresAt = undefined;
+        this.authError = "The saved Google Classroom authorization could not be refreshed. Connect again to replace it, or revoke ASFAI in the Google Account if access should end.";
+      }
+    })();
+    await this.restorePromise;
   }
 
   private async closeCallbackServer() {
@@ -247,17 +411,29 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
   }
 
   async connect(input: ClassroomConnectInput) {
-    if (!this.clientId || !this.clientSecret) {
-      throw new Error("Google Classroom is not configured. An administrator must set ASFAI_GOOGLE_CLASSROOM_CLIENT_ID and ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET for a Google Desktop OAuth client with the Classroom API enabled.");
+    if (!this.clientId) {
+      throw new Error("Google Classroom is not configured. An administrator must package or install a Google Desktop OAuth client with the Classroom API enabled.");
+    }
+    await this.restoreSavedAuthorization();
+    const scopes = scopesFor(input);
+    const savedGrantIsSufficient = Boolean(this.accessToken || this.refreshToken)
+      && !this.authError
+      && scopes.every((scope) => this.grantedScopes.includes(scope));
+    if (savedGrantIsSufficient) {
+      this.role = input.role;
+      this.readOnly = input.readOnly;
+      this.includeDriveContent = input.includeDriveContent;
+      await this.persistAuthorization();
+      return {
+        ...this.statusSnapshot(),
+        authorizationUrl: undefined,
+        requestedScopes: scopes,
+        instruction: "The saved Google Classroom authorization was restored for this device user. Continue without opening a web page.",
+      };
     }
     await this.closeCallbackServer();
     this.authorizationUrl = undefined;
     this.authError = undefined;
-    this.accessToken = undefined;
-    this.refreshToken = undefined;
-    this.expiresAt = undefined;
-    this.accountEmail = undefined;
-    this.grantedScopes = [];
     this.role = input.role;
     this.readOnly = input.readOnly;
     this.includeDriveContent = input.includeDriveContent;
@@ -266,7 +442,6 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     const state = base64Url(randomBytes(32));
     const verifier = base64Url(randomBytes(48));
     const challenge = base64Url(createHash("sha256").update(verifier).digest());
-    const scopes = scopesFor(input);
 
     this.callbackServer = createServer(async (request, response) => {
       const incoming = new URL(request.url ?? "/", callbackUrl);
@@ -284,8 +459,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
-            client_id: this.clientId!,
-            client_secret: this.clientSecret!,
+            ...this.tokenClientParameters(),
             code,
             code_verifier: verifier,
             grant_type: "authorization_code",
@@ -296,12 +470,15 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
         if (!tokenResponse.ok) throw new Error(cleanErrorBody(tokenText));
         const token = JSON.parse(tokenText) as GoogleTokenResponse;
         this.accessToken = token.access_token;
-        this.refreshToken = token.refresh_token;
+        this.refreshToken = token.refresh_token ?? this.refreshToken;
+        if (!this.refreshToken) throw new Error("Google did not issue reusable authorization. Remove ASFAI from the Google Account and connect again.");
         this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1000;
         this.grantedScopes = token.scope?.split(/\s+/).filter(Boolean) ?? scopes;
         this.authorizationUrl = undefined;
         const userResponse = await this.fetchImpl(GOOGLE_USERINFO, { headers: { authorization: `Bearer ${this.accessToken}` } });
         if (userResponse.ok) this.accountEmail = ((await userResponse.json()) as { email?: string }).email;
+        this.authorizationRestored = false;
+        await this.persistAuthorization();
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end("<!doctype html><title>ASFAI Classroom connected</title><h1>Classroom connected</h1><p>You can close this window and continue in chat.</p>");
       } catch (error) {
         this.authError = error instanceof Error ? error.message : String(error);
@@ -331,15 +508,24 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     }).toString();
     this.authorizationUrl = authorization.toString();
     return {
-      ...this.status(),
+      ...this.statusSnapshot(),
       callbackUrl,
       authorizationUrl: this.authorizationUrl,
       requestedScopes: scopes,
-      instruction: "Open the authorization URL and approve access on Google's page. Never paste Google credentials, authorization codes, or tokens into chat. Then call status until isLoggedIn is true.",
+      instruction: "Open the authorization URL and approve access on Google's page once. Never paste Google credentials, authorization codes, or tokens into chat. The protected authorization is then reused across chats and restarts until the user explicitly forgets it or revokes ASFAI in their Google Account.",
     };
   }
 
   async disconnect() {
+    await this.closeCallbackServer();
+    this.authorizationUrl = undefined;
+    return {
+      ...await this.status(),
+      instruction: "The reusable Google Classroom authorization remains protected on this device. Use forget_authorization only when the user explicitly asks to remove it.",
+    };
+  }
+
+  async forgetAuthorization() {
     await this.closeCallbackServer();
     this.accessToken = undefined;
     this.refreshToken = undefined;
@@ -350,25 +536,32 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     this.role = undefined;
     this.readOnly = undefined;
     this.includeDriveContent = false;
-    return this.status();
+    this.authorizationRestored = false;
+    this.restoreAttempted = true;
+    this.restorePromise = undefined;
+    this.authError = undefined;
+    if (this.authorizationStorage) {
+      await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.delete(GOOGLE_AUTHORIZATION_KEY));
+    }
+    return {
+      ...this.statusSnapshot(),
+      instruction: "Google Classroom authorization was removed from this device. The user may also revoke ASFAI in their Google Account.",
+    };
   }
 
   private async token() {
+    await this.restoreSavedAuthorization();
     if (this.accessToken && (!this.expiresAt || this.expiresAt > Date.now() + 60_000)) return this.accessToken;
-    if (!this.refreshToken || !this.clientId || !this.clientSecret) throw new Error("Google Classroom is not authenticated. Call connect and complete browser authorization first.");
-    const response = await this.fetchImpl(GOOGLE_TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ client_id: this.clientId, client_secret: this.clientSecret, refresh_token: this.refreshToken, grant_type: "refresh_token" }),
-    });
-    const text = await response.text();
-    if (!response.ok) throw new Error(cleanErrorBody(text));
-    const token = JSON.parse(text) as GoogleTokenResponse;
-    this.accessToken = token.access_token;
-    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1000;
-    if (token.refresh_token) this.refreshToken = token.refresh_token;
-    if (token.scope) this.grantedScopes = token.scope.split(/\s+/).filter(Boolean);
-    return this.accessToken;
+    if (!this.refreshToken || !this.clientId) throw new Error("Google Classroom is not authenticated. Call connect and complete browser authorization first.");
+    try {
+      await this.refreshAccessToken();
+      this.authError = undefined;
+      await this.persistAuthorization();
+      return this.accessToken!;
+    } catch (error) {
+      this.authError = "Google Classroom authorization could not be refreshed. Connect again if the user still wants access.";
+      throw error;
+    }
   }
 
   private async requestJson<T>(url: string, init: RequestInit = {}) {

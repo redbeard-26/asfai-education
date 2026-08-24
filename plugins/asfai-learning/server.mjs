@@ -55367,8 +55367,8 @@ var ClassroomConnectorService = class {
     this.adapters = /* @__PURE__ */ new Map();
     for (const adapter of adapters) this.adapters.set(adapter.provider, adapter);
   }
-  providers() {
-    return [...this.adapters.values()].map((adapter) => ({ provider: adapter.provider, status: adapter.status() }));
+  async providers() {
+    return await Promise.all([...this.adapters.values()].map(async (adapter) => ({ provider: adapter.provider, status: await adapter.status() })));
   }
   adapter(provider) {
     const adapter = this.adapters.get(provider);
@@ -55381,13 +55381,56 @@ var ClassroomConnectorService = class {
 
 // src/lib/classroom-connectors/google.ts
 import { createHash, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
 var CLASSROOM_API = "https://classroom.googleapis.com/v1";
 var DRIVE_API = "https://www.googleapis.com/drive/v3";
 var DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 var GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 var GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 var GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v3/userinfo";
+var GOOGLE_AUTHORIZATION_KEY = "google-classroom-authorization-v1";
+function readGoogleOAuthClient(filePath) {
+  if (!filePath) return void 0;
+  try {
+    const parsed = JSON.parse(readFileSync(filePath, "utf8"));
+    const clientId = parsed.installed?.client_id;
+    if (!clientId) return void 0;
+    return { clientId, clientSecret: parsed.installed?.client_secret };
+  } catch {
+    return void 0;
+  }
+}
+function resolveGoogleOAuthClient(options) {
+  if (options.clientId !== void 0 || options.clientSecret !== void 0) {
+    return { clientId: options.clientId, clientSecret: options.clientSecret, source: "options" };
+  }
+  if (process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID) {
+    return {
+      clientId: process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID,
+      clientSecret: process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET,
+      source: "environment"
+    };
+  }
+  const candidates = [
+    options.credentialsFile,
+    process.env.ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE,
+    fileURLToPath(new URL("./google-oauth-client.json", import.meta.url))
+  ];
+  for (const candidate of candidates) {
+    const credentials = readGoogleOAuthClient(candidate);
+    if (credentials) return { ...credentials, source: "credentials-file" };
+  }
+  return { clientId: void 0, clientSecret: void 0, source: "none" };
+}
+function parseSavedGoogleAuthorization(value) {
+  const parsed = JSON.parse(value);
+  if (parsed.schemaVersion !== "1" || typeof parsed.refreshToken !== "string" || !parsed.refreshToken || !Array.isArray(parsed.grantedScopes) || parsed.grantedScopes.some((scope) => typeof scope !== "string") || parsed.role !== "learner" && parsed.role !== "teacher" || typeof parsed.readOnly !== "boolean" || typeof parsed.includeDriveContent !== "boolean" || typeof parsed.savedAt !== "string") {
+    throw new Error("invalid saved Google authorization");
+  }
+  return parsed;
+}
 function base64Url(value) {
   return value.toString("base64url");
 }
@@ -55482,19 +55525,26 @@ var GoogleClassroomAdapter = class {
     this.provider = "google";
     this.grantedScopes = [];
     this.includeDriveContent = false;
-    this.clientId = options.clientId ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_ID;
-    this.clientSecret = options.clientSecret ?? process.env.ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET;
+    this.authorizationRestored = false;
+    this.restoreAttempted = false;
+    const configuration = resolveGoogleOAuthClient(options);
+    this.clientId = configuration.clientId;
+    this.clientSecret = configuration.clientSecret;
+    this.configurationSource = configuration.source;
+    this.authorizationStorage = options.authorizationStorage;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.accessToken = options.initialAccessToken;
+    this.refreshToken = options.initialRefreshToken;
     this.expiresAt = options.initialAccessToken ? Date.now() + 36e5 : void 0;
   }
-  status() {
+  statusSnapshot() {
     return {
       provider: this.provider,
-      configured: Boolean(this.clientId && this.clientSecret),
-      requiredEnvironment: this.clientId && this.clientSecret ? [] : ["ASFAI_GOOGLE_CLASSROOM_CLIENT_ID", "ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET"],
+      configured: Boolean(this.clientId),
+      configurationSource: this.configurationSource,
+      requiredConfiguration: this.clientId ? [] : ["Google Desktop OAuth client configuration"],
       authorizationPending: Boolean(this.authorizationUrl),
-      isLoggedIn: Boolean(this.accessToken || this.refreshToken),
+      isLoggedIn: Boolean((this.accessToken || this.refreshToken) && !this.authError),
       accountEmail: this.accountEmail,
       role: this.role,
       readOnly: this.readOnly,
@@ -55506,8 +55556,81 @@ var GoogleClassroomAdapter = class {
         "Google permits attachment access and submission modification only for coursework associated with the same Developer Console project.",
         "Detailed ASFAI feedback is saved owner-side; the Classroom API supports grade/state passback but not private feedback comments."
       ],
-      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output."
+      authorizationPersistence: {
+        persistsAcrossChatsAndRestarts: Boolean(this.authorizationStorage),
+        restoredFromDevice: this.authorizationRestored,
+        protectedBy: this.authorizationStorage?.protection,
+        removal: "Authorization remains available until the user explicitly asks ASFAI to forget Google Classroom on this device or revokes ASFAI in their Google Account."
+      },
+      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output. Reusable Google authorization is protected for the current device user."
     };
+  }
+  async status() {
+    await this.restoreSavedAuthorization();
+    return this.statusSnapshot();
+  }
+  tokenClientParameters() {
+    if (!this.clientId) throw new Error("Google Classroom is not configured.");
+    const parameters = { client_id: this.clientId };
+    if (this.clientSecret) parameters.client_secret = this.clientSecret;
+    return parameters;
+  }
+  async persistAuthorization() {
+    if (!this.authorizationStorage || !this.refreshToken || !this.role || this.readOnly === void 0) return;
+    const authorization = {
+      schemaVersion: "1",
+      refreshToken: this.refreshToken,
+      accountEmail: this.accountEmail,
+      grantedScopes: this.grantedScopes,
+      role: this.role,
+      readOnly: this.readOnly,
+      includeDriveContent: this.includeDriveContent,
+      savedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.authorizationStorage.withSessionLease(() => this.authorizationStorage.set(GOOGLE_AUTHORIZATION_KEY, JSON.stringify(authorization)));
+  }
+  async refreshAccessToken() {
+    if (!this.refreshToken) throw new Error("Google Classroom is not authenticated.");
+    const response = await this.fetchImpl(GOOGLE_TOKEN, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ ...this.tokenClientParameters(), refresh_token: this.refreshToken, grant_type: "refresh_token" })
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(cleanErrorBody(text));
+    const token = JSON.parse(text);
+    this.accessToken = token.access_token;
+    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1e3;
+    if (token.refresh_token) this.refreshToken = token.refresh_token;
+    if (token.scope) this.grantedScopes = token.scope.split(/\s+/).filter(Boolean);
+  }
+  async restoreSavedAuthorization() {
+    if (this.accessToken || this.refreshToken || this.restoreAttempted || !this.authorizationStorage || !this.clientId) return;
+    if (this.restorePromise) return await this.restorePromise;
+    this.restoreAttempted = true;
+    this.restorePromise = (async () => {
+      try {
+        const raw = await this.authorizationStorage.withSessionLease(() => this.authorizationStorage.get(GOOGLE_AUTHORIZATION_KEY));
+        if (!raw) return;
+        const saved = parseSavedGoogleAuthorization(raw);
+        this.refreshToken = saved.refreshToken;
+        this.accountEmail = saved.accountEmail;
+        this.grantedScopes = saved.grantedScopes;
+        this.role = saved.role;
+        this.readOnly = saved.readOnly;
+        this.includeDriveContent = saved.includeDriveContent;
+        await this.refreshAccessToken();
+        this.authorizationRestored = true;
+        this.authError = void 0;
+        await this.persistAuthorization();
+      } catch {
+        this.accessToken = void 0;
+        this.refreshToken = void 0;
+        this.expiresAt = void 0;
+        this.authError = "The saved Google Classroom authorization could not be refreshed. Connect again to replace it, or revoke ASFAI in the Google Account if access should end.";
+      }
+    })();
+    await this.restorePromise;
   }
   async closeCallbackServer() {
     if (!this.callbackServer) return;
@@ -55516,17 +55639,27 @@ var GoogleClassroomAdapter = class {
     await new Promise((resolve) => server2.close(() => resolve()));
   }
   async connect(input) {
-    if (!this.clientId || !this.clientSecret) {
-      throw new Error("Google Classroom is not configured. An administrator must set ASFAI_GOOGLE_CLASSROOM_CLIENT_ID and ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET for a Google Desktop OAuth client with the Classroom API enabled.");
+    if (!this.clientId) {
+      throw new Error("Google Classroom is not configured. An administrator must package or install a Google Desktop OAuth client with the Classroom API enabled.");
+    }
+    await this.restoreSavedAuthorization();
+    const scopes = scopesFor(input);
+    const savedGrantIsSufficient = Boolean(this.accessToken || this.refreshToken) && !this.authError && scopes.every((scope) => this.grantedScopes.includes(scope));
+    if (savedGrantIsSufficient) {
+      this.role = input.role;
+      this.readOnly = input.readOnly;
+      this.includeDriveContent = input.includeDriveContent;
+      await this.persistAuthorization();
+      return {
+        ...this.statusSnapshot(),
+        authorizationUrl: void 0,
+        requestedScopes: scopes,
+        instruction: "The saved Google Classroom authorization was restored for this device user. Continue without opening a web page."
+      };
     }
     await this.closeCallbackServer();
     this.authorizationUrl = void 0;
     this.authError = void 0;
-    this.accessToken = void 0;
-    this.refreshToken = void 0;
-    this.expiresAt = void 0;
-    this.accountEmail = void 0;
-    this.grantedScopes = [];
     this.role = input.role;
     this.readOnly = input.readOnly;
     this.includeDriveContent = input.includeDriveContent;
@@ -55535,7 +55668,6 @@ var GoogleClassroomAdapter = class {
     const state = base64Url(randomBytes(32));
     const verifier = base64Url(randomBytes(48));
     const challenge = base64Url(createHash("sha256").update(verifier).digest());
-    const scopes = scopesFor(input);
     this.callbackServer = createServer(async (request, response) => {
       const incoming = new URL(request.url ?? "/", callbackUrl);
       if (incoming.pathname !== "/classroom/callback") {
@@ -55552,8 +55684,7 @@ var GoogleClassroomAdapter = class {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
+            ...this.tokenClientParameters(),
             code,
             code_verifier: verifier,
             grant_type: "authorization_code",
@@ -55564,12 +55695,15 @@ var GoogleClassroomAdapter = class {
         if (!tokenResponse.ok) throw new Error(cleanErrorBody(tokenText));
         const token = JSON.parse(tokenText);
         this.accessToken = token.access_token;
-        this.refreshToken = token.refresh_token;
+        this.refreshToken = token.refresh_token ?? this.refreshToken;
+        if (!this.refreshToken) throw new Error("Google did not issue reusable authorization. Remove ASFAI from the Google Account and connect again.");
         this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1e3;
         this.grantedScopes = token.scope?.split(/\s+/).filter(Boolean) ?? scopes;
         this.authorizationUrl = void 0;
         const userResponse = await this.fetchImpl(GOOGLE_USERINFO, { headers: { authorization: `Bearer ${this.accessToken}` } });
         if (userResponse.ok) this.accountEmail = (await userResponse.json()).email;
+        this.authorizationRestored = false;
+        await this.persistAuthorization();
         response.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end("<!doctype html><title>ASFAI Classroom connected</title><h1>Classroom connected</h1><p>You can close this window and continue in chat.</p>");
       } catch (error51) {
         this.authError = error51 instanceof Error ? error51.message : String(error51);
@@ -55598,14 +55732,22 @@ var GoogleClassroomAdapter = class {
     }).toString();
     this.authorizationUrl = authorization.toString();
     return {
-      ...this.status(),
+      ...this.statusSnapshot(),
       callbackUrl,
       authorizationUrl: this.authorizationUrl,
       requestedScopes: scopes,
-      instruction: "Open the authorization URL and approve access on Google's page. Never paste Google credentials, authorization codes, or tokens into chat. Then call status until isLoggedIn is true."
+      instruction: "Open the authorization URL and approve access on Google's page once. Never paste Google credentials, authorization codes, or tokens into chat. The protected authorization is then reused across chats and restarts until the user explicitly forgets it or revokes ASFAI in their Google Account."
     };
   }
   async disconnect() {
+    await this.closeCallbackServer();
+    this.authorizationUrl = void 0;
+    return {
+      ...await this.status(),
+      instruction: "The reusable Google Classroom authorization remains protected on this device. Use forget_authorization only when the user explicitly asks to remove it."
+    };
+  }
+  async forgetAuthorization() {
     await this.closeCallbackServer();
     this.accessToken = void 0;
     this.refreshToken = void 0;
@@ -55616,24 +55758,31 @@ var GoogleClassroomAdapter = class {
     this.role = void 0;
     this.readOnly = void 0;
     this.includeDriveContent = false;
-    return this.status();
+    this.authorizationRestored = false;
+    this.restoreAttempted = true;
+    this.restorePromise = void 0;
+    this.authError = void 0;
+    if (this.authorizationStorage) {
+      await this.authorizationStorage.withSessionLease(() => this.authorizationStorage.delete(GOOGLE_AUTHORIZATION_KEY));
+    }
+    return {
+      ...this.statusSnapshot(),
+      instruction: "Google Classroom authorization was removed from this device. The user may also revoke ASFAI in their Google Account."
+    };
   }
   async token() {
+    await this.restoreSavedAuthorization();
     if (this.accessToken && (!this.expiresAt || this.expiresAt > Date.now() + 6e4)) return this.accessToken;
-    if (!this.refreshToken || !this.clientId || !this.clientSecret) throw new Error("Google Classroom is not authenticated. Call connect and complete browser authorization first.");
-    const response = await this.fetchImpl(GOOGLE_TOKEN, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ client_id: this.clientId, client_secret: this.clientSecret, refresh_token: this.refreshToken, grant_type: "refresh_token" })
-    });
-    const text = await response.text();
-    if (!response.ok) throw new Error(cleanErrorBody(text));
-    const token = JSON.parse(text);
-    this.accessToken = token.access_token;
-    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1e3;
-    if (token.refresh_token) this.refreshToken = token.refresh_token;
-    if (token.scope) this.grantedScopes = token.scope.split(/\s+/).filter(Boolean);
-    return this.accessToken;
+    if (!this.refreshToken || !this.clientId) throw new Error("Google Classroom is not authenticated. Call connect and complete browser authorization first.");
+    try {
+      await this.refreshAccessToken();
+      this.authError = void 0;
+      await this.persistAuthorization();
+      return this.accessToken;
+    } catch (error51) {
+      this.authError = "Google Classroom authorization could not be refreshed. Connect again if the user still wants access.";
+      throw error51;
+    }
   }
   async requestJson(url2, init = {}) {
     const headers = new Headers(init.headers);
@@ -55839,6 +55988,180 @@ ${work.content}\r
   }
   requireWritable(action) {
     if (this.readOnly !== false) throw new Error(`Reconnect to Google Classroom with readOnly:false to ${action}.`);
+  }
+};
+
+// src/lib/device-protected-storage.ts
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, readFile, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+var DPAPI_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security
+$operation = $env:ASFAI_DPAPI_OPERATION
+$inputValue = [Console]::In.ReadToEnd().Trim()
+$bytes = [Convert]::FromBase64String($inputValue)
+$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+if ($operation -eq 'protect') {
+  $result = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, $scope)
+} elseif ($operation -eq 'unprotect') {
+  $result = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope)
+} else {
+  throw 'Unsupported ASFAI device-protection operation.'
+}
+[Console]::Out.Write([Convert]::ToBase64String($result))
+`.trim();
+async function runWindowsDpapi(operation, value) {
+  const encodedCommand = Buffer.from(DPAPI_SCRIPT, "utf16le").toString("base64");
+  return await new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-EncodedCommand",
+      encodedCommand
+    ], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      env: { ...process.env, ASFAI_DPAPI_OPERATION: operation }
+    });
+    const stdout = [];
+    const stderr = [];
+    child.stdout.on("data", (chunk) => stdout.push(chunk));
+    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code !== 0) {
+        const detail = Buffer.concat(stderr).toString("utf8").trim();
+        reject(new Error(`Windows could not protect the saved authorization.${detail ? ` ${detail}` : ""}`));
+        return;
+      }
+      try {
+        resolve(Buffer.from(Buffer.concat(stdout).toString("utf8").trim(), "base64"));
+      } catch {
+        reject(new Error("Windows returned invalid protected authorization data."));
+      }
+    });
+    child.stdin.end(value.toString("base64"));
+  });
+}
+function deviceStorageProtector(platform = process.platform) {
+  if (platform === "win32") {
+    return {
+      id: "windows-dpapi-current-user",
+      protect: (value) => runWindowsDpapi("protect", value),
+      unprotect: (value) => runWindowsDpapi("unprotect", value)
+    };
+  }
+  return {
+    id: "user-file-permissions",
+    protect: async (value) => value,
+    unprotect: async (value) => value
+  };
+}
+var DeviceProtectedStorage = class {
+  constructor(filePath, protector = deviceStorageProtector()) {
+    this.filePath = filePath;
+    this.protector = protector;
+    this.serial = Promise.resolve();
+    this.protection = protector.id;
+  }
+  exclusive(operation) {
+    const result = this.serial.then(operation, operation);
+    this.serial = result.then(() => void 0, () => void 0);
+    return result;
+  }
+  async withSessionLease(operation) {
+    const leasePath = `${this.filePath}.lock`;
+    await mkdir(path.dirname(leasePath), { recursive: true });
+    const deadline = Date.now() + 3e4;
+    while (true) {
+      try {
+        await mkdir(leasePath);
+        break;
+      } catch (error51) {
+        if (error51.code !== "EEXIST") throw error51;
+        let leaseAge;
+        try {
+          leaseAge = Date.now() - (await stat(leasePath)).mtimeMs;
+        } catch (statError) {
+          if (statError.code === "ENOENT") continue;
+          throw statError;
+        }
+        if (leaseAge > 12e4) {
+          await rmdir(leasePath).catch(() => void 0);
+          continue;
+        }
+        if (Date.now() >= deadline) throw new Error("Another ASFAI companion is updating the saved Solid authorization. Try again shortly.");
+        await new Promise((resolve) => setTimeout(resolve, 75));
+      }
+    }
+    try {
+      this.values = void 0;
+      return await operation();
+    } finally {
+      await rmdir(leasePath).catch(() => void 0);
+    }
+  }
+  async loadUnlocked() {
+    if (this.values) return this.values;
+    try {
+      const envelope = JSON.parse(await readFile(this.filePath, "utf8"));
+      if (envelope.schemaVersion !== "1" || envelope.protection !== this.protector.id || typeof envelope.payload !== "string") {
+        throw new Error("unsupported format");
+      }
+      const plaintext = await this.protector.unprotect(Buffer.from(envelope.payload, "base64"));
+      const parsed = JSON.parse(plaintext.toString("utf8"));
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || Object.values(parsed).some((value) => typeof value !== "string")) {
+        throw new Error("invalid contents");
+      }
+      this.values = parsed;
+    } catch (error51) {
+      if (error51.code === "ENOENT") {
+        this.values = {};
+      } else {
+        throw new Error("The saved authorization could not be opened for this device user.", { cause: error51 });
+      }
+    }
+    return this.values;
+  }
+  async persistUnlocked() {
+    const directory = path.dirname(this.filePath);
+    await mkdir(directory, { recursive: true });
+    const protectedValue = await this.protector.protect(Buffer.from(JSON.stringify(this.values ?? {}), "utf8"));
+    const envelope = {
+      schemaVersion: "1",
+      protection: this.protector.id,
+      payload: protectedValue.toString("base64")
+    };
+    const temporary = `${this.filePath}.${randomUUID()}.tmp`;
+    await writeFile(temporary, JSON.stringify(envelope), { encoding: "utf8", mode: 384 });
+    await rename(temporary, this.filePath);
+    await chmod(this.filePath, 384).catch(() => void 0);
+  }
+  async get(key) {
+    return await this.exclusive(async () => (await this.loadUnlocked())[key]);
+  }
+  async set(key, value) {
+    await this.exclusive(async () => {
+      const values = await this.loadUnlocked();
+      values[key] = value;
+      await this.persistUnlocked();
+    });
+  }
+  async delete(key) {
+    await this.exclusive(async () => {
+      const values = await this.loadUnlocked();
+      delete values[key];
+      await this.persistUnlocked();
+    });
+  }
+  async clear() {
+    await this.exclusive(async () => {
+      this.values = {};
+      await rm(this.filePath, { force: true });
+    });
   }
 };
 
@@ -56349,7 +56672,7 @@ async function getFile(fileUrl, options) {
 }
 async function overwriteFile(fileUrl, file2, options) {
   const fileUrlString = internal_toIriString(fileUrl);
-  const response = await writeFile(fileUrlString, file2, "PUT", options);
+  const response = await writeFile2(fileUrlString, file2, "PUT", options);
   if (internal_isUnsuccessfulResponse(response)) {
     const errorBody = await response.clone().text();
     throw new FetchError(`Overwriting the file at [${fileUrlString}] failed: [${response.status}] [${response.statusText}] ${errorBody}.`, response, errorBody);
@@ -56384,7 +56707,7 @@ function flattenHeaders(headersToFlatten) {
   }
   return flatHeaders;
 }
-async function writeFile(targetUrl, file2, method, options = {}) {
+async function writeFile2(targetUrl, file2, method, options = {}) {
   var _a3, _b, _c;
   const headers = flattenHeaders((_b = (_a3 = options.init) === null || _a3 === void 0 ? void 0 : _a3.headers) !== null && _b !== void 0 ? _b : {});
   if (containsReserved(headers)) {
@@ -60248,180 +60571,6 @@ function newEducatorWorkspace(educatorId = uuidUrn()) {
   return { schemaVersion: "0.1", educatorId, createdAt: now, updatedAt: now, resources: {}, collections: {}, history: [] };
 }
 
-// src/lib/device-protected-storage.ts
-import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, rename, rm, rmdir, stat, writeFile as writeFile2 } from "node:fs/promises";
-import path from "node:path";
-var DPAPI_SCRIPT = `
-$ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Security
-$operation = $env:ASFAI_DPAPI_OPERATION
-$inputValue = [Console]::In.ReadToEnd().Trim()
-$bytes = [Convert]::FromBase64String($inputValue)
-$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser
-if ($operation -eq 'protect') {
-  $result = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, $scope)
-} elseif ($operation -eq 'unprotect') {
-  $result = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope)
-} else {
-  throw 'Unsupported ASFAI device-protection operation.'
-}
-[Console]::Out.Write([Convert]::ToBase64String($result))
-`.trim();
-async function runWindowsDpapi(operation, value) {
-  const encodedCommand = Buffer.from(DPAPI_SCRIPT, "utf16le").toString("base64");
-  return await new Promise((resolve, reject) => {
-    const child = spawn("powershell.exe", [
-      "-NoLogo",
-      "-NoProfile",
-      "-NonInteractive",
-      "-EncodedCommand",
-      encodedCommand
-    ], {
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-      env: { ...process.env, ASFAI_DPAPI_OPERATION: operation }
-    });
-    const stdout = [];
-    const stderr = [];
-    child.stdout.on("data", (chunk) => stdout.push(chunk));
-    child.stderr.on("data", (chunk) => stderr.push(chunk));
-    child.once("error", reject);
-    child.once("close", (code) => {
-      if (code !== 0) {
-        const detail = Buffer.concat(stderr).toString("utf8").trim();
-        reject(new Error(`Windows could not protect the saved Solid authorization.${detail ? ` ${detail}` : ""}`));
-        return;
-      }
-      try {
-        resolve(Buffer.from(Buffer.concat(stdout).toString("utf8").trim(), "base64"));
-      } catch {
-        reject(new Error("Windows returned invalid protected Solid authorization data."));
-      }
-    });
-    child.stdin.end(value.toString("base64"));
-  });
-}
-function deviceStorageProtector(platform = process.platform) {
-  if (platform === "win32") {
-    return {
-      id: "windows-dpapi-current-user",
-      protect: (value) => runWindowsDpapi("protect", value),
-      unprotect: (value) => runWindowsDpapi("unprotect", value)
-    };
-  }
-  return {
-    id: "user-file-permissions",
-    protect: async (value) => value,
-    unprotect: async (value) => value
-  };
-}
-var DeviceProtectedStorage = class {
-  constructor(filePath, protector = deviceStorageProtector()) {
-    this.filePath = filePath;
-    this.protector = protector;
-    this.serial = Promise.resolve();
-    this.protection = protector.id;
-  }
-  exclusive(operation) {
-    const result = this.serial.then(operation, operation);
-    this.serial = result.then(() => void 0, () => void 0);
-    return result;
-  }
-  async withSessionLease(operation) {
-    const leasePath = `${this.filePath}.lock`;
-    await mkdir(path.dirname(leasePath), { recursive: true });
-    const deadline = Date.now() + 3e4;
-    while (true) {
-      try {
-        await mkdir(leasePath);
-        break;
-      } catch (error51) {
-        if (error51.code !== "EEXIST") throw error51;
-        let leaseAge;
-        try {
-          leaseAge = Date.now() - (await stat(leasePath)).mtimeMs;
-        } catch (statError) {
-          if (statError.code === "ENOENT") continue;
-          throw statError;
-        }
-        if (leaseAge > 12e4) {
-          await rmdir(leasePath).catch(() => void 0);
-          continue;
-        }
-        if (Date.now() >= deadline) throw new Error("Another ASFAI companion is updating the saved Solid authorization. Try again shortly.");
-        await new Promise((resolve) => setTimeout(resolve, 75));
-      }
-    }
-    try {
-      this.values = void 0;
-      return await operation();
-    } finally {
-      await rmdir(leasePath).catch(() => void 0);
-    }
-  }
-  async loadUnlocked() {
-    if (this.values) return this.values;
-    try {
-      const envelope = JSON.parse(await readFile(this.filePath, "utf8"));
-      if (envelope.schemaVersion !== "1" || envelope.protection !== this.protector.id || typeof envelope.payload !== "string") {
-        throw new Error("unsupported format");
-      }
-      const plaintext = await this.protector.unprotect(Buffer.from(envelope.payload, "base64"));
-      const parsed = JSON.parse(plaintext.toString("utf8"));
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || Object.values(parsed).some((value) => typeof value !== "string")) {
-        throw new Error("invalid contents");
-      }
-      this.values = parsed;
-    } catch (error51) {
-      if (error51.code === "ENOENT") {
-        this.values = {};
-      } else {
-        throw new Error("The saved Solid authorization could not be opened for this device user.", { cause: error51 });
-      }
-    }
-    return this.values;
-  }
-  async persistUnlocked() {
-    const directory = path.dirname(this.filePath);
-    await mkdir(directory, { recursive: true });
-    const protectedValue = await this.protector.protect(Buffer.from(JSON.stringify(this.values ?? {}), "utf8"));
-    const envelope = {
-      schemaVersion: "1",
-      protection: this.protector.id,
-      payload: protectedValue.toString("base64")
-    };
-    const temporary = `${this.filePath}.${randomUUID()}.tmp`;
-    await writeFile2(temporary, JSON.stringify(envelope), { encoding: "utf8", mode: 384 });
-    await rename(temporary, this.filePath);
-    await chmod(this.filePath, 384).catch(() => void 0);
-  }
-  async get(key) {
-    return await this.exclusive(async () => (await this.loadUnlocked())[key]);
-  }
-  async set(key, value) {
-    await this.exclusive(async () => {
-      const values = await this.loadUnlocked();
-      values[key] = value;
-      await this.persistUnlocked();
-    });
-  }
-  async delete(key) {
-    await this.exclusive(async () => {
-      const values = await this.loadUnlocked();
-      delete values[key];
-      await this.persistUnlocked();
-    });
-  }
-  async clear() {
-    await this.exclusive(async () => {
-      this.values = {};
-      await rm(this.filePath, { force: true });
-    });
-  }
-};
-
 // src/lib/learner-workflow.ts
 var INLINE_EVIDENCE_TRANSCRIPT_MAX_BYTES = 8 * 1024;
 var inlineTranscriptTextSchema = external_exports.string().min(1).superRefine((value, context) => {
@@ -60908,9 +61057,13 @@ ${oidcIssuer}`).digest("hex").slice(0, 32)}`;
 };
 
 // scripts/personal-storage-mcp.ts
-var storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path3.join(homedir(), ".asfai-personal-storage"));
-var classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
-var server = new McpServer({ name: "asfai-private-companion", version: "1.3.0" });
+var personalDataDirectory = process.env.ASFAI_PERSONAL_DATA_DIR ?? path3.join(homedir(), ".asfai-personal-storage");
+var storage = new PersonalStorageService(personalDataDirectory);
+var classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter({
+  credentialsFile: path3.join(personalDataDirectory, "asfai", "auth", "google-oauth-client.json"),
+  authorizationStorage: new DeviceProtectedStorage(path3.join(personalDataDirectory, "asfai", "auth", "google-classroom-session.protected.json"))
+})]);
+var server = new McpServer({ name: "asfai-private-companion", version: "1.4.0" });
 var documentSchema = external_exports.enum(personalDocumentKinds);
 var actionSchema = external_exports.enum(["status", "configure_local", "connect_solid", "forget_solid_authorization", "load", "save", "identity", "sign", "verify"]).describe("Use status first. Then choose local configuration, persistent Solid OIDC connection, document load/save, identity/signing, verification, or an explicitly user-requested authorization removal.");
 var payloadSchema = external_exports.object({
@@ -60983,6 +61136,7 @@ var classroomActionSchema = external_exports.enum([
   "status",
   "connect",
   "disconnect",
+  "forget_authorization",
   "list_courses",
   "list_learners",
   "list_assignments",
@@ -60994,7 +61148,7 @@ var classroomActionSchema = external_exports.enum([
 var classroomPayloadSchema = external_exports.object({
   provider: classroomProviderSchema.describe("Classroom provider adapter. Pass 'google' for Google Classroom."),
   role: classroomRoleSchema.optional().describe("connect: learner for own work or teacher for course work"),
-  readOnly: external_exports.boolean().optional().describe("connect: true for import only; false when assignment, attachment, turn-in, or grade writes are needed"),
+  readOnly: external_exports.boolean().optional().describe("connect: defaults true for import only; pass false only when the user asks to create an assignment, attach or turn in work, or return a grade"),
   includeDriveContent: external_exports.boolean().optional().describe("connect: request extra permission to read Google Drive attachment text; leave false unless needed"),
   port: external_exports.number().int().min(1024).max(65535).optional().describe("connect: optional local OAuth callback port; normally omit"),
   courseId: external_exports.string().min(1).optional(),
@@ -61014,7 +61168,8 @@ var classroomPayloadSchema = external_exports.object({
 var classroomPayloadHelp = {
   status: "payload: { provider }; currently provider is 'google'.",
   connect: "payload: { provider, role, readOnly, includeDriveContent?, port? }",
-  disconnect: "payload: { provider }",
+  disconnect: "payload: { provider }; closes a pending browser authorization but preserves the reusable grant.",
+  forget_authorization: "payload: { provider }; use only after the user explicitly asks ASFAI to forget or revoke this classroom connection on this device.",
   list_courses: "payload: { provider, pageSize?, pageToken? }",
   list_learners: "payload: { provider, courseId, pageSize?, pageToken? }; teacher connection only.",
   list_assignments: "payload: { provider, courseId, pageSize?, pageToken? }",
@@ -61025,23 +61180,24 @@ var classroomPayloadHelp = {
 };
 server.registerTool("asfai_classroom", {
   title: "Exchange learning work with a classroom provider",
-  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Connect locally with OAuth, import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; this tool does not retain student work or OAuth credentials on the public ASFAI server.",
+  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Call status first: it silently restores device-protected Google authorization across chats and restarts. Connect only when status is not logged in or broader permission is needed; default to read-only. Never call forget_authorization as cleanup\u2014use it only after an explicit user request. Import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; private work and OAuth credentials never go to the public ASFAI server.",
   inputSchema: { action: classroomActionSchema, payload: classroomPayloadSchema }
 }, async ({ action, payload }) => {
   try {
     const adapter = classrooms.adapter(payload.provider);
     const page = external_exports.object({ pageSize: external_exports.number().int().min(1).max(100).optional(), pageToken: external_exports.string().min(1).optional() }).parse(payload);
-    if (action === "status") return json2(adapter.status());
+    if (action === "status") return json2(await adapter.status());
     if (action === "connect") {
       const parsed2 = external_exports.object({
         role: classroomRoleSchema,
-        readOnly: external_exports.boolean(),
+        readOnly: external_exports.boolean().default(true),
         includeDriveContent: external_exports.boolean().default(false),
         port: external_exports.number().int().min(1024).max(65535).optional()
       }).parse(payload);
       return json2(await adapter.connect(parsed2));
     }
     if (action === "disconnect") return json2(await adapter.disconnect());
+    if (action === "forget_authorization") return json2(await adapter.forgetAuthorization());
     if (action === "list_courses") return json2(await adapter.listCourses(page));
     if (action === "list_learners") {
       const parsed2 = external_exports.object({ courseId: external_exports.string().min(1) }).parse(payload);

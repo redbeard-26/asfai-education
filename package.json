@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:plugin": "node scripts/build-plugin.mjs",
+    "configure:google-classroom": "node scripts/configure-google-classroom.mjs",
     "start": "next start",
     "personal-storage:mcp": "tsx scripts/personal-storage-mcp.ts",
     "lint": "eslint",

@@ -49,9 +49,12 @@ Keep the learner-facing conversation natural. Ask which class or assignment they
 ### Connect and import
 
 1. Call `asfai_classroom` action `status` with payload `{ "provider": "google" }`.
-2. If it is configured but not connected, call `connect` with `role`, the least access needed, and the same provider. Use `readOnly:true` for import-only work. Set `includeDriveContent:true` only if reading attachment text is necessary. Show the returned link as “Connect classroom,” never ask for credentials or tokens in chat, and check `status` after the user approves.
-3. Use `list_courses`, teacher-only `list_learners`, and `list_assignments` only as needed to identify the target. Then call `import_work` with the provider, course and assignment, a specific learner or submission when known, and relevant `objectiveIds`. Import only the selected learner's work and only the attachment text needed for the requested evaluation.
-4. If the provider is not configured, explain that an administrator must configure that provider's OAuth application. Do not claim a separate Google-specific MCP tool is needed; `asfai_classroom` is the installed bridge.
+2. Status silently restores valid device-protected authorization. If `isLoggedIn:true`, continue immediately without calling `connect` or showing another consent page.
+3. If disconnected or broader permission is needed, call `connect` with `role`, the least access needed, and the same provider. Default to `readOnly:true`. Set `includeDriveContent:true` only if reading attachment text is necessary, and request writable access only for a user-requested external change. Show a returned link as “Connect classroom,” never ask for credentials or tokens in chat, and check `status` after the user approves. The grant then persists across chats and restarts until explicit removal or provider revocation.
+4. Use `list_courses`, teacher-only `list_learners`, and `list_assignments` only as needed to identify the target. Then call `import_work` with the provider, course and assignment, a specific learner or submission when known, and relevant `objectiveIds`. Import only the selected learner's work and only the attachment text needed for the requested evaluation.
+5. If the provider is not configured, explain that an administrator must configure that provider's OAuth application. Do not claim a separate Google-specific MCP tool is needed; `asfai_classroom` is the installed bridge.
+
+Never call `forget_authorization` as cleanup. Use it only after an explicit request such as “forget Google Classroom on this device” or “revoke this classroom connection.” Ending a lesson, chat, MCP process, application, or computer session must not remove authorization.
 
 ### Evaluate and save
 

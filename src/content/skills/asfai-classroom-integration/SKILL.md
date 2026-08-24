@@ -16,9 +16,12 @@ Speak about the class, assignment, work, learning goal, feedback, and next step.
 ## Connect with least privilege
 
 1. Call `asfai_classroom` action `status` with `{ "provider": "google" }` or the requested configured provider.
-2. If disconnected, call `connect` with `role: "learner"` for the learner's own work or `role: "teacher"` for class submissions. Use `readOnly:true` when only importing. Set `includeDriveContent:true` only when the user asks to evaluate attachment contents and a reference or short answer is insufficient.
-3. Give the returned authorization URL to the user as a simple “Connect classroom” link. After approval, check `status` until `isLoggedIn` is true.
-4. If `configured:false`, say that the classroom administrator must configure the named provider's OAuth application. The user does not need a separate provider-specific MCP tool; `asfai_classroom` is the general bridge.
+2. `status` silently restores sufficient device-protected Google authorization. If `isLoggedIn:true`, continue immediately without calling `connect`, showing a consent page, or asking the user to authorize again.
+3. If disconnected or broader permission is required, call `connect` with `role: "learner"` for the learner's own work or `role: "teacher"` for class submissions. Default to `readOnly:true`. Set `includeDriveContent:true` only when the user asks to evaluate attachment contents and a reference or short answer is insufficient. Request writable access only for a user-requested external change.
+4. If `connect` returns an authorization URL, give it to the user as a simple “Connect classroom” link. After approval, check `status` until `isLoggedIn` is true. The grant then persists across chats and restarts for this device user.
+5. If `configured:false`, say that the classroom administrator must configure the named provider's OAuth application. The user does not need a separate provider-specific MCP tool; `asfai_classroom` is the general bridge.
+
+Never call `forget_authorization` when a chat, lesson, MCP process, application, or computer session ends. Use it only after the user explicitly asks ASFAI to forget or revoke this classroom connection. The user can also revoke ASFAI through their Google Account; revoked or invalid grants require one new approval if they later reconnect.
 
 ## Import and identify objectives
 

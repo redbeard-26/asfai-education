@@ -12,11 +12,16 @@ import {
   classroomWorkExportSchema,
 } from "../src/lib/classroom-connectors/contract";
 import { GoogleClassroomAdapter } from "../src/lib/classroom-connectors/google";
+import { DeviceProtectedStorage } from "../src/lib/device-protected-storage";
 import { PersonalStorageService, personalDocumentKinds } from "../src/lib/personal-storage";
 
-const storage = new PersonalStorageService(process.env.ASFAI_PERSONAL_DATA_DIR ?? path.join(homedir(), ".asfai-personal-storage"));
-const classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter()]);
-const server = new McpServer({ name: "asfai-private-companion", version: "1.3.0" });
+const personalDataDirectory = process.env.ASFAI_PERSONAL_DATA_DIR ?? path.join(homedir(), ".asfai-personal-storage");
+const storage = new PersonalStorageService(personalDataDirectory);
+const classrooms = new ClassroomConnectorService([new GoogleClassroomAdapter({
+  credentialsFile: path.join(personalDataDirectory, "asfai", "auth", "google-oauth-client.json"),
+  authorizationStorage: new DeviceProtectedStorage(path.join(personalDataDirectory, "asfai", "auth", "google-classroom-session.protected.json")),
+})]);
+const server = new McpServer({ name: "asfai-private-companion", version: "1.4.0" });
 const documentSchema = z.enum(personalDocumentKinds);
 const actionSchema = z.enum(["status", "configure_local", "connect_solid", "forget_solid_authorization", "load", "save", "identity", "sign", "verify"])
   .describe("Use status first. Then choose local configuration, persistent Solid OIDC connection, document load/save, identity/signing, verification, or an explicitly user-requested authorization removal.");
@@ -94,6 +99,7 @@ const classroomActionSchema = z.enum([
   "status",
   "connect",
   "disconnect",
+  "forget_authorization",
   "list_courses",
   "list_learners",
   "list_assignments",
@@ -106,7 +112,7 @@ const classroomActionSchema = z.enum([
 const classroomPayloadSchema = z.object({
   provider: classroomProviderSchema.describe("Classroom provider adapter. Pass 'google' for Google Classroom."),
   role: classroomRoleSchema.optional().describe("connect: learner for own work or teacher for course work"),
-  readOnly: z.boolean().optional().describe("connect: true for import only; false when assignment, attachment, turn-in, or grade writes are needed"),
+  readOnly: z.boolean().optional().describe("connect: defaults true for import only; pass false only when the user asks to create an assignment, attach or turn in work, or return a grade"),
   includeDriveContent: z.boolean().optional().describe("connect: request extra permission to read Google Drive attachment text; leave false unless needed"),
   port: z.number().int().min(1024).max(65535).optional().describe("connect: optional local OAuth callback port; normally omit"),
   courseId: z.string().min(1).optional(),
@@ -128,7 +134,8 @@ type ClassroomAction = z.infer<typeof classroomActionSchema>;
 const classroomPayloadHelp: Record<ClassroomAction, string> = {
   status: "payload: { provider }; currently provider is 'google'.",
   connect: "payload: { provider, role, readOnly, includeDriveContent?, port? }",
-  disconnect: "payload: { provider }",
+  disconnect: "payload: { provider }; closes a pending browser authorization but preserves the reusable grant.",
+  forget_authorization: "payload: { provider }; use only after the user explicitly asks ASFAI to forget or revoke this classroom connection on this device.",
   list_courses: "payload: { provider, pageSize?, pageToken? }",
   list_learners: "payload: { provider, courseId, pageSize?, pageToken? }; teacher connection only.",
   list_assignments: "payload: { provider, courseId, pageSize?, pageToken? }",
@@ -140,23 +147,24 @@ const classroomPayloadHelp: Record<ClassroomAction, string> = {
 
 server.registerTool("asfai_classroom", {
   title: "Exchange learning work with a classroom provider",
-  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Connect locally with OAuth, import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; this tool does not retain student work or OAuth credentials on the public ASFAI server.",
+  description: "Provider-neutral classroom bridge for AI-led education workflows. Always pass provider (currently 'google'). Call status first: it silently restores device-protected Google authorization across chats and restarts. Connect only when status is not logged in or broader permission is needed; default to read-only. Never call forget_authorization as cleanup—use it only after an explicit user request. Import courses/assignments/student work, or preview and explicitly confirm assignment creation, work export/turn-in, and grade passback. Evaluate imported work with asfai_evidence and save detailed evidence with asfai_personal_storage; private work and OAuth credentials never go to the public ASFAI server.",
   inputSchema: { action: classroomActionSchema, payload: classroomPayloadSchema },
 }, async ({ action, payload }) => {
   try {
     const adapter = classrooms.adapter(payload.provider);
     const page = z.object({ pageSize: z.number().int().min(1).max(100).optional(), pageToken: z.string().min(1).optional() }).parse(payload);
-    if (action === "status") return json(adapter.status());
+    if (action === "status") return json(await adapter.status());
     if (action === "connect") {
       const parsed = z.object({
         role: classroomRoleSchema,
-        readOnly: z.boolean(),
+        readOnly: z.boolean().default(true),
         includeDriveContent: z.boolean().default(false),
         port: z.number().int().min(1024).max(65535).optional(),
       }).parse(payload);
       return json(await adapter.connect(parsed));
     }
     if (action === "disconnect") return json(await adapter.disconnect());
+    if (action === "forget_authorization") return json(await adapter.forgetAuthorization());
     if (action === "list_courses") return json(await adapter.listCourses(page));
     if (action === "list_learners") {
       const parsed = z.object({ courseId: z.string().min(1) }).parse(payload);

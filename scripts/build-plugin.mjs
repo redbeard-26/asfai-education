@@ -1,9 +1,19 @@
 import { build } from "esbuild";
-import { mkdir } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const pluginRoot = path.resolve("plugins/asfai-learning");
 await mkdir(pluginRoot, { recursive: true });
+
+const credentialsSource = process.env.ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE;
+if (credentialsSource) {
+  const parsed = JSON.parse(await readFile(path.resolve(credentialsSource), "utf8"));
+  if (!parsed?.installed?.client_id) throw new Error("The Google configuration must be a Desktop OAuth client JSON file.");
+  const destination = path.join(pluginRoot, "google-oauth-client.json");
+  await copyFile(path.resolve(credentialsSource), destination);
+  await chmod(destination, 0o600).catch(() => undefined);
+  process.stdout.write("Packaged the configured Google Desktop OAuth client without printing its values.\n");
+}
 
 await build({
   entryPoints: ["scripts/personal-storage-mcp.ts"],
