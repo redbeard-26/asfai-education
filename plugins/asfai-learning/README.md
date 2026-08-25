@@ -1,6 +1,6 @@
 # ASFAI Learning plugin
 
-This plugin packages the public ASFAI Education MCP, a two-tool private companion, and one compact routing skill. The companion provides personal storage and a provider-neutral classroom bridge; Google Classroom is the first adapter and is selected with `provider: "google"`. Students and teachers do not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths.
+This plugin packages the public ASFAI Education MCP, one local MCP server displayed as **ASFAI Personal Storage and Classroom**, and one compact routing skill. The local server exports both `asfai_personal_storage` and the provider-neutral `asfai_classroom` bridge; Google Classroom is selected with `provider: "google"`. There is no separate Google-specific MCP server to install. Students and teachers do not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths.
 
 The plugin display name is **ASFAI Learning**; there is intentionally no tool named `asfai_learning`. New chats receive eight public `asfai_*` gateway tools plus private `asfai_personal_storage` and `asfai_classroom`. A public-directory search is not an availability check for this personal-marketplace plugin. After installing or updating it, keep its toggle enabled and start a new chat.
 
