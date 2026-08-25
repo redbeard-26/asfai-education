@@ -45,13 +45,15 @@ The bridge does not decide mastery. The AI maps work to learning objectives, use
 
 ## Google configuration
 
-The Google adapter uses a Desktop OAuth client and a loopback callback. The administrator enables the Google Classroom API and Google Drive API, configures the OAuth consent screen and permitted users, and downloads the Desktop client JSON once. Install that file into the plugin without printing its values:
+The Google adapter uses a Desktop OAuth client, PKCE, and a loopback callback. The distributed ASFAI plugin includes the production Desktop client ID, so a fresh installation is configured for Google Classroom without a per-user credential file or environment variable. Google treats installed applications as public clients that cannot keep a client secret confidential; the distributed file therefore contains only the client ID. Every user still grants access to their own Google account, and the resulting authorization remains protected on that user's device.
+
+For a separate Google Cloud project or managed-host override, an administrator can install a downloaded Desktop client JSON without printing its values:
 
 ```text
 npm run configure:google-classroom -- <downloaded-desktop-client.json>
 ```
 
-The configured plugin can then be installed or distributed without requiring each learner to edit environment variables. For development and managed-host overrides, the adapter also accepts `ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE` or the existing client ID and client secret environment variables. `ASFAI_CLASSROOM_OAUTH_PORT=18766` remains optional.
+The adapter also accepts `ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE` or client ID and client secret environment variables. These override the bundled public client identity. `ASFAI_CLASSROOM_OAUTH_PORT=18766` remains optional.
 
 The adapter defaults to read-only access. Drive attachment text is opt-in because reading arbitrary Drive files can require a broader restricted scope. Assignment creation and work/grade writes require a new consent for writable Classroom scopes; creating an ASFAI text attachment also uses `drive.file`. A sufficient saved grant is reused without opening another consent page.
 

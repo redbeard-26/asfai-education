@@ -81,6 +81,20 @@ describe("provider-neutral classroom connector", () => {
     }
   });
 
+  it("loads a distributable Desktop OAuth client ID without a client secret", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "asfai-google-public-config-"));
+    const credentialsFile = path.join(directory, "google-oauth-public-client.json");
+    try {
+      await writeFile(credentialsFile, JSON.stringify({ installed: { client_id: "desktop-public-client-id" } }));
+      await expect(new GoogleClassroomAdapter({ credentialsFile }).status()).resolves.toMatchObject({
+        configured: true,
+        configurationSource: "credentials-file",
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("restores protected Google authorization across companions until explicitly forgotten", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "asfai-google-restore-"));
     const target = path.join(directory, "google-session.protected.json");

@@ -55416,7 +55416,8 @@ function resolveGoogleOAuthClient(options) {
   const candidates = [
     options.credentialsFile,
     process.env.ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE,
-    fileURLToPath(new URL("./google-oauth-client.json", import.meta.url))
+    fileURLToPath(new URL("./google-oauth-client.json", import.meta.url)),
+    fileURLToPath(new URL("./google-oauth-public-client.json", import.meta.url))
   ];
   for (const candidate of candidates) {
     const credentials = readGoogleOAuthClient(candidate);
