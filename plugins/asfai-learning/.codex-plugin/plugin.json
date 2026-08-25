@@ -1,12 +1,12 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.0+codex.20260825042725",
+  "version": "0.1.0+codex.20260825054011",
   "description": "Teach and plan with ASFAI, use Pod-first private storage, and exchange work with classroom providers through one remote MCP connector.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
   },
-  "homepage": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education",
+  "homepage": "https://constitution.asfai.org/education",
   "repository": "https://github.com/redbeard-26/asfai-education",
   "license": "Apache-2.0",
   "keywords": [

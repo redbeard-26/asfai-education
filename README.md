@@ -70,11 +70,11 @@ The MCP endpoint is:
 Production requires a non-secret public origin and a secret used only to sign one-hour artifact launches:
 
 ```text
-ASFAI_SITE_ORIGIN=https://<api-id>.execute-api.<region>.amazonaws.com
+ASFAI_SITE_ORIGIN=https://constitution.asfai.org
 ASFAI_ARTIFACT_LAUNCH_SECRET=<at least 32 random characters>
 ```
 
-The authenticated remote connector additionally requires `ASFAI_REMOTE_TOKEN_SECRET` and `ASFAI_REMOTE_ENCRYPTION_KEY`. Google Classroom is enabled with a Google Web OAuth client whose authorized redirect URI is `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`; its client ID and secret are supplied through `ASFAI_GOOGLE_CLASSROOM_CLIENT_ID` and `ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET`.
+The authenticated remote connector additionally requires `ASFAI_REMOTE_TOKEN_SECRET` and `ASFAI_REMOTE_ENCRYPTION_KEY`. `ASFAI_SITE_ORIGIN` is the verified public origin advertised in OAuth and MCP metadata; it may proxy to the AWS-issued transport URL. Google Classroom is enabled with a Google Web OAuth client whose authorized redirect URI is `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`; its client ID and secret are supplied through `ASFAI_GOOGLE_CLASSROOM_CLIENT_ID` and `ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET`.
 
 For local development:
 
