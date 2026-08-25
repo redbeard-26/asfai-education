@@ -14,7 +14,7 @@ The private MCP runs on the learner's computer. Solid credentials and private si
 
 ## Classroom exchange
 
-An administrator configures the Google OAuth application once. A learner or teacher can then ask chat to connect Google Classroom, import an assignment or submission, evaluate it against ASFAI learning objectives, save concise evidence privately, and export approved work or grades. Every classroom call includes the provider name, so future adapters can use the same workflow without adding more always-loaded MCP tools.
+The plugin includes ASFAI's production Google Desktop OAuth client ID, so a learner or teacher can ask chat to connect Google Classroom immediately after installation. The user approves access to their own account once; no credential file, environment variable, or administrator setup is required on their device. ASFAI uses PKCE and does not distribute the downloaded Desktop client secret. Users can then import an assignment or submission, evaluate it against ASFAI learning objectives, save concise evidence privately, and export approved work or grades. Every classroom call includes the provider name, so future adapters can use the same workflow without adding more always-loaded MCP tools.
 
 OAuth tokens and imported student work stay at the local companion boundary. Reusable Google authorization is protected for the current Windows user and restored across chats and restarts until the user explicitly forgets it or revokes ASFAI in their Google Account. Classroom access defaults to read-only; any operation that creates an assignment, attaches or turns in work, or sends a grade is first returned as a preview and requires explicit user confirmation.
 

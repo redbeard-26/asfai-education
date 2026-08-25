@@ -62,7 +62,8 @@ try {
   assert.equal(classroomStatus.isError, undefined);
   const classroomPayload = JSON.parse(classroomStatus.content[0].text);
   assert.equal(classroomPayload.provider, "google");
-  assert.equal(typeof classroomPayload.configured, "boolean");
+  assert.equal(classroomPayload.configured, true, "The distributed plugin must include its public Google Desktop client ID");
+  assert.equal(classroomPayload.configurationSource, "credentials-file");
   assert.match(classroomPayload.credentialBoundary, /never accepted/i);
 
   const unavailableProvider = await client.callTool({
