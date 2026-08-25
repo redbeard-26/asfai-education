@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://asfai.org/schemas/learner-profile-0.1.json",
+  "$id": "https://asfai.org/schemas/learner-profile-0.2.json",
   "title": "ASFAI portable learner profile",
   "type": "object",
   "required": [
@@ -10,16 +10,26 @@
     "updatedAt",
     "evidence",
     "assessmentClaims",
-    "objectiveStates"
+    "objectiveStates",
+    "lessonRuns",
+    "lessonReports"
   ],
   "properties": {
-    "schemaVersion": { "const": "0.1" },
+    "schemaVersion": { "const": "0.2" },
     "learnerId": { "type": "string" },
     "createdAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "evidence": { "type": "array", "items": { "type": "object" } },
     "assessmentClaims": { "type": "array", "items": { "type": "object" } },
     "objectiveStates": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "lessonRuns": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "lessonReports": {
       "type": "object",
       "additionalProperties": { "type": "object" }
     },

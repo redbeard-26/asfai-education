@@ -10,6 +10,7 @@ coverage/
 .env
 .env.*
 !.env.example
+plugins/asfai-learning/google-oauth-client.json
 
 # Editor and operating-system files
 .DS_Store
