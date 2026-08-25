@@ -9,7 +9,7 @@ assert.equal(entries.length, 1, "The plugin must expose exactly one MCP connecto
 assert.equal(entries[0][0], "asfai_learning");
 assert.deepEqual(entries[0][1], {
   type: "http",
-  url: "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education/api/mcp",
+  url: "https://constitution.asfai.org/education/api/mcp",
 });
 
 const manifest = JSON.parse(await readFile(path.join(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
