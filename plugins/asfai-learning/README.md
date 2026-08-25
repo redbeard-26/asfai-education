@@ -1,25 +1,11 @@
 # ASFAI Learning plugin
 
-This plugin packages the public ASFAI Education MCP, one local MCP server displayed as **ASFAI Personal Storage and Classroom**, and one compact routing skill. The local server exports both `asfai_personal_storage` and the provider-neutral `asfai_classroom` bridge; Google Classroom is selected with `provider: "google"`. There is no separate Google-specific MCP server to install. Students and teachers do not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths.
+This plugin installs one authenticated remote MCP server displayed as **ASFAI Learning**. It works without the education website or a desktop companion and is intended to use the same connection from Windows, iPhone, and iPad.
 
-The plugin display name is **ASFAI Learning**; there is intentionally no tool named `asfai_learning`. New chats receive eight public `asfai_*` gateway tools plus private `asfai_personal_storage` and `asfai_classroom`. A public-directory search is not an availability check for this personal-marketplace plugin. After installing or updating it, keep its toggle enabled and start a new chat.
+The compact callable surface contains nine gateway tools: `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, `asfai_storage`, and `asfai_classroom`. Classroom is provider-neutral; pass `provider: "google"` for Google Classroom today. There is no separate Pod, storage, or Google connector.
 
-## Learner experience
+The connector establishes an accountless private identity through OAuth 2.1 and PKCE. A connected Solid Pod is the primary store for learner, educator, and classroom records. When no Pod is connected, the remote service identifies its encrypted connector-scoped fallback explicitly and never reports it as a Pod save. Provider passwords and tokens are never accepted through tool arguments or returned to the model.
 
-1. Install **ASFAI Learning** from the plugin directory.
-2. Start a chat and say, “Connect my private Pod,” or begin a lesson and keep progress on this device.
-3. For a Pod, approve access once on the Pod provider page and return to chat. The device then reconnects silently in later chats until the user explicitly forgets it or revokes it at the provider.
+Google Classroom authorization is performed through a hosted browser handoff and then encrypted for the connector until the user explicitly removes it or revokes ASFAI in Google. The connector can list courses and assignments, import selected work, create assignments with links, Drive files, or generated Google Docs, attach or turn in approved work, and return approved grades. All external mutations are previewed before a confirmed call.
 
-The private MCP runs on the learner's computer. Solid credentials and private signing keys never pass through the public AWS MCP. Reusable Solid authorization is protected for the current device user (with current-user DPAPI encryption on Windows) and is not removed when a chat or process ends. The local fallback writes under the learner's profile and verifies every save by reading it back.
-
-## Classroom exchange
-
-The plugin includes ASFAI's production Google Desktop OAuth client ID, so a learner or teacher can ask chat to connect Google Classroom immediately after installation. The user approves access to their own account once; no credential file, environment variable, or administrator setup is required on their device. ASFAI uses PKCE and does not distribute the downloaded Desktop client secret. Users can then import an assignment or submission, evaluate it against ASFAI learning objectives, save concise evidence privately, and export approved work or grades. Every classroom call includes the provider name, so future adapters can use the same workflow without adding more always-loaded MCP tools.
-
-OAuth tokens and imported student work stay at the local companion boundary. Reusable Google authorization is protected for the current Windows user and restored across chats and restarts until the user explicitly forgets it or revokes ASFAI in their Google Account. Classroom access defaults to read-only; any operation that creates an assignment, attaches or turns in work, or sends a grade is first returned as a preview and requires explicit user confirmation.
-
-## Distribution status
-
-The repository marketplace supports development and team testing. A workspace administrator can publish the installed plugin to selected classroom roles. Universal public-directory submission is a separate release step.
-
-The current packaged local launcher targets the Windows ChatGPT/Codex desktop host. Other desktop platforms need their corresponding runtime launcher before broad public release.
+After installing or updating the plugin, keep its toggle enabled and start a new chat so the single server and current skill are loaded.

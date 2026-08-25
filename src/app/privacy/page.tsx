@@ -17,9 +17,10 @@ export default function PrivacyPage() {
         <h2>Our privacy model</h2>
         <p>
           ASFAI Education is designed so that a learner&apos;s detailed progress and schoolwork remain under
-          that learner&apos;s or educator&apos;s control. The public ASFAI service supplies learning objectives,
-          lesson guidance, and other public educational information. It does not require learner accounts
-          and is not intended to retain individual learner profiles.
+          that learner&apos;s or educator&apos;s control. The ASFAI Learning connector supplies learning objectives,
+          lesson guidance, private-storage routing, and classroom exchange. It creates an accountless,
+          connector-scoped identifier rather than requiring a learner account. A connected Solid Pod is the
+          primary home for private learning records.
         </p>
       </section>
 
@@ -28,12 +29,12 @@ export default function PrivacyPage() {
         <ul>
           <li>Public learning-objective, lesson, and curriculum queries sent to the ASFAI service.</li>
           <li>
-            Learner evidence, assessment claims, and lesson reports that a user chooses to save locally or
-            in the user&apos;s authorized Solid Pod.
+            Learner evidence, assessment claims, and lesson reports that a user chooses to save in an
+            authorized Solid Pod or the encrypted connector fallback.
           </li>
           <li>
             Google Classroom course, assignment, submission, roster, and Drive-attachment information that
-            a user expressly asks the installed ASFAI companion to read or update.
+            a user expressly asks the ASFAI Learning connector to read or update.
           </li>
           <li>OAuth account identifiers and authorization grants needed to maintain a requested connection.</li>
         </ul>
@@ -49,9 +50,10 @@ export default function PrivacyPage() {
           out an export, submission, assignment, or grade action that the user explicitly confirms.
         </p>
         <p>
-          The installed companion keeps Google OAuth tokens and raw Classroom work at the user&apos;s local device
-          boundary. Those items are not sent to the shared public ASFAI MCP service. ASFAI does not sell Google
-          user data, use it for advertising, or use it to train general-purpose AI models. It does not transfer
+          The remote connector encrypts reusable Google OAuth grants and isolates them to the accountless
+          connector identity. Selected Classroom work is processed only for the requested operation and is not
+          retained as a complete submission by default. ASFAI does not sell Google user data, use it for
+          advertising, or use it to train general-purpose AI models. It does not transfer
           Google user data except as needed to provide the user-requested function, comply with law, protect
           security, or save information to a destination the user chooses.
         </p>
@@ -64,17 +66,18 @@ export default function PrivacyPage() {
       <section>
         <h2>Storage, retention, and deletion</h2>
         <p>
-          On supported Windows installations, reusable Google and Solid authorization records are encrypted
-          for the current Windows user. A Google authorization remains available until the user asks ASFAI to
-          forget it, removes the local application data, or revokes access through the Google Account. Imported
-          work is used for the requested session and is not retained by the public service. A concise excerpt,
+          Reusable Google and Solid authorization records are encrypted at the hosted connector and isolated
+          by connector identity. An authorization remains available until the user asks ASFAI to forget it,
+          disconnects the connector, or revokes access through the provider. Imported work is used for the
+          requested operation and is not retained as a complete submission by default. A concise excerpt,
           summary, provider reference, or learning-evidence record is saved only when the user requests or
           approves that save.
         </p>
         <p>
-          Users control records stored locally or in their Solid Pod and may edit or delete them there. Users
+          Users control records stored in their Solid Pod and may edit or delete them there. If the encrypted
+          connector fallback is used, users may load or replace those records through ASFAI. Users
           can revoke Google access at any time from their Google Account permissions or by asking ASFAI to
-          forget the Classroom authorization on that device.
+          forget the Classroom authorization for that connector.
         </p>
       </section>
 

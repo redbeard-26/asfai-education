@@ -8,6 +8,12 @@ The architecture therefore separates six concerns that are often collapsed into 
 
 ## System layers
 
+### MCP access boundary
+
+The installed ASFAI Learning plugin contains one authenticated remote MCP connector. OAuth 2.1 with PKCE establishes a pseudonymous, accountless connector tenant. Nine compact gateway tools serve public learning operations, private Pod-first storage, and provider-neutral classroom exchange without requiring a coordinating website or local runtime.
+
+Solid and classroom OAuth grants are encrypted and isolated by connector tenant. A connected Solid Pod is the primary learner and educator store. When no Pod is available, the gateway uses a clearly identified tenant-scoped AWS fallback rather than pretending that model output has been persisted. Classroom systems transport assignments, documents, submissions, and approved evaluations; they do not become the source of truth for mastery.
+
 ### 1. Competency graph
 
 The graph defines learning objectives and the relationships among them. It contains:

@@ -12,8 +12,8 @@ Use `asfai_resource` as an immutable reducer over the complete portable educator
 3. Use action `version` for edits. Never overwrite an earlier resource version.
 4. Use collections to organize work. Sharing and revocation are preview/confirm operations; show the scope and obtain explicit confirmation before the confirmed call.
 5. Publication creates a status change only after explicit confirmation. Hosting executable artifacts also requires the authenticated publication and scanning pipeline described by the lesson-authoring guidance.
-6. After every mutation, use the private companion tool `asfai_personal_storage` when available: load document `educator`, pass the current workspace to `save` with the prior digest as `expectedDigest`, and require `verified: true`. Otherwise use instructions from public `asfai_storage`, read back, and call `verify`.
+6. After every mutation, use `asfai_storage`: load document `educator`, pass the current workspace to `save` with the prior digest as `expectedDigest`, and require `verified:true`. A connected Solid Pod is primary; identify the connector fallback accurately when no Pod is connected.
 
-Prefer local JSON or an authenticated Solid Pod when the chat host has no browser access. Never request passwords, access tokens, refresh tokens, DPoP keys, or cookies in chat.
+Prefer the authenticated Solid Pod. Never request passwords, access tokens, refresh tokens, DPoP keys, or cookies in chat.
 
-For rooms, keep the teacher-owned definition in the educator workspace and an exchange copy in classroom document storage. Sign assignment and feedback envelopes with the private companion. Accept learner reports only after signature, digest, recipient, and replay checks succeed; do not collect raw conversation by default.
+For rooms, keep the teacher-owned definition in the educator workspace and an exchange copy in classroom document storage. Sign assignment and feedback envelopes with `asfai_storage`. Accept learner reports only after signature, digest, recipient, and replay checks succeed; do not collect raw conversation by default.

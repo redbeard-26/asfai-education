@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { fileURLToPath } from "node:url";
 import { DeviceProtectedStorage } from "@/lib/device-protected-storage";
 import type {
   ClassroomAssignmentExport,
@@ -52,7 +51,7 @@ interface GoogleCourseWork {
   maxPoints?: number;
   workType?: string;
   associatedWithDeveloper?: boolean;
-  materials?: GoogleAttachment[];
+  materials?: GoogleMaterial[];
 }
 
 interface GoogleStudent {
@@ -60,11 +59,22 @@ interface GoogleStudent {
   profile?: { id?: string; name?: { fullName?: string; givenName?: string; familyName?: string } };
 }
 
+interface GoogleDriveFile {
+  id?: string;
+  title?: string;
+  alternateLink?: string;
+  thumbnailUrl?: string;
+}
+
 interface GoogleAttachment {
-  driveFile?: { id?: string; title?: string; alternateLink?: string; thumbnailUrl?: string };
+  driveFile?: GoogleDriveFile;
   link?: { url?: string; title?: string; thumbnailUrl?: string };
   youtubeVideo?: { id?: string; title?: string; alternateLink?: string; thumbnailUrl?: string };
   form?: { formUrl?: string; title?: string; responseUrl?: string; thumbnailUrl?: string };
+}
+
+interface GoogleMaterial extends Omit<GoogleAttachment, "driveFile"> {
+  driveFile?: { driveFile?: GoogleDriveFile; shareMode?: "VIEW" | "EDIT" | "STUDENT_COPY" };
 }
 
 interface GoogleSubmission {
@@ -84,7 +94,7 @@ interface GoogleSubmission {
   multipleChoiceSubmission?: { answer?: string };
 }
 
-interface GoogleAdapterOptions {
+export interface GoogleAdapterOptions {
   clientId?: string;
   clientSecret?: string;
   credentialsFile?: string;
@@ -92,6 +102,8 @@ interface GoogleAdapterOptions {
   fetchImpl?: typeof fetch;
   initialAccessToken?: string;
   initialRefreshToken?: string;
+  redirectUrl?: string;
+  stateFactory?: () => string;
 }
 
 type GoogleConfigurationSource = "options" | "environment" | "credentials-file" | "none";
@@ -107,7 +119,20 @@ type SavedGoogleAuthorization = {
   savedAt: string;
 };
 
+type PendingGoogleAuthorization = {
+  schemaVersion: "1";
+  state: string;
+  verifier: string;
+  redirectUrl: string;
+  scopes: string[];
+  role: ClassroomConnectInput["role"];
+  readOnly: boolean;
+  includeDriveContent: boolean;
+  createdAt: string;
+};
+
 export const GOOGLE_AUTHORIZATION_KEY = "google-classroom-authorization-v1";
+export const GOOGLE_PENDING_AUTHORIZATION_KEY = "google-classroom-pending-v1";
 
 function readGoogleOAuthClient(filePath?: string) {
   if (!filePath) return undefined;
@@ -137,8 +162,6 @@ function resolveGoogleOAuthClient(options: GoogleAdapterOptions) {
   const candidates = [
     options.credentialsFile,
     process.env.ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE,
-    fileURLToPath(new URL("./google-oauth-client.json", import.meta.url)),
-    fileURLToPath(new URL("./google-oauth-public-client.json", import.meta.url)),
   ];
   for (const candidate of candidates) {
     const credentials = readGoogleOAuthClient(candidate);
@@ -217,7 +240,7 @@ function normalizeAssignment(assignment: GoogleCourseWork) {
     updatedAt: assignment.updateTime,
     url: assignment.alternateLink,
     associatedWithProviderApp: assignment.associatedWithDeveloper ?? false,
-    materials: (assignment.materials ?? []).map(normalizeAttachment),
+    materials: (assignment.materials ?? []).map(normalizeMaterial),
   };
 }
 
@@ -227,6 +250,17 @@ function normalizeAttachment(attachment: GoogleAttachment) {
   if (attachment.youtubeVideo) return { type: "youtube_video", id: attachment.youtubeVideo.id, title: attachment.youtubeVideo.title, url: attachment.youtubeVideo.alternateLink, thumbnailUrl: attachment.youtubeVideo.thumbnailUrl };
   if (attachment.form) return { type: "form", title: attachment.form.title, url: attachment.form.responseUrl ?? attachment.form.formUrl, thumbnailUrl: attachment.form.thumbnailUrl };
   return { type: "unknown" };
+}
+
+function normalizeMaterial(material: GoogleMaterial) {
+  if (material.driveFile) {
+    const file = material.driveFile.driveFile;
+    return {
+      type: "drive_file", id: file?.id, title: file?.title, url: file?.alternateLink,
+      thumbnailUrl: file?.thumbnailUrl, shareMode: material.driveFile.shareMode ?? "VIEW",
+    };
+  }
+  return normalizeAttachment({ link: material.link, youtubeVideo: material.youtubeVideo, form: material.form });
 }
 
 export function normalizeGoogleSubmission(submission: GoogleSubmission) {
@@ -250,7 +284,9 @@ export function normalizeGoogleSubmission(submission: GoogleSubmission) {
 
 function materialForGoogle(material: ClassroomMaterial) {
   if (material.type === "link") return { link: { url: material.url, title: material.title } };
-  if (material.type === "drive_file") return { driveFile: { id: material.id, title: material.title } };
+  if (material.type === "drive_file") return {
+    driveFile: { driveFile: { id: material.id, title: material.title }, shareMode: material.shareMode },
+  };
   return { youtubeVideo: { id: material.id, title: material.title } };
 }
 
@@ -276,6 +312,8 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
   private readonly configurationSource: GoogleConfigurationSource;
   private readonly authorizationStorage?: DeviceProtectedStorage;
   private readonly fetchImpl: typeof fetch;
+  private readonly hostedRedirectUrl?: string;
+  private readonly stateFactory?: () => string;
   private accessToken?: string;
   private refreshToken?: string;
   private expiresAt?: number;
@@ -298,6 +336,8 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     this.configurationSource = configuration.source;
     this.authorizationStorage = options.authorizationStorage;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.hostedRedirectUrl = options.redirectUrl;
+    this.stateFactory = options.stateFactory;
     this.accessToken = options.initialAccessToken;
     this.refreshToken = options.initialRefreshToken;
     this.expiresAt = options.initialAccessToken ? Date.now() + 3_600_000 : undefined;
@@ -308,7 +348,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
       provider: this.provider,
       configured: Boolean(this.clientId),
       configurationSource: this.configurationSource,
-      requiredConfiguration: this.clientId ? [] : ["Google Desktop OAuth client configuration"],
+      requiredConfiguration: this.clientId ? [] : [this.hostedRedirectUrl ? "Google Web OAuth client configuration" : "Google Desktop OAuth client configuration"],
       authorizationPending: Boolean(this.authorizationUrl),
       isLoggedIn: Boolean((this.accessToken || this.refreshToken) && !this.authError),
       accountEmail: this.accountEmail,
@@ -317,7 +357,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
       includeDriveContent: this.includeDriveContent,
       grantedScopes: this.grantedScopes,
       error: this.authError,
-      capabilities: ["courses", "learners", "assignments", "submission-import", "assignment-export", "work-attachment-export", "grade-passback"],
+      capabilities: ["courses", "learners", "assignments", "submission-import", "assignment-export", "assignment-document-creation", "work-attachment-export", "grade-passback"],
       limitations: [
         "Google permits attachment access and submission modification only for coursework associated with the same Developer Console project.",
         "Detailed ASFAI feedback is saved owner-side; the Classroom API supports grade/state passback but not private feedback comments.",
@@ -326,9 +366,13 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
         persistsAcrossChatsAndRestarts: Boolean(this.authorizationStorage),
         restoredFromDevice: this.authorizationRestored,
         protectedBy: this.authorizationStorage?.protection,
-        removal: "Authorization remains available until the user explicitly asks ASFAI to forget Google Classroom on this device or revokes ASFAI in their Google Account.",
+        removal: this.hostedRedirectUrl
+          ? "Authorization remains available to this ASFAI connector until the user explicitly asks ASFAI to forget it or revokes ASFAI in their Google Account."
+          : "Authorization remains available until the user explicitly asks ASFAI to forget Google Classroom on this device or revokes ASFAI in their Google Account.",
       },
-      credentialBoundary: "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output. Reusable Google authorization is protected for the current device user.",
+      credentialBoundary: this.hostedRedirectUrl
+        ? "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output. Reusable authorization is encrypted and isolated to this authenticated ASFAI connector."
+        : "Google passwords, authorization codes, access tokens, refresh tokens, and client secrets are never accepted as MCP input or returned as output. Reusable Google authorization is protected for the current device user.",
     };
   }
 
@@ -413,7 +457,9 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
 
   async connect(input: ClassroomConnectInput) {
     if (!this.clientId) {
-      throw new Error("Google Classroom is not configured. An administrator must package or install a Google Desktop OAuth client with the Classroom API enabled.");
+      throw new Error(this.hostedRedirectUrl
+        ? "Google Classroom is not configured. An administrator must configure a Google Web OAuth client with the Classroom and Drive APIs enabled."
+        : "Google Classroom is not configured. An administrator must install a Google Desktop OAuth client with the Classroom API enabled.");
     }
     await this.restoreSavedAuthorization();
     const scopes = scopesFor(input);
@@ -429,7 +475,9 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
         ...this.statusSnapshot(),
         authorizationUrl: undefined,
         requestedScopes: scopes,
-        instruction: "The saved Google Classroom authorization was restored for this device user. Continue without opening a web page.",
+        instruction: this.hostedRedirectUrl
+          ? "The saved Google Classroom authorization was restored for this ASFAI connector. Continue without opening a web page."
+          : "The saved Google Classroom authorization was restored for this device user. Continue without opening a web page.",
       };
     }
     await this.closeCallbackServer();
@@ -439,10 +487,39 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     this.readOnly = input.readOnly;
     this.includeDriveContent = input.includeDriveContent;
     const port = input.port ?? Number(process.env.ASFAI_CLASSROOM_OAUTH_PORT ?? 18766);
-    const callbackUrl = `http://127.0.0.1:${port}/classroom/callback`;
-    const state = base64Url(randomBytes(32));
+    const callbackUrl = this.hostedRedirectUrl ?? `http://127.0.0.1:${port}/classroom/callback`;
+    const state = this.stateFactory?.() ?? base64Url(randomBytes(32));
     const verifier = base64Url(randomBytes(48));
     const challenge = base64Url(createHash("sha256").update(verifier).digest());
+
+    const authorization = new URL(GOOGLE_AUTH);
+    authorization.search = new URLSearchParams({
+      client_id: this.clientId,
+      redirect_uri: callbackUrl,
+      response_type: "code",
+      scope: scopes.join(" "),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      access_type: "offline",
+      prompt: "consent",
+      include_granted_scopes: "true",
+    }).toString();
+    this.authorizationUrl = authorization.toString();
+
+    if (this.hostedRedirectUrl) {
+      if (!this.authorizationStorage) throw new Error("Hosted Google Classroom authorization requires protected server storage.");
+      const pending: PendingGoogleAuthorization = {
+        schemaVersion: "1", state, verifier, redirectUrl: callbackUrl, scopes,
+        role: input.role, readOnly: input.readOnly, includeDriveContent: input.includeDriveContent,
+        createdAt: new Date().toISOString(),
+      };
+      await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.set(GOOGLE_PENDING_AUTHORIZATION_KEY, JSON.stringify(pending)));
+      return {
+        ...this.statusSnapshot(), callbackUrl, authorizationUrl: this.authorizationUrl, requestedScopes: scopes,
+        instruction: "Open the classroom authorization link and approve access on Google's page once. The encrypted grant is then reused by this connector until explicitly forgotten or revoked.",
+      };
+    }
 
     this.callbackServer = createServer(async (request, response) => {
       const incoming = new URL(request.url ?? "/", callbackUrl);
@@ -494,20 +571,6 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
       this.callbackServer!.listen(port, "127.0.0.1", resolve);
     });
 
-    const authorization = new URL(GOOGLE_AUTH);
-    authorization.search = new URLSearchParams({
-      client_id: this.clientId,
-      redirect_uri: callbackUrl,
-      response_type: "code",
-      scope: scopes.join(" "),
-      state,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-      access_type: "offline",
-      prompt: "consent",
-      include_granted_scopes: "true",
-    }).toString();
-    this.authorizationUrl = authorization.toString();
     return {
       ...this.statusSnapshot(),
       callbackUrl,
@@ -517,12 +580,57 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     };
   }
 
+  async completeAuthorizationRedirect(incomingUrl: string) {
+    if (!this.hostedRedirectUrl || !this.authorizationStorage) throw new Error("This Google Classroom adapter is not using hosted authorization.");
+    const raw = await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.get(GOOGLE_PENDING_AUTHORIZATION_KEY));
+    if (!raw) throw new Error("No pending Google Classroom authorization was found for this connector.");
+    const pending = JSON.parse(raw) as PendingGoogleAuthorization;
+    if (pending.schemaVersion !== "1" || pending.redirectUrl !== this.hostedRedirectUrl || Date.now() - Date.parse(pending.createdAt) > 15 * 60_000) {
+      throw new Error("The pending Google Classroom authorization expired.");
+    }
+    const incoming = new URL(incomingUrl);
+    if (incoming.searchParams.get("state") !== pending.state) throw new Error("Google OAuth state validation failed.");
+    const providerError = incoming.searchParams.get("error");
+    if (providerError) throw new Error(`Google authorization ended with ${providerError}.`);
+    const code = incoming.searchParams.get("code");
+    if (!code) throw new Error("Google did not return an authorization code.");
+    const tokenResponse = await this.fetchImpl(GOOGLE_TOKEN, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        ...this.tokenClientParameters(), code, code_verifier: pending.verifier,
+        grant_type: "authorization_code", redirect_uri: pending.redirectUrl,
+      }),
+    });
+    const tokenText = await tokenResponse.text();
+    if (!tokenResponse.ok) throw new Error(cleanErrorBody(tokenText));
+    const token = JSON.parse(tokenText) as GoogleTokenResponse;
+    this.accessToken = token.access_token;
+    this.refreshToken = token.refresh_token ?? this.refreshToken;
+    if (!this.refreshToken) throw new Error("Google did not issue reusable authorization. Remove ASFAI from the Google Account and connect again.");
+    this.expiresAt = Date.now() + (token.expires_in ?? 3600) * 1000;
+    this.grantedScopes = token.scope?.split(/\s+/).filter(Boolean) ?? pending.scopes;
+    this.role = pending.role;
+    this.readOnly = pending.readOnly;
+    this.includeDriveContent = pending.includeDriveContent;
+    const userResponse = await this.fetchImpl(GOOGLE_USERINFO, { headers: { authorization: `Bearer ${this.accessToken}` } });
+    if (userResponse.ok) this.accountEmail = ((await userResponse.json()) as { email?: string }).email;
+    this.authorizationUrl = undefined;
+    this.authorizationRestored = false;
+    this.authError = undefined;
+    await this.persistAuthorization();
+    await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.delete(GOOGLE_PENDING_AUTHORIZATION_KEY));
+    return this.statusSnapshot();
+  }
+
   async disconnect() {
     await this.closeCallbackServer();
     this.authorizationUrl = undefined;
     return {
       ...await this.status(),
-      instruction: "The reusable Google Classroom authorization remains protected on this device. Use forget_authorization only when the user explicitly asks to remove it.",
+      instruction: this.hostedRedirectUrl
+        ? "The reusable Google Classroom authorization remains protected for this ASFAI connector. Use forget_authorization only when the user explicitly asks to remove it."
+        : "The reusable Google Classroom authorization remains protected on this device. Use forget_authorization only when the user explicitly asks to remove it.",
     };
   }
 
@@ -542,11 +650,16 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     this.restorePromise = undefined;
     this.authError = undefined;
     if (this.authorizationStorage) {
-      await this.authorizationStorage.withSessionLease(() => this.authorizationStorage!.delete(GOOGLE_AUTHORIZATION_KEY));
+      await this.authorizationStorage.withSessionLease(async () => {
+        await this.authorizationStorage!.delete(GOOGLE_AUTHORIZATION_KEY);
+        await this.authorizationStorage!.delete(GOOGLE_PENDING_AUTHORIZATION_KEY);
+      });
     }
     return {
       ...this.statusSnapshot(),
-      instruction: "Google Classroom authorization was removed from this device. The user may also revoke ASFAI in their Google Account.",
+      instruction: this.hostedRedirectUrl
+        ? "Google Classroom authorization was removed from this ASFAI connector. The user may also revoke ASFAI in their Google Account."
+        : "Google Classroom authorization was removed from this device. The user may also revoke ASFAI in their Google Account.",
     };
   }
 
@@ -655,7 +768,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
     const assignmentMaterialContent: Record<string, unknown> = {};
     if (input.includeAttachmentContent) {
       for (const material of assignment.materials ?? []) {
-        const normalizedMaterial = normalizeAttachment(material);
+        const normalizedMaterial = normalizeMaterial(material);
         if (normalizedMaterial.type === "drive_file" && normalizedMaterial.id) {
           try { assignmentMaterialContent[normalizedMaterial.id] = await this.driveText(normalizedMaterial.id, input.maxContentBytes); }
           catch (error) { assignmentMaterialContent[normalizedMaterial.id] = { warning: error instanceof Error ? error.message : String(error) }; }
@@ -693,7 +806,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
   }
 
   async createAssignment(input: { courseId: string; assignment: ClassroomAssignmentExport; objectiveIds: string[]; confirmed: boolean }) {
-    const body = {
+    const baseBody = {
       title: input.assignment.title,
       description: input.assignment.description,
       state: input.assignment.state,
@@ -703,11 +816,68 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
       materials: input.assignment.materials.map(materialForGoogle),
       submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN",
     };
-    if (!input.confirmed) return { provider: this.provider, preview: body, objectiveIds: input.objectiveIds, requiresConfirmation: true, externalMutationPerformed: false };
+    if (!input.confirmed) return {
+      provider: this.provider,
+      preview: {
+        ...baseBody,
+        generatedDocuments: input.assignment.documents.map((document) => ({
+          title: document.title,
+          format: document.format,
+          contentType: document.contentType,
+          shareMode: document.shareMode,
+          byteLength: Buffer.byteLength(document.content, "utf8"),
+        })),
+      },
+      objectiveIds: input.objectiveIds,
+      requiresConfirmation: true,
+      externalMutationPerformed: false,
+    };
     this.requireWritable("create an assignment");
     if (this.role !== "teacher") throw new Error("Reconnect to Google Classroom with role:'teacher' to create an assignment.");
-    const created = await this.requestJson<GoogleCourseWork>(`${CLASSROOM_API}/courses/${encodeURIComponent(input.courseId)}/courseWork`, { method: "POST", body: JSON.stringify(body) });
-    return { provider: this.provider, assignment: normalizeAssignment(created), objectiveIds: input.objectiveIds, externalMutationPerformed: true };
+    const createdDocuments: Array<{ id: string; name?: string; mimeType?: string; webViewLink?: string }> = [];
+    try {
+      for (const document of input.assignment.documents) createdDocuments.push(await this.createDriveDocument(document));
+      const body = {
+        ...baseBody,
+        materials: [
+          ...baseBody.materials,
+          ...createdDocuments.map((document, index) => ({
+            driveFile: {
+              driveFile: { id: document.id, title: document.name },
+              shareMode: input.assignment.documents[index].shareMode,
+            },
+          })),
+        ],
+      };
+      const created = await this.requestJson<GoogleCourseWork>(`${CLASSROOM_API}/courses/${encodeURIComponent(input.courseId)}/courseWork`, { method: "POST", body: JSON.stringify(body) });
+      return {
+        provider: this.provider,
+        assignment: normalizeAssignment(created),
+        createdDocuments,
+        objectiveIds: input.objectiveIds,
+        externalMutationPerformed: true,
+      };
+    } catch (error) {
+      await Promise.all(createdDocuments.map((document) => this.deleteDriveFile(document.id).catch(() => undefined)));
+      throw error;
+    }
+  }
+
+  private async createDriveDocument(document: ClassroomAssignmentExport["documents"][number]) {
+    const boundary = `asfai-${base64Url(randomBytes(18))}`;
+    const name = document.fileName ?? (document.format === "google_doc" ? document.title : `${document.title}${document.contentType === "text/markdown" ? ".md" : ".txt"}`);
+    const targetMimeType = document.format === "google_doc" ? "application/vnd.google-apps.document" : document.contentType;
+    const metadata = JSON.stringify({ name, mimeType: targetMimeType });
+    const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${document.contentType}; charset=UTF-8\r\n\r\n${document.content}\r\n--${boundary}--`;
+    return this.requestJson<{ id: string; name?: string; mimeType?: string; webViewLink?: string }>(`${DRIVE_UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,webViewLink`, {
+      method: "POST",
+      headers: { "content-type": `multipart/related; boundary=${boundary}` },
+      body,
+    });
+  }
+
+  private async deleteDriveFile(fileId: string) {
+    await this.requestJson(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`, { method: "DELETE" });
   }
 
   private async createDriveTextFile(work: ClassroomWorkExport) {
@@ -762,7 +932,7 @@ export class GoogleClassroomAdapter implements ClassroomConnectorAdapter {
       submission: normalizeGoogleSubmission(submission),
       objectiveIds: input.objectiveIds,
       externalMutationPerformed: true,
-      detailedFeedbackLocation: "Save detailed objective-level evidence and feedback through asfai_personal_storage; Google Classroom receives only grade and submission state through this API.",
+      detailedFeedbackLocation: "Save detailed objective-level evidence and feedback through asfai_storage; Google Classroom receives only grade and submission state through this API.",
     };
   }
 

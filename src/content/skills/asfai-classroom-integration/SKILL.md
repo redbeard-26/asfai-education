@@ -5,9 +5,9 @@ description: Import or export assignments and student work through a configured 
 
 # ASFAI classroom integration
 
-Use this guidance when a learner or teacher wants to move work between an AI conversation and a classroom system. The installed private companion exposes one provider-neutral tool named `asfai_classroom`. Always pass a provider identifier; pass `provider: "google"` for Google Classroom. Future providers should implement this same normalized workflow instead of adding an always-loaded tool for each vendor.
+Use this guidance when a learner or teacher wants to move work between an AI conversation and a classroom system. The single ASFAI Learning connector exposes one provider-neutral tool named `asfai_classroom`. Always pass a provider identifier; pass `provider: "google"` for Google Classroom. Future providers implement the same workflow instead of adding more connectors or always-loaded tools.
 
-Keep classroom OAuth and private work at the local companion boundary. Do not send tokens, authorization codes, secrets, raw student submissions, or complete private profiles to the public ASFAI service. The public tools may receive only the learning objective IDs and the minimum excerpts or structured observations needed for the requested educational work.
+Classroom OAuth grants are encrypted and isolated to the authenticated connector. Never ask for or expose tokens, authorization codes, secrets, or passwords. Import only the selected work needed for the educational task, then save concise evidence to the Pod-first learner store.
 
 ## Natural conversation
 
@@ -16,9 +16,9 @@ Speak about the class, assignment, work, learning goal, feedback, and next step.
 ## Connect with least privilege
 
 1. Call `asfai_classroom` action `status` with `{ "provider": "google" }` or the requested configured provider.
-2. `status` silently restores sufficient device-protected Google authorization. If `isLoggedIn:true`, continue immediately without calling `connect`, showing a consent page, or asking the user to authorize again.
+2. `status` silently restores sufficient connector-protected Google authorization. If `isLoggedIn:true`, continue immediately without calling `connect` or showing another consent page.
 3. If disconnected or broader permission is required, call `connect` with `role: "learner"` for the learner's own work or `role: "teacher"` for class submissions. Default to `readOnly:true`. Set `includeDriveContent:true` only when the user asks to evaluate attachment contents and a reference or short answer is insufficient. Request writable access only for a user-requested external change.
-4. If `connect` returns an authorization URL, give it to the user as a simple “Connect classroom” link. After approval, check `status` until `isLoggedIn` is true. The grant then persists across chats and restarts for this device user.
+4. If `connect` returns an authorization URL, give it to the user as a simple “Connect classroom” link. After approval, check `status`. The encrypted grant persists for this connector across chats and supported devices until explicit removal or Google revocation.
 5. If `configured:false`, say that the classroom administrator must configure the named provider's OAuth application. The user does not need a separate provider-specific MCP tool; `asfai_classroom` is the general bridge.
 
 Never call `forget_authorization` when a chat, lesson, MCP process, application, or computer session ends. Use it only after the user explicitly asks ASFAI to forget or revoke this classroom connection. The user can also revoke ASFAI through their Google Account; revoked or invalid grants require one new approval if they later reconnect.
@@ -43,9 +43,9 @@ Use `asfai_evidence` to create objective-linked observations and assessment clai
 
 ## Save before external passback
 
-Before returning a grade or feedback, save the concise objective-level evidence and report through `asfai_personal_storage`:
+Before returning a grade or feedback, save the concise objective-level evidence and report through `asfai_storage`:
 
-1. Call `status` and connect the requested Pod or use the already configured local store.
+1. Call `status`; use the connected Pod when available and accurately identify the connector fallback otherwise.
 2. Load the appropriate `learner`, `educator`, or `classroom` document.
 3. Append the minimum useful evidence, assessment claim, and report reference. Avoid unnecessary personal data, full submission copies, and verbatim conversations.
 4. Save the complete updated document with the prior digest as `expectedDigest`.
@@ -59,7 +59,7 @@ If saving fails, say that the result remains unsaved. Do not return a grade that
 
 The following classroom actions change external state and always require a preview and explicit approval:
 
-- `create_assignment` may create a draft or published assignment.
+- `create_assignment` may create a draft or published assignment and may create and attach teacher-authored Google Docs or files from its provider-neutral `documents` array. Each generated document declares `shareMode:"VIEW"`, `"EDIT"`, or `"STUDENT_COPY"`; default to view-only and use a student copy when each learner needs an editable personal version.
 - `export_work` may create or attach a file/link and may turn in a submission.
 - `return_evaluation` may set a draft or published grade and may return the submission.
 

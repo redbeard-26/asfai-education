@@ -80,6 +80,12 @@ import { buildLessonReport, getNextActivity, startLessonRun } from "@/lib/lesson
 import { reviewLesson } from "@/lib/register-lesson-tools";
 import { readSkillFiles } from "@/lib/skill-bundle";
 import { listSkills } from "@/lib/skills";
+import {
+  classroomActionSchema,
+  privateStorageActionSchema,
+  remoteClassroomAction,
+  remoteStorageAction,
+} from "@/lib/remote-private-tools";
 
 export const ASFAI_DEFAULT_TOOL_NAMES = [
   "asfai_capability",
@@ -90,6 +96,7 @@ export const ASFAI_DEFAULT_TOOL_NAMES = [
   "asfai_evidence",
   "asfai_resource",
   "asfai_storage",
+  "asfai_classroom",
 ] as const;
 
 const compactPayloadSchema = z.record(z.string(), z.unknown()).optional();
@@ -146,7 +153,10 @@ const resourceActionSchema = z.enum([
   "initialize", "search", "get", "create", "version", "delete", "publish", "retire", "create_collection", "update_collection", "share_collection", "revoke_collection", "export", "start_job", "get_job", "update_job", "cancel_job", "create_room", "update_room", "publish_room", "close_room", "create_quiz", "update_quiz", "publish_quiz", "retire_quiz", "create_workflow", "start_workflow", "advance_workflow", "cancel_workflow", "initialize_classroom", "store_room", "store_membership", "queue_exchange", "accept_exchange", "classroom_summary",
 ]);
 
-const storageActionSchema = z.enum(["instructions", "companion", "verify", "export", "initialize"]);
+const storageActionSchema = z.enum([
+  "instructions", "verify", "export", "initialize",
+  "status", "connect_pod", "forget_pod_authorization", "load", "save", "identity", "sign", "verify_signature",
+]);
 
 function persistenceNotice(owner: "learner" | "educator") {
   return {
@@ -161,11 +171,11 @@ function persistenceNotice(owner: "learner" | "educator") {
 async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, payload: Record<string, unknown>, siteOrigin: string) {
   if (action === "manifest") {
     return {
-      server: { name: "asfai-education", version: "1.1.0" },
-      catalog: { version: "1.1.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
+      server: { name: "asfai-learning", version: "2.0.0" },
+      catalog: { version: "2.0.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
       defaultTools: ASFAI_DEFAULT_TOOL_NAMES,
-      contextBudget: { defaultToolCount: 8, maximumToolCount: 12, serializedCharacterTarget: 6000, serializedCharacterMaximum: 8000 },
-      state: "Public graph and capability metadata are cacheable; learner and educator state remains caller-owned.",
+      contextBudget: { defaultToolCount: 9, maximumToolCount: 12, serializedCharacterTarget: 8000, serializedCharacterMaximum: 10000 },
+      state: "Public graph and capability metadata are cacheable. The authenticated connector routes private records to the user's Solid Pod when connected and otherwise uses its encrypted fallback store.",
     };
   }
   if (action === "list" || action === "search" || action === "recommend") {
@@ -509,23 +519,10 @@ function educatorPersistence(target?: { mode?: string; location?: string }) {
   return { mode: "local_file", location: target?.location ?? "asfai/educator-workspace.json", requiredCapability: "local_filesystem", steps: ["Write a temporary JSON file in the same directory.", "Atomically replace the target.", "Read back and compare digest and counts."], serverRetained: false };
 }
 
-function storageAction(action: z.infer<typeof storageActionSchema>, payload: Record<string, unknown>) {
-  if (action === "companion") {
-    return {
-      tool: "asfai_personal_storage",
-      publicToolCountImpact: 0,
-      installSkill: { tool: "asfai_capability", action: "install_skill", payload: { name: "asfai-personal-storage" } },
-      installation: {
-        plugin: "asfai-learning",
-        marketplace: "redbeard-26/asfai-education",
-        ref: "aws-hosting",
-        bundled: true,
-        userSetupAfterInstall: "Ask to connect private storage; no repository clone, dependency install, MCP settings, or filesystem path is required.",
-      },
-      developerFallback: { repository: "https://github.com/redbeard-26/asfai-education", command: "npm run personal-storage:mcp", transport: "stdio" },
-      actions: ["status", "configure_local", "connect_solid", "disconnect", "load", "save", "identity", "sign", "verify"],
-      boundary: "The private companion runs in the user's MCP client. The public AWS MCP never receives Solid credentials or private signing keys.",
-    };
+async function storageAction(action: z.infer<typeof storageActionSchema>, payload: Record<string, unknown>, tenantId?: string) {
+  if (privateStorageActionSchema.options.includes(action as z.infer<typeof privateStorageActionSchema>)) {
+    if (!tenantId) throw new Error("This private-storage action requires an authenticated ASFAI connector.");
+    return remoteStorageAction(action as z.infer<typeof privateStorageActionSchema>, payload, tenantId);
   }
   if (action === "initialize") {
     const owner = z.enum(["learner", "educator"]).parse(payload.owner);
@@ -547,6 +544,11 @@ function storageAction(action: z.infer<typeof storageActionSchema>, payload: Rec
   }
   const input = z.object({ owner: z.enum(["learner", "educator"]), state: z.unknown(), filename: z.string().optional() }).parse(payload);
   return { owner: input.owner, state: input.state, digest: digest(input.state), filename: input.filename ?? (input.owner === "learner" ? "asfai/learner.json" : "asfai/educator-workspace.json"), contentType: "application/json", serverRetained: false };
+}
+
+function tenantId(extra?: { authInfo?: { extra?: Record<string, unknown> } }) {
+  const value = extra?.authInfo?.extra?.tenantId;
+  return typeof value === "string" ? value : undefined;
 }
 
 export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
@@ -593,7 +595,14 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
   server.registerTool("asfai_resource", { title: "Manage educator-owned resources", description: "Portable versioned resources, collections, sharing previews, and export.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_storage", { title: "Persist and verify caller-owned data", description: "Discover the private companion or verify host-side IndexedDB, local JSON, and Solid Pod storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
-    try { return json(storageAction(action, data(payload))); } catch (error) { return err(error); }
+  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save learner and educator records, using the user's Solid Pod first when connected; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+    try { return json(await storageAction(action, data(payload), tenantId(extra))); } catch (error) { return err(error); }
+  });
+  server.registerTool("asfai_classroom", { title: "Exchange work with a classroom provider", description: "Connect a provider such as Google, import work, create assignments with documents, export learner work, and return approved evaluations.", inputSchema: { action: classroomActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+    try {
+      const owner = tenantId(extra);
+      if (!owner) throw new Error("Classroom actions require an authenticated ASFAI connector.");
+      return json(await remoteClassroomAction(action, data(payload), owner));
+    } catch (error) { return err(error); }
   });
 }

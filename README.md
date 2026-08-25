@@ -28,7 +28,7 @@ Learner state is accessed through a common `LearnerStore` interface with two ini
 - **IndexedDB** — the zero-setup default, stored in the current browser profile.
 - **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
 
-The education MCP server is also in this repository. Its default surface is eight compact gateways rather than one tool for each feature:
+The education MCP server is also in this repository. The installed plugin connects to one authenticated remote MCP with nine compact gateways rather than one tool for each feature:
 
 - `asfai_capability` discovers 33 platform, 88 educator, and 51 student capabilities and delivers workflow guidance;
 - `asfai_graph` searches the upstream learning graph and computes neighbors, frontiers, and paths;
@@ -37,11 +37,12 @@ The education MCP server is also in this repository. Its default surface is eigh
 - `asfai_lesson` authors, validates, reviews, publishes, assigns, and facilitates versioned lessons and games;
 - `asfai_evidence` prepares assessment, records justified observations and claims, reports, and exchanges scoped progress;
 - `asfai_resource` manages immutable educator resources, collections, rooms, quizzes, sharing, publication previews, and resumable artifact jobs; and
-- `asfai_storage` returns and verifies IndexedDB, local JSON, or Solid Pod persistence procedures.
+- `asfai_storage` connects and writes a Solid Pod, uses a connector-scoped fallback when no Pod is available, and retains the host-side storage procedures for compatibility; and
+- `asfai_classroom` connects a named classroom provider, imports work, creates assignments and supporting documents, exports work, and returns approved evaluations.
 
-The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. The public server does not durably persist learner identity, progress, educator workspaces, sessions, room membership, or jobs.
+The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. Public learning operations do not retain learner identity or raw work. The two private gateways use the authenticated connector tenant: `asfai_storage` writes the Pod or explicit fallback, while `asfai_classroom` retains only encrypted reusable provider authorization.
 
-The **ASFAI Learning** plugin packages the public MCP, one compact routing skill, and a two-tool private companion. After installation, a learner can connect a Solid Pod or use verified storage on the device; a learner or teacher can also exchange work through one provider-neutral classroom bridge, with Google as the first adapter. No repository clone, dependency installation, or manual MCP configuration is required. See [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
+The **ASFAI Learning** plugin contains one remote MCP connector and one compact routing skill. The connector authenticates through OAuth with no ASFAI account, uses a connected Solid Pod as the primary store, and falls back to tenant-isolated AWS storage only while a Pod is unavailable. The same connector provides a provider-neutral classroom bridge, with Google as the first adapter. No repository clone, local runtime, website session, or manual MCP configuration is required. See [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
 See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
@@ -72,6 +73,8 @@ Production requires a non-secret public origin and a secret used only to sign on
 ASFAI_SITE_ORIGIN=https://<api-id>.execute-api.<region>.amazonaws.com
 ASFAI_ARTIFACT_LAUNCH_SECRET=<at least 32 random characters>
 ```
+
+The authenticated remote connector additionally requires `ASFAI_REMOTE_TOKEN_SECRET` and `ASFAI_REMOTE_ENCRYPTION_KEY`. Google Classroom is enabled with a Google Web OAuth client whose authorized redirect URI is `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`; its client ID and secret are supplied through `ASFAI_GOOGLE_CLASSROOM_CLIENT_ID` and `ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET`.
 
 For local development:
 
@@ -106,7 +109,7 @@ No student records are committed to this repository.
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
 - [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
-- [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md)
+- [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md)
 - [Classroom connectors](docs/CLASSROOM-CONNECTORS.md)
 - [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
 - [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)

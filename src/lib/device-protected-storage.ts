@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -10,7 +10,7 @@ export interface SolidSessionStorage {
 }
 
 export interface StorageProtector {
-  readonly id: "windows-dpapi-current-user" | "user-file-permissions";
+  readonly id: "windows-dpapi-current-user" | "user-file-permissions" | "server-aes-256-gcm";
   protect(value: Buffer): Promise<Buffer>;
   unprotect(value: Buffer): Promise<Buffer>;
 }
@@ -82,6 +82,29 @@ export function deviceStorageProtector(platform = process.platform): StorageProt
   };
 }
 
+export function serverStorageProtector(secret: string): StorageProtector {
+  if (secret.length < 32) throw new Error("ASFAI remote provider encryption is not configured.");
+  const key = createHash("sha256").update(secret, "utf8").digest();
+  const aad = Buffer.from("asfai-remote-provider-storage-v1", "utf8");
+  return {
+    id: "server-aes-256-gcm",
+    protect: async (value) => {
+      const iv = randomBytes(12);
+      const cipher = createCipheriv("aes-256-gcm", key, iv);
+      cipher.setAAD(aad);
+      const ciphertext = Buffer.concat([cipher.update(value), cipher.final()]);
+      return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]);
+    },
+    unprotect: async (value) => {
+      if (value.length < 29) throw new Error("Invalid protected ASFAI provider data.");
+      const decipher = createDecipheriv("aes-256-gcm", key, value.subarray(0, 12));
+      decipher.setAAD(aad);
+      decipher.setAuthTag(value.subarray(12, 28));
+      return Buffer.concat([decipher.update(value.subarray(28)), decipher.final()]);
+    },
+  };
+}
+
 type StorageEnvelope = {
   schemaVersion: "1";
   protection: StorageProtector["id"];
@@ -132,7 +155,7 @@ export class DeviceProtectedStorage implements SolidSessionStorage {
           await rmdir(leasePath).catch(() => undefined);
           continue;
         }
-        if (Date.now() >= deadline) throw new Error("Another ASFAI companion is updating the saved Solid authorization. Try again shortly.");
+        if (Date.now() >= deadline) throw new Error("Another ASFAI request is updating the saved provider authorization. Try again shortly.");
         await new Promise((resolve) => setTimeout(resolve, 75));
       }
     }

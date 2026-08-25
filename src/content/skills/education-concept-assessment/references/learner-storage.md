@@ -1,16 +1,18 @@
 # Learner-owned storage procedure
 
-The public ASFAI MCP transforms a supplied profile and returns a complete updated profile. It cannot directly reach browser IndexedDB, a host filesystem, or a learner's authenticated Solid session. The chat host must perform and verify the write.
+The authenticated ASFAI Learning connector can load and save the portable profile through `asfai_storage`. Call `status` first. A connected Solid Pod is primary; otherwise the connector reports its encrypted fallback explicitly. Load before assessment and save the complete update with the prior digest as `expectedDigest`. Claim success only when the tool returns `verified:true`.
+
+Use the host-side procedures below only when the remote private-storage actions are genuinely unavailable. They are compatibility fallbacks, not prerequisites for the normal MCP workflow.
 
 ## Capability check
 
-Before teaching begins, inspect available tools and identify which capability is real:
+When using a host-side fallback, inspect which capability is real:
 
 - `browser_indexeddb`: JavaScript can run on the ASFAI Education origin and use IndexedDB;
 - `local_filesystem`: the host can read, atomically replace, and reread a learner-approved file;
 - `authenticated_solid_fetch`: the host has a logged-in Solid session and fetch bound to that session.
 
-Call `asfai_storage` action `instructions` with `owner: "learner"`, the target, and confirmed capabilities. Do not offer an unavailable target as though it will work.
+Call `asfai_storage` action `instructions` with `owner: "learner"`, the target, and confirmed capabilities. Do not offer an unavailable target as though it will work. Do not prefer these procedures over a working `asfai_storage` private save.
 
 ## IndexedDB
 

@@ -87,6 +87,7 @@ export class PersonalStorageService {
   }
 
   private statusSnapshot() {
+    const remote = this.deviceStorage?.protection === "server-aes-256-gcm";
     return {
       mode: this.mode,
       baseDirectory: this.mode === "local" ? this.baseDirectory : undefined,
@@ -101,9 +102,13 @@ export class PersonalStorageService {
         persistsAcrossChatsAndRestarts: true,
         restoredFromDevice: this.sessionRestored,
         protectedBy: this.deviceStorage?.protection ?? (process.platform === "win32" ? "windows-dpapi-current-user" : "user-file-permissions"),
-        removal: "Authorization remains available until the user explicitly asks ASFAI to forget this Pod on this device or revokes access at the Pod provider. It is never removed merely because a chat or MCP process ends.",
+        removal: remote
+          ? "Authorization remains available to this ASFAI connector until the user explicitly asks ASFAI to forget it or revokes access at the Pod provider. It is never removed merely because a chat or MCP request ends."
+          : "Authorization remains available until the user explicitly asks ASFAI to forget this Pod on this device or revokes access at the Pod provider. It is never removed merely because a chat or MCP process ends.",
       },
-      credentialBoundary: "Passwords, cookies, tokens, refresh tokens, client secrets, and DPoP keys are never accepted as MCP input or returned as output. Reusable Solid authorization is protected for the current device user.",
+      credentialBoundary: remote
+        ? "Passwords, cookies, tokens, refresh tokens, client secrets, and DPoP keys are never accepted as MCP input or returned as output. Reusable Solid authorization is encrypted and isolated to this authenticated ASFAI connector."
+        : "Passwords, cookies, tokens, refresh tokens, client secrets, and DPoP keys are never accepted as MCP input or returned as output. Reusable Solid authorization is protected for the current device user.",
     };
   }
 
@@ -192,7 +197,7 @@ export class PersonalStorageService {
     await this.restorePromise;
   }
 
-  async connectSolid(input: { podRoot: string; oidcIssuer: string; port?: number }) {
+  async connectSolid(input: { podRoot: string; oidcIssuer: string; port?: number; callbackUrl?: string }) {
     const podRoot = new URL(input.podRoot);
     const oidcIssuer = new URL(input.oidcIssuer);
     if (podRoot.protocol !== "https:" || oidcIssuer.protocol !== "https:") throw new Error("Solid Pod and OIDC issuer URLs must use HTTPS.");
@@ -215,7 +220,9 @@ export class PersonalStorageService {
         return {
           ...this.statusSnapshot(),
           authorizationUrl: undefined,
-          instruction: "The saved Pod authorization was restored for this device user. Continue without opening a web page.",
+          instruction: storage.protection === "server-aes-256-gcm"
+            ? "The saved Pod authorization was restored for this ASFAI connector. Continue without opening a web page."
+            : "The saved Pod authorization was restored for this device user. Continue without opening a web page.",
         };
       }
     } catch {
@@ -227,7 +234,21 @@ export class PersonalStorageService {
     this.authError = undefined;
     await this.saveConnectionPreference({ schemaVersion: "1", podRoot: this.podRoot, oidcIssuer: this.oidcIssuer, sessionId });
     const port = input.port ?? 18765;
-    this.callbackUrl = `http://127.0.0.1:${port}/solid/callback`;
+    this.callbackUrl = input.callbackUrl ?? `http://127.0.0.1:${port}/solid/callback`;
+    if (input.callbackUrl) {
+      await this.session.login({
+        oidcIssuer: this.oidcIssuer,
+        redirectUrl: this.callbackUrl,
+        clientName: "ASFAI Learning",
+        handleRedirect: (url) => { this.authorizationUrl = url; },
+      });
+      if (!this.authorizationUrl) throw new Error("The Solid identity provider did not provide an authorization URL.");
+      return {
+        ...this.statusSnapshot(),
+        authorizationUrl: this.authorizationUrl,
+        instruction: "Open the private-storage authorization link once and approve ASFAI at the Pod provider. The connection is then reused until it is explicitly forgotten or revoked. Never paste credentials or tokens into chat.",
+      };
+    }
     this.callbackServer = createServer(async (request, response) => {
       const incoming = new URL(request.url ?? "/", this.callbackUrl);
       if (incoming.pathname !== "/solid/callback") {
@@ -253,7 +274,7 @@ export class PersonalStorageService {
       await this.session.login({
         oidcIssuer: this.oidcIssuer,
         redirectUrl: this.callbackUrl,
-        clientName: "ASFAI Personal Storage MCP",
+        clientName: "ASFAI Learning",
         handleRedirect: (url) => { this.authorizationUrl = url; },
       });
     } catch (error) {
@@ -266,6 +287,24 @@ export class PersonalStorageService {
       authorizationUrl: this.authorizationUrl,
       instruction: "Open the authorization URL once and approve ASFAI on the Pod provider page. The authorization is then protected for this device user and reused across chats and restarts until the user explicitly forgets it or revokes it at the provider. Never paste credentials or tokens into chat. Then call status until isLoggedIn is true.",
     };
+  }
+
+  async completeSolidAuthorization(incomingUrl: string) {
+    const preference = await this.readConnectionPreference();
+    if (!preference) throw new Error("No pending Solid authorization was found for this connector.");
+    this.restoreEnabled = true;
+    this.mode = "solid";
+    this.podRoot = preference.podRoot;
+    this.oidcIssuer = preference.oidcIssuer;
+    const storage = this.solidSessionStorage();
+    const session = this.dependencies.createSession(storage, preference.sessionId);
+    await session.handleIncomingRedirect(incomingUrl);
+    if (!session.info.isLoggedIn) throw new Error("The Solid identity provider returned without establishing a session.");
+    this.session = session;
+    this.sessionRestored = false;
+    this.authorizationUrl = undefined;
+    this.authError = undefined;
+    return this.statusSnapshot();
   }
 
   private async closeCallbackServer() {
@@ -296,7 +335,9 @@ export class PersonalStorageService {
     this.callbackUrl = undefined;
     return {
       ...this.statusSnapshot(),
-      instruction: "This device has forgotten its reusable Pod authorization. This happens only after an explicit user request; ending a chat or MCP process never performs it.",
+      instruction: storage.protection === "server-aes-256-gcm"
+        ? "This ASFAI connector has forgotten its reusable Pod authorization. This happens only after an explicit user request; ending a chat or MCP request never performs it."
+        : "This device has forgotten its reusable Pod authorization. This happens only after an explicit user request; ending a chat or MCP process never performs it.",
     };
   }
 
