@@ -1,0 +1,39 @@
+{
+  "name": "asfai-learning",
+  "version": "0.1.0+codex.20260825025820",
+  "description": "Teach and plan with ASFAI, connect private storage, and exchange work with configurable classroom providers through bundled local MCP tools.",
+  "author": {
+    "name": "ASFAI",
+    "url": "https://github.com/redbeard-26"
+  },
+  "homepage": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education",
+  "repository": "https://github.com/redbeard-26/asfai-education",
+  "license": "Apache-2.0",
+  "keywords": [
+    "education",
+    "learning",
+    "lessons",
+    "solid",
+    "private-data"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ASFAI Learning",
+    "shortDescription": "ASFAI learning, private data, and classroom exchange.",
+    "longDescription": "Create and run lessons through chat, use the public ASFAI learning graph, connect PrivateDataPod and other Solid Pods, and exchange work with configurable classroom providers through included local MCP bridges. Reusable Pod and Google Classroom authorization is protected for the current Windows user and restored across chats and restarts until explicit revocation. The callable tools use asfai_* gateway names rather than the plugin display name. Private credentials, device-protected authorization, signing keys, and imported work remain on the user's device.",
+    "developerName": "ASFAI",
+    "category": "Education",
+    "capabilities": [
+      "Learning",
+      "Lesson planning",
+      "Private storage",
+      "Classroom exchange"
+    ],
+    "defaultPrompt": [
+      "Connect my private Pod and continue my lesson.",
+      "Help me learn a concept and save my progress.",
+      "Create a lesson or import classroom work and evaluate it."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

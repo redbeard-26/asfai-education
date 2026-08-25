@@ -39,6 +39,17 @@ code { display: inline-block; background: #eef2f7; border-radius: 7px; padding: 
 .neighbor-grid li { margin: 6px 0; }
 .text-button { background: transparent; color: #1d4ed8; padding: 0; border-radius: 0; text-align: left; }
 small { color: #64748b; }
+.site-footer, .legal-nav { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 32px; }
+.site-footer { padding-top: 24px; border-top: 1px solid #dbe1ea; }
+.site-footer a, .legal-nav a, .legal-page a { color: #1d4ed8; }
+.legal-page { max-width: 820px; }
+.legal-page h1 { font-size: clamp(38px, 6vw, 60px); }
+.legal-page section { margin-top: 32px; }
+.legal-page h2 { margin-bottom: 10px; font-size: 24px; }
+.legal-page p, .legal-page li { line-height: 1.7; color: #374151; }
+.legal-page li + li { margin-top: 8px; }
+.legal-updated { color: #6b7280; }
+.legal-nav { padding-top: 24px; border-top: 1px solid #dbe1ea; }
 @media (max-width: 760px) {
   .panel-grid { grid-template-columns: 1fr; }
   .card.wide { grid-column: auto; }

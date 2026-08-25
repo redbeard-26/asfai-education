@@ -1,0 +1,20 @@
+{
+  "name": "asfai",
+  "interface": {
+    "displayName": "ASFAI"
+  },
+  "plugins": [
+    {
+      "name": "asfai-learning",
+      "source": {
+        "source": "local",
+        "path": "./plugins/asfai-learning"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education"
+    }
+  ]
+}

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Block Algebra — Drop</title>
+<style>
+  :root{
+    --bg:#FBFAF7; --panel:#FFFFFF; --ink:#23252B; --muted:#8B8A82; --line:#E6E4DC;
+    --u-fill:#FCF0D6; --u-line:#C99A38; --u-ink:#8A6716;
+    --x-fill:#DEEAF1; --x-line:#5C88A7; --x-ink:#3B637E;
+    --x2-fill:#E9E4F4; --x2-line:#7C6BAA; --x2-ink:#5A4B85;
+    --ok:#2E7D5B; --ok-bg:#EAF4EF; --warn:#C77A55;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.45 ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    display:flex; flex-direction:column; min-height:100vh; overflow:hidden;
+  }
+  .math{ font-family:Georgia, "Times New Roman", serif; }
+  .math i{ font-style:italic; }
+
+  header{
+    display:flex; align-items:baseline; gap:18px; flex-wrap:wrap;
+    padding:12px 20px 10px; border-bottom:1px solid var(--line);
+  }
+  .wordmark{ font-weight:600; font-size:15px; }
+  .wordmark span{ color:var(--muted); font-weight:400; }
+  .score{ font-variant-numeric:tabular-nums; font-size:15px; }
+  .score b{ font-size:19px; }
+  .score .lbl{ text-transform:uppercase; letter-spacing:.1em; font-size:10px; color:var(--muted); margin-right:4px; }
+  .hbtns{ margin-left:auto; display:flex; gap:8px; }
+  button.btn{
+    font:inherit; font-size:13.5px; padding:6px 14px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--line); background:transparent; color:var(--ink);
+  }
+  button.btn.primary{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  button.btn:hover{ opacity:.85; }
+  button.btn:focus-visible{ outline:2px solid var(--x-line); outline-offset:2px; }
+
+  #targets{
+    display:flex; gap:10px; padding:10px 20px; border-bottom:1px solid var(--line);
+    align-items:stretch; flex-wrap:wrap;
+  }
+  .tcard{
+    border:1px solid var(--line); background:var(--panel); border-radius:10px;
+    padding:7px 14px 8px; min-width:118px;
+  }
+  .tcard .ex{ font-size:19px; line-height:1.15; }
+  .tcard .pts{ font-size:11.5px; color:var(--muted); letter-spacing:.04em; margin-top:1px; }
+  @media (prefers-reduced-motion: no-preference){
+    .tcard.pulse{ animation:pulse .5s ease-out; }
+    @keyframes pulse{ 0%{ background:var(--ok-bg); border-color:var(--ok);} 100%{ background:var(--panel);} }
+  }
+  #hint{ align-self:center; margin-left:auto; color:var(--muted); font-size:12.5px; max-width:36ch; }
+  @media (max-width:700px){ #hint{ display:none; } }
+
+  .board-wrap{ flex:1; display:flex; padding:14px 20px 16px; min-height:0; }
+  #board{
+    position:relative; flex:1; min-height:420px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; touch-action:none;
+  }
+  #limit{ position:absolute; left:0; right:0; border-top:1.5px dashed #E0C4B4; pointer-events:none; }
+  #limit small{
+    position:absolute; right:8px; top:2px; color:#D3A78F; font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase;
+  }
+  .tile{
+    position:absolute; display:flex; align-items:center; justify-content:center;
+    border-radius:5px; cursor:grab; user-select:none; touch-action:none;
+    font-family:Georgia, "Times New Roman", serif;
+  }
+  .tile.dragging{ cursor:grabbing; box-shadow:0 8px 22px rgba(30,30,40,.16); }
+  .tile.t1 { background:var(--u-fill);  border:1.5px solid var(--u-line);  color:var(--u-ink);  font-size:15px; }
+  .tile.tx { background:var(--x-fill);  border:1.5px solid var(--x-line);  color:var(--x-ink);  font-size:17px; }
+  .tile.tx2{ background:var(--x2-fill); border:1.5px solid var(--x2-line); color:var(--x2-ink); font-size:22px; }
+  .tile i{ font-style:italic; }
+  .tile.clearing{ transition:transform .22s ease-in, opacity .22s ease-in; transform:scale(.5); opacity:0; }
+
+  .float{
+    position:absolute; pointer-events:none; font-family:Georgia,serif; color:var(--ok);
+    transform:translate(-50%,0); white-space:nowrap; z-index:900;
+  }
+  .float .p{ font-size:20px; font-weight:bold; text-align:center; }
+  .float .idn{ font-size:14.5px; background:var(--ok-bg); border:1px solid var(--ok);
+    border-radius:8px; padding:2px 10px; margin-top:2px; }
+  @media (prefers-reduced-motion: no-preference){
+    .float{ animation:rise 1.25s ease-out forwards; }
+    @keyframes rise{ 0%{opacity:0;} 10%{opacity:1;} 75%{opacity:1;} 100%{ opacity:0; transform:translate(-50%,-42px);} }
+  }
+  @media (prefers-reduced-motion: reduce){ .float{ opacity:1; } }
+
+  #overlay{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    background:rgba(251,250,247,.82); z-index:1000;
+  }
+  #overlay.show{ display:flex; }
+  #overlay .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:26px 34px; text-align:center; box-shadow:0 12px 40px rgba(30,30,40,.10);
+  }
+  #overlay h2{ margin:0 0 4px; font-size:20px; font-weight:600; }
+  #overlay .fin{ font-size:32px; font-variant-numeric:tabular-nums; margin:6px 0 2px; }
+  #overlay .sub{ color:var(--muted); font-size:13px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Block Algebra <span>— Drop</span></div>
+  <div class="score"><span class="lbl">Score</span><b id="score">0</b></div>
+  <div class="score"><span class="lbl">Best</span><span id="best">0</span></div>
+  <div class="hbtns">
+    <button class="btn" id="pauseBtn">Pause</button>
+    <button class="btn" id="newBtn">New game</button>
+    <button class="btn" id="dataBtn" title="Download this session's telemetry as JSON">Data &#8595;</button>
+  </div>
+</header>
+
+<div id="targets"></div>
+
+<div class="board-wrap">
+  <div id="board">
+    <div id="limit"><small>limit</small></div>
+    <div id="overlay">
+      <div class="card">
+        <h2>Stack reached the top</h2>
+        <div class="fin" id="finScore">0</div>
+        <div class="sub" id="finBest"></div>
+        <button class="btn primary" id="againBtn">Play again</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   Block Algebra — Drop  (instrumented build for the ASFAI learning
+   platform demonstrator). Gameplay is identical to the base game; this
+   build additionally emits an evidence event stream documented in
+   LEARNING-EVIDENCE-GUIDE.md.
+   ===================================================================== */
+
+const GAME = 'block-algebra-drop', GAME_VER = '1.2.1';
+
+/* ---------- constants ---------- */
+const U  = 44;                    // 1-block side, px
+const XF = 2.6180339887;          // x in units — irrational, so ones can never fake an x
+const XP = U * XF;
+const SNAP = 12, NEAR = 26, TOL = 4.5, DANGER = 74;
+const RECENT_GRAB_S = 30;         // a tile counts as "player-worked" this long after a grab
+
+const SIZES = { '1':[U,U], 'x':[XP,U], 'x2':[XP,XP] };
+const LABEL = { '1':'1', 'x':'<i>x</i>', 'x2':'<i>x</i>&sup2;' };
+
+/* ---------- target pools:  a·x² + b·x + c ---------- */
+const TIER_NAME = ['constant/linear-A', 'linear/quad-B', 'quadratic-C'];
+const POOLS = [
+  [ {a:0,b:0,c:3, pts:15}, {a:0,b:0,c:4, pts:20}, {a:0,b:1,c:2, pts:25},
+    {a:0,b:2,c:0, pts:25}, {a:0,b:1,c:3, pts:30} ],
+  [ {a:0,b:2,c:1, pts:35}, {a:0,b:2,c:2, pts:40}, {a:0,b:3,c:2, pts:45},
+    {a:1,b:1,c:0, pts:50}, {a:1,b:2,c:0, pts:60} ],
+  [ {a:1,b:2,c:1, pts:80},  {a:1,b:3,c:2, pts:100}, {a:1,b:4,c:4, pts:120},
+    {a:1,b:5,c:6, pts:140}, {a:2,b:3,c:1, pts:150} ]
+];
+
+/* ---------- telemetry ---------- */
+const qs = new URLSearchParams(location.search);
+for(const [key,value] of new URLSearchParams(location.hash.slice(1))) qs.set(key,value);
+const T0 = performance.now();
+const nowS = () => +((performance.now() - T0)/1000).toFixed(2);
+const TLM = {
+  game: GAME, version: GAME_VER, schema: 1,
+  learner: null,
+  launch: qs.get('launch') || null,
+  session: (crypto.randomUUID ? crypto.randomUUID()
+            : 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2,8)),
+  started: new Date().toISOString(),
+  events: []
+};
+
+/* Telemetry level (?telemetry=full|standard|summary — default standard):
+   - full     : every event, incl. per-tile spawn/grab/drop/rotate (research/calibration)
+   - standard : evidence events only; per-tile activity kept as aggregate counters
+   - summary  : session_start + one summary object per game over
+   Aggregates (AGG) are always maintained, so getSummary() is identical at every level. */
+const TLEVEL = ['full','standard','summary'].indexOf(qs.get('telemetry')) >= 0
+             ? qs.get('telemetry') : 'standard';
+const VERBOSE = new Set(['tile_spawn','tile_grab','tile_drop','tile_rotate']);
+const SUMMARY_ONLY = new Set(['session_start','summary']);
+const MAX_EVENTS = 6000;                 // hard cap; verbose events yield first
+let truncated = false;
+const RELAY_TOKEN = qs.get('token');
+const PARENT_ORIGIN = qs.get('parentOrigin');
+let relayTimer = null;
+
+function sendRelayResult(summary){
+  if(!TLM.launch || !RELAY_TOKEN) return;
+  if(relayTimer) clearTimeout(relayTimer);
+  relayTimer = setTimeout(()=>{
+    fetch('/education/api/artifact-results?launch='+encodeURIComponent(TLM.launch), {
+      method:'POST', credentials:'omit', cache:'no-store',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+RELAY_TOKEN},
+      body:JSON.stringify({ source:GAME, version:GAME_VER, schema:TLM.schema,
+        session:TLM.session, summary, completedAt:new Date().toISOString() })
+    }).catch(()=>{});
+  }, 150);
+}
+
+const AGG = {
+  offered:[0,0,0],
+  clears:[0,1,2].map(()=>({ total:0, constructed:0, chain:0, ttc:[] })),
+  quad:new Set(), spawns:{'1':0,'x':0,'x2':0},
+  grabs:0, drops:0, rotations:0, explored:0, games:0, overs:0, lastScore:0
+};
+function aggregate(type, d){
+  switch(type){
+    case 'target_offered': AGG.offered[d.tier]++; break;
+    case 'tile_spawn':     AGG.spawns[d.kind]++; break;
+    case 'tile_grab':      AGG.grabs++; break;
+    case 'tile_drop':      AGG.drops++; break;
+    case 'tile_rotate':    AGG.rotations++; break;
+    case 'rect_explored':  AGG.explored++; break;
+    case 'game_start':     AGG.games++; break;
+    case 'game_over':      AGG.overs++; AGG.lastScore = d.score; break;
+    case 'clear': {
+      const c = AGG.clears[d.tier]; c.total++;
+      if(d.chain) c.chain++;
+      if(d.constructed){
+        c.constructed++;
+        if(d.ttc != null) c.ttc.push(d.ttc);
+        if(d.a > 0) AGG.quad.add(d.poly);
+      }
+      break;
+    }
+  }
+}
+function keepEvent(type){
+  if(TLEVEL === 'summary')  return SUMMARY_ONLY.has(type);
+  if(TLEVEL === 'standard') return !VERBOSE.has(type);
+  return true;
+}
+function logE(type, data){
+  const d = data || {};
+  aggregate(type, d);                    // counters always run, at every level
+  if(!keepEvent(type)) return;
+  if(TLM.events.length >= MAX_EVENTS){
+    if(!truncated){ truncated = true; TLM.events.push({ t:nowS(), type:'telemetry_truncated', max:MAX_EVENTS }); }
+    if(VERBOSE.has(type)) return;
+  }
+  const ev = Object.assign({ t: nowS(), type }, d);
+  TLM.events.push(ev);
+  try{
+    if(window.parent !== window && PARENT_ORIGIN && URL.canParse(PARENT_ORIGIN))
+      window.parent.postMessage({ source: GAME, session: TLM.session, learner: null, event: ev }, PARENT_ORIGIN);
+  }catch(_){}
+  if(type === 'summary') sendRelayResult(d);
+}
+function polyStr(a,b,c){
+  const p = [];
+  if(a) p.push((a===1?'':a)+'x^2');
+  if(b) p.push((b===1?'':b)+'x');
+  if(c) p.push(''+c);
+  return p.length ? p.join(' + ') : '0';
+}
+function sideStr(a,b){
+  if(a===0) return ''+b;
+  const ax = (a===1?'':a)+'x';
+  return b===0 ? ax : '('+ax+' + '+b+')';
+}
+function factoredStr(dw,dh){
+  let s1 = sideStr(dh.a,dh.b), s2 = sideStr(dw.a,dw.b);
+  if(s2.indexOf('(')<0 && s1.indexOf('(')>=0) [s1,s2]=[s2,s1];
+  return (s1===s2 && s1.indexOf('(')===0) ? s1+'^2' : s1+s2;
+}
+
+/* summary derived from the always-on aggregates (level-independent) */
+function median(arr){
+  if(!arr.length) return null;
+  const s=[...arr].sort((x,y)=>x-y), m=Math.floor(s.length/2);
+  return +( (s.length%2 ? s[m] : (s[m-1]+s[m])/2).toFixed(1) );
+}
+function getSummary(){
+  return {
+    session: TLM.session, learner: TLM.learner, telemetryLevel: TLEVEL,
+    durationS: nowS(), games: AGG.games, gameOvers: AGG.overs, lastScore: AGG.lastScore,
+    grabs: AGG.grabs, drops: AGG.drops, rotations: AGG.rotations,
+    spawns: Object.assign({}, AGG.spawns), rectsExplored: AGG.explored,
+    tiers: [0,1,2].map(i => {
+      const c = AGG.clears[i];
+      return {
+        tier: i, name: TIER_NAME[i], targetsOffered: AGG.offered[i],
+        clears: c.total, constructedClears: c.constructed, chainClears: c.chain,
+        clearRatePerTarget: AGG.offered[i] ? +(c.constructed/AGG.offered[i]).toFixed(2) : null,
+        medianTtcConstructedS: median(c.ttc)
+      };
+    }),
+    distinctQuadraticsConstructed: [...AGG.quad]
+  };
+}
+function downloadData(){
+  const payload = { meta:{ game:GAME, version:GAME_VER, schema:TLM.schema, level:TLEVEL,
+                           session:TLM.session, learner:TLM.learner, started:TLM.started,
+                           exported:new Date().toISOString() },
+                    summary:getSummary(), events:TLM.events };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = GAME + '-' + TLM.session.slice(0,8) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+}
+window.BlockAlgebraTelemetry = {
+  getEvents: () => TLM.events.slice(),
+  getSummary, download: downloadData,
+  session: TLM.session, learner: TLM.learner, level: TLEVEL
+};
+
+/* ---------- dom / state ---------- */
+const board   = document.getElementById('board');
+const targetsEl = document.getElementById('targets');
+const scoreEl = document.getElementById('score');
+const bestEl  = document.getElementById('best');
+const overlay = document.getElementById('overlay');
+const limitEl = document.getElementById('limit');
+limitEl.style.top = DANGER + 'px';
+
+let tiles = [], Z = 10, drag = null, tileSeq = 0;
+let targets = [], score = 0, best = 0, gameNo = 0, gameStartT = 0;
+let running = true, over = false;
+let spawnT = 0, last = performance.now(), clearTimer = null;
+const exploreSeen = new Map();     // poly -> last log time, to de-noise exploration events
+
+const bw = () => board.clientWidth;
+const bh = () => board.clientHeight;
+
+/* ---------- math formatting (display) ---------- */
+function exprHTML(a,b,c){
+  const p = [];
+  if(a) p.push((a===1?'':a)+'<i>x</i>&sup2;');
+  if(b) p.push((b===1?'':b)+'<i>x</i>');
+  if(c) p.push(''+c);
+  return p.length ? p.join(' + ') : '0';
+}
+function sideHTML(a,b){
+  if(a===0) return ''+b;
+  const ax = (a===1?'':a)+'<i>x</i>';
+  return b===0 ? ax : '('+ax+' + '+b+')';
+}
+function factoredHTML(dw,dh){
+  let s1 = sideHTML(dh.a,dh.b), s2 = sideHTML(dw.a,dw.b);
+  if(s2.indexOf('(')<0 && s1.indexOf('(')>=0) [s1,s2]=[s2,s1];
+  return (s1===s2 && s1.indexOf('(')===0) ? s1+'&sup2;' : s1+s2;
+}
+
+/* ---------- tiles ---------- */
+function makeTile(type,x,y){
+  const el = document.createElement('div');
+  el.className = 'tile ' + (type==='1'?'t1':type==='x'?'tx':'tx2');
+  el.innerHTML = LABEL[type];
+  const [w,h] = SIZES[type];
+  const t = { el, id:++tileSeq, type, x, y, w, h,
+              rest:false, drag:false, clearing:false, lastGrab:-1e9 };
+  el.style.width = w+'px'; el.style.height = h+'px';
+  pos(t,x,y);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); startDrag(t,e); });
+  board.appendChild(el);
+  tiles.push(t);
+  return t;
+}
+function pos(t,x,y){
+  t.x = Math.max(0, Math.min(x, bw() - t.w));
+  t.y = Math.max(-t.h-10, Math.min(y, bh() - t.h));
+  t.el.style.left = t.x+'px'; t.el.style.top = t.y+'px';
+}
+function inter(a,b){
+  const w = Math.min(a.x+a.w,b.x+b.w) - Math.max(a.x,b.x);
+  const h = Math.min(a.y+a.h,b.y+b.h) - Math.max(a.y,b.y);
+  return (w>0 && h>0) ? w*h : 0;
+}
+const xOver = (a,b) => Math.min(a.x+a.w,b.x+b.w) - Math.max(a.x,b.x);
+const yOver = (a,b) => Math.min(a.y+a.h,b.y+b.h) - Math.max(a.y,b.y);
+
+/* ---------- drag / rotate ---------- */
+function startDrag(t,e){
+  if(over || t.clearing) return;
+  const r = board.getBoundingClientRect();
+  drag = { t, id:e.pointerId, gx:e.clientX - r.left - t.x, gy:e.clientY - r.top - t.y,
+           sx:e.clientX, sy:e.clientY, moved:false };
+  t.drag = true; t.rest = false; t.lastGrab = nowS();
+  t.el.style.zIndex = ++Z;
+  t.el.classList.add('dragging');
+  logE('tile_grab', { id:t.id, kind:t.type });
+  try{ t.el.setPointerCapture(e.pointerId); }catch(_){}
+}
+window.addEventListener('pointermove', e => {
+  if(!drag || e.pointerId!==drag.id) return;
+  const t = drag.t, r = board.getBoundingClientRect();
+  if(Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) > 5) drag.moved = true;
+  let nx = e.clientX - r.left - drag.gx;
+  let ny = e.clientY - r.top  - drag.gy;
+  const s = snap(t,nx,ny);
+  pos(t, s[0], s[1]);
+});
+window.addEventListener('pointerup', e => {
+  if(!drag || e.pointerId!==drag.id) return;
+  const t = drag.t;
+  t.el.classList.remove('dragging');
+  t.drag = false;
+  if(!drag.moved && t.type==='x'){ rotate(t); logE('tile_rotate', { id:t.id }); }
+  else if(drag.moved) logE('tile_drop', { id:t.id, kind:t.type, x:Math.round(t.x), y:Math.round(t.y) });
+  resolveUp(t);
+  drag = null;
+});
+window.addEventListener('pointercancel', () => {
+  if(drag){ drag.t.el.classList.remove('dragging'); drag.t.drag = false; resolveUp(drag.t); drag = null; }
+});
+function rotate(t){
+  const cx = t.x + t.w/2, cy = t.y + t.h/2;
+  [t.w,t.h] = [t.h,t.w];
+  t.el.style.width = t.w+'px'; t.el.style.height = t.h+'px';
+  pos(t, cx - t.w/2, cy - t.h/2);
+}
+function resolveUp(t){
+  let guard = 0;
+  while(guard++ < 400){
+    let hit = null;
+    for(const o of tiles){ if(o!==t && !o.clearing && !o.drag && inter(t,o) > 4){ hit = o; break; } }
+    if(!hit) break;
+    t.y = hit.y - t.h;
+  }
+  pos(t, t.x, t.y);
+  t.rest = false;
+}
+function snap(t,nx,ny){
+  let bx = null, by = null;
+  for(const o of tiles){
+    if(o===t || o.clearing) continue;
+    if(ny < o.y+o.h+NEAR && o.y < ny+t.h+NEAR){
+      for(const d of [o.x-nx, o.x+o.w-nx, o.x-(nx+t.w), o.x+o.w-(nx+t.w)])
+        if(Math.abs(d)<SNAP && (bx===null || Math.abs(d)<Math.abs(bx))) bx = d;
+    }
+    if(nx < o.x+o.w+NEAR && o.x < nx+t.w+NEAR){
+      for(const d of [o.y-ny, o.y+o.h-ny, o.y-(ny+t.h), o.y+o.h-(ny+t.h)])
+        if(Math.abs(d)<SNAP && (by===null || Math.abs(d)<Math.abs(by))) by = d;
+    }
+  }
+  return [nx + (bx||0), ny + (by||0)];
+}
+
+/* ---------- physics ---------- */
+const fallSpeed = () => 34 + Math.min(60, score * 0.05);
+const spawnEvery = () => Math.max(1.5, 3.4 - score * 0.0018);
+
+function dropDist(t){
+  let d = bh() - (t.y + t.h);
+  for(const o of tiles){
+    if(o===t || o.clearing || o.drag) continue;
+    if(xOver(t,o) > 1 && o.y >= t.y + t.h - 0.5) d = Math.min(d, o.y - (t.y + t.h));
+  }
+  return Math.max(0, d);
+}
+function physics(dt){
+  const order = [...tiles].sort((a,b) => (b.y+b.h) - (a.y+a.h));
+  for(const t of order){
+    if(t.drag || t.clearing) continue;
+    const d = dropDist(t);
+    if(d <= 0.01){
+      if(!t.rest){ t.rest = true; onSettle(t); }
+    } else {
+      t.rest = false;
+      pos(t, t.x, t.y + Math.min(d, fallSpeed()*dt));
+    }
+  }
+}
+function onSettle(t){
+  let bd = null;
+  for(const o of tiles){
+    if(o===t || o.clearing || o.drag || !o.rest) continue;
+    if(yOver(t,o) > 4){
+      for(const d of [o.x-t.x, o.x+o.w-t.x, o.x-(t.x+t.w), o.x+o.w-(t.x+t.w)])
+        if(Math.abs(d)<7 && (bd===null || Math.abs(d)<Math.abs(bd))) bd = d;
+    }
+  }
+  if(bd){
+    const old = t.x; t.x += bd;
+    for(const o of tiles) if(o!==t && !o.clearing && inter(t,o) > 6){ t.x = old; break; }
+    pos(t, t.x, t.y);
+  }
+  if(t.y < DANGER){ gameOver(); return; }
+  if(clearTimer) clearTimeout(clearTimer);
+  clearTimer = setTimeout(()=>checkClears(false), 70);
+}
+
+/* ---------- spawning ---------- */
+function spawnTile(){
+  const r = Math.random();
+  const type = r < 0.42 ? '1' : r < 0.83 ? 'x' : 'x2';
+  const [w,h] = SIZES[type];
+  for(let tries=0; tries<12; tries++){
+    const x = 8 + Math.random() * Math.max(1, bw() - w - 16);
+    const probe = { x, y:-h, w, h:h+150 };
+    let clash = false;
+    for(const o of tiles) if(o.y < 170 && xOver(probe,o) > 4 && !o.clearing){ clash = true; break; }
+    if(!clash){ const t = makeTile(type, x, -h); logE('tile_spawn', { id:t.id, kind:type }); return; }
+  }
+}
+
+/* ---------- clear detection ---------- */
+function decomp(L){
+  for(let a=0;a<=9;a++){
+    const rem = L - a*XP;
+    if(rem < -TOL) break;
+    const b = Math.round(rem/U);
+    if(b>=0 && Math.abs(a*XP + b*U - L) < TOL) return {a,b};
+  }
+  return null;
+}
+function rIn(x0,y0,x1,y1,o){
+  const w = Math.min(x1,o.x+o.w) - Math.max(x0,o.x);
+  const h = Math.min(y1,o.y+o.h) - Math.max(y0,o.y);
+  return (w>0 && h>0) ? w*h : 0;
+}
+function checkClears(chain){
+  if(over) return;
+  const R = tiles.filter(t => t.rest && !t.drag && !t.clearing);
+  const seen = new Set();
+  let best = null;
+  const now = nowS();
+  for(let i=0;i<R.length;i++){
+    for(let j=i;j<R.length;j++){
+      const A=R[i], B=R[j];
+      const x0=Math.min(A.x,B.x), y0=Math.min(A.y,B.y);
+      const x1=Math.max(A.x+A.w,B.x+B.w), y1=Math.max(A.y+A.h,B.y+B.h);
+      const key = x0.toFixed(0)+','+y0.toFixed(0)+','+x1.toFixed(0)+','+y1.toFixed(0);
+      if(seen.has(key)) continue; seen.add(key);
+
+      const inside = []; let sum = 0, ok = true;
+      for(const o of tiles){
+        if(o.clearing || o.drag) continue;
+        const full = o.x>=x0-2 && o.y>=y0-2 && o.x+o.w<=x1+2 && o.y+o.h<=y1+2;
+        if(full && o.rest){ inside.push(o); sum += o.w*o.h; }
+        else if(rIn(x0,y0,x1,y1,o) > 30){ ok = false; break; }
+      }
+      if(!ok || inside.length < 2) continue;
+      const W = x1-x0, H = y1-y0;
+      if(W*H - sum > Math.max(140, W*H*0.015)) continue;
+      const dw = decomp(W), dh = decomp(H);
+      if(!dw || !dh) continue;
+      const a = dw.a*dh.a, b = dw.a*dh.b + dw.b*dh.a, c = dw.b*dh.b;
+      const ti = targets.findIndex(g => g.a===a && g.b===b && g.c===c);
+      if(ti < 0){
+        /* a valid rectangle the player built that matches NO active target —
+           evidence of factoring behaviour beyond the scoreboard */
+        const touched = inside.filter(o => now - o.lastGrab < RECENT_GRAB_S).length;
+        if(inside.length >= 3 && touched >= 2){
+          const p = polyStr(a,b,c);
+          if(!exploreSeen.has(p) || now - exploreSeen.get(p) > 8){
+            exploreSeen.set(p, now);
+            logE('rect_explored', { poly:p, factored:factoredStr(dw,dh), tiles:inside.length });
+          }
+        }
+        continue;
+      }
+      if(!best || targets[ti].pts > best.pts)
+        best = { inside, ti, pts:targets[ti].pts, a,b,c, dw,dh, cx:(x0+x1)/2, cy:y0 };
+    }
+  }
+  if(best) doClear(best, !!chain);
+}
+function doClear(hit, chain){
+  const g = targets[hit.ti];
+  const now = nowS();
+  const touched = hit.inside.filter(o => now - o.lastGrab < RECENT_GRAB_S).length;
+  const constructed = !chain && touched >= Math.min(2, hit.inside.length);
+  score += g.pts; scoreEl.textContent = score;
+  logE('clear', {
+    poly: polyStr(hit.a,hit.b,hit.c), factored: factoredStr(hit.dw,hit.dh),
+    a:hit.a, b:hit.b, c:hit.c, tier:g.tier, pts:g.pts,
+    tiles: hit.inside.length, touched, chain, constructed,
+    ttc: g.offeredAt != null ? +(now - g.offeredAt).toFixed(1) : null
+  });
+  const idn = hit.a > 0
+    ? exprHTML(hit.a,hit.b,hit.c)+' = '+factoredHTML(hit.dw,hit.dh)
+    : exprHTML(hit.a,hit.b,hit.c)+' &nbsp;\u2713';
+  floatText(hit.cx, Math.max(hit.cy-8, 24), '+'+g.pts, idn);
+  for(const t of hit.inside){ t.clearing = true; t.el.classList.add('clearing'); }
+  setTimeout(()=>{
+    for(const t of hit.inside){ if(t.el.parentNode) board.removeChild(t.el); tiles.splice(tiles.indexOf(t),1); }
+  }, 230);
+  replaceTarget(hit.ti);
+  setTimeout(()=>checkClears(true), 420);
+}
+function floatText(x,y,pts,idn){
+  const f = document.createElement('div');
+  f.className = 'float';
+  f.style.left = x+'px'; f.style.top = y+'px';
+  f.innerHTML = '<div class="p">'+pts+'</div><div class="idn math">'+idn+'</div>';
+  board.appendChild(f);
+  setTimeout(()=>{ if(f.parentNode) board.removeChild(f); }, 1400);
+}
+
+/* ---------- targets ---------- */
+function pickTarget(tier, avoid){
+  const pool = POOLS[tier];
+  for(let k=0;k<10;k++){
+    const g = pool[Math.floor(Math.random()*pool.length)];
+    if(!avoid.some(o => o && o.a===g.a && o.b===g.b && o.c===g.c)) return {...g, tier};
+  }
+  return {...pool[0], tier};
+}
+function offer(tier, slot, avoid){
+  const g = pickTarget(tier, avoid);
+  g.offeredAt = nowS();
+  logE('target_offered', { slot, tier, poly:polyStr(g.a,g.b,g.c), pts:g.pts });
+  return g;
+}
+function initTargets(){
+  targets = [];
+  for(let tier=0; tier<3; tier++) targets.push(offer(tier, tier, targets));
+  renderTargets();
+}
+function replaceTarget(i){
+  targets[i] = offer(targets[i].tier, i, targets);
+  renderTargets(i);
+}
+function renderTargets(pulseIdx){
+  targetsEl.innerHTML = '';
+  targets.forEach((g,i)=>{
+    const d = document.createElement('div');
+    d.className = 'tcard' + (i===pulseIdx?' pulse':'');
+    d.innerHTML = '<div class="ex math">'+exprHTML(g.a,g.b,g.c)+'</div><div class="pts">'+g.pts+' pts</div>';
+    targetsEl.appendChild(d);
+  });
+  const h = document.createElement('div');
+  h.id = 'hint';
+  h.textContent = 'Tiles fall \u2014 drag them anywhere, tap an x to rotate. Build a target as one solid rectangle and it clears.';
+  targetsEl.appendChild(h);
+}
+
+/* ---------- game flow ---------- */
+function gameOver(){
+  if(over) return;
+  over = true;
+  best = Math.max(best, score); bestEl.textContent = best;
+  logE('game_over', { game:gameNo, score, durationS:+(nowS()-gameStartT).toFixed(1) });
+  logE('summary', getSummary());
+  document.getElementById('finScore').textContent = score;
+  document.getElementById('finBest').textContent = 'best ' + best;
+  overlay.classList.add('show');
+}
+function newGame(){
+  for(const t of tiles) if(t.el.parentNode) board.removeChild(t.el);
+  tiles = []; Z = 10; score = 0; scoreEl.textContent = '0';
+  over = false; running = true; spawnT = 2.4;
+  gameNo++; gameStartT = nowS(); exploreSeen.clear();
+  logE('game_start', { game:gameNo });
+  overlay.classList.remove('show');
+  document.getElementById('pauseBtn').textContent = 'Pause';
+  initTargets();
+}
+document.getElementById('newBtn').addEventListener('click', newGame);
+document.getElementById('againBtn').addEventListener('click', newGame);
+document.getElementById('dataBtn').addEventListener('click', downloadData);
+document.getElementById('pauseBtn').addEventListener('click', function(){
+  if(over) return;
+  running = !running;
+  logE(running ? 'resume' : 'pause', {});
+  this.textContent = running ? 'Pause' : 'Resume';
+});
+window.addEventListener('resize', ()=>{ for(const t of tiles) pos(t,t.x,t.y); });
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - last)/1000, 0.05);
+  last = now;
+  if(!running || over) return;
+  spawnT += dt;
+  if(spawnT >= spawnEvery()){ spawnT = 0; spawnTile(); }
+  physics(dt);
+}
+logE('session_start', {});
+newGame();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

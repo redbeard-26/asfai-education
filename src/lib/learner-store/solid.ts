@@ -3,6 +3,8 @@
 import { createContainerAt, getFile, overwriteFile } from "@inrupt/solid-client";
 import { Session } from "@inrupt/solid-client-authn-browser";
 import {
+  assertStoredProfileMatches,
+  migrateLearnerProfile,
   newLearnerProfile,
   type AssessmentClaim,
   type EvidenceEvent,
@@ -10,6 +12,7 @@ import {
   type LearnerProfile,
   type LearnerStore,
 } from "./types";
+import type { LessonReport, LessonRun } from "@/lib/lessons/schemas";
 
 export const solidSession = new Session();
 const CONFIG_KEY = "asfai-solid-config";
@@ -73,7 +76,12 @@ export class SolidPodLearnerStore implements LearnerStore {
   async load(): Promise<LearnerProfile> {
     try {
       const file = await getFile(this.profileUrl, { fetch: this.fetcher });
-      return JSON.parse(await file.text()) as LearnerProfile;
+      const raw = JSON.parse(await file.text()) as unknown;
+      const profile = migrateLearnerProfile(raw);
+      if ((raw as { schemaVersion?: string }).schemaVersion !== profile.schemaVersion) {
+        await this.save(profile);
+      }
+      return profile;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (!/404|not found/i.test(message)) throw error;
@@ -85,35 +93,51 @@ export class SolidPodLearnerStore implements LearnerStore {
 
   async save(profile: LearnerProfile): Promise<void> {
     await this.ensureContainer();
-    const next = { ...profile, updatedAt: new Date().toISOString() };
     await overwriteFile(
       this.profileUrl,
-      new Blob([JSON.stringify(next, null, 2)], { type: "application/json" }),
+      new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" }),
       { contentType: "application/json", fetch: this.fetcher },
     );
+    const saved = await getFile(this.profileUrl, { fetch: this.fetcher });
+    assertStoredProfileMatches(profile, migrateLearnerProfile(JSON.parse(await saved.text()) as unknown));
   }
 
   async appendEvidence(event: EvidenceEvent): Promise<LearnerProfile> {
     const profile = await this.load();
-    const next = { ...profile, evidence: [...profile.evidence, event] };
+    const next = { ...profile, updatedAt: new Date().toISOString(), evidence: [...profile.evidence, event] };
     await this.save(next);
-    return { ...next, updatedAt: new Date().toISOString() };
+    return next;
   }
 
   async appendAssessmentClaim(claim: AssessmentClaim): Promise<LearnerProfile> {
     const profile = await this.load();
-    const next = { ...profile, assessmentClaims: [...profile.assessmentClaims, claim] };
+    const next = { ...profile, updatedAt: new Date().toISOString(), assessmentClaims: [...profile.assessmentClaims, claim] };
     await this.save(next);
-    return { ...next, updatedAt: new Date().toISOString() };
+    return next;
   }
 
   async putObjectiveState(state: LearnerObjectiveState): Promise<LearnerProfile> {
     const profile = await this.load();
     const next = {
       ...profile,
+      updatedAt: new Date().toISOString(),
       objectiveStates: { ...profile.objectiveStates, [state.objectiveId]: state },
     };
     await this.save(next);
-    return { ...next, updatedAt: new Date().toISOString() };
+    return next;
+  }
+
+  async putLessonRun(run: LessonRun): Promise<LearnerProfile> {
+    const profile = await this.load();
+    const next = { ...profile, updatedAt: new Date().toISOString(), lessonRuns: { ...profile.lessonRuns, [run.id]: run } };
+    await this.save(next);
+    return next;
+  }
+
+  async putLessonReport(report: LessonReport): Promise<LearnerProfile> {
+    const profile = await this.load();
+    const next = { ...profile, updatedAt: new Date().toISOString(), lessonReports: { ...profile.lessonReports, [report.id]: report } };
+    await this.save(next);
+    return next;
   }
 }

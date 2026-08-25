@@ -2,7 +2,7 @@
 
 Open, standards-based architecture and reference implementation for AI-mediated learning, evidence, and mastery.
 
-> **Status:** Early implementation. The repository now contains a deployable Next.js education service and MCP server, but it is not yet a production learner-record system or assessment engine.
+> **Status:** MCP-first reference implementation. The repository contains a deployable Next.js education service, a compact versioned capability catalog, caller-owned educator and learner state, lessons, rooms, quizzes, evidence workflows, and hosted artifacts. Restricted and district operations remain draft/human-review workflows until an authenticated institutional control plane is configured.
 
 ASFAI Education is intended to let students learn through AI tutors, courses, games, and hands-on projects while maintaining a coherent picture of what each student has attempted, demonstrated, and mastered.
 
@@ -28,16 +28,25 @@ Learner state is accessed through a common `LearnerStore` interface with two ini
 - **IndexedDB** — the zero-setup default, stored in the current browser profile.
 - **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
 
-The education MCP server is also in this repository. It contains **education graph tools only** and does not persist learner identity or progress. It can:
+The education MCP server is also in this repository. Its default surface is eight compact gateways rather than one tool for each feature:
 
-- list learning programs;
-- search and retrieve objectives;
-- identify prerequisite and downstream neighboring objectives;
-- return objectives within a subject/domain learning program;
-- compute a learner's current frontier from client-supplied mastered objective IDs; and
-- find a prerequisite path to a target objective.
+- `asfai_capability` discovers 33 platform, 88 educator, and 51 student capabilities and delivers workflow guidance;
+- `asfai_graph` searches the upstream learning graph and computes neighbors, frontiers, and paths;
+- `asfai_run` prepares versioned one-shot and control-plane work with validation and review contracts;
+- `asfai_session` runs resumable learner dialogue, room joins, and formative quizzes with caller-owned state;
+- `asfai_lesson` authors, validates, reviews, publishes, assigns, and facilitates versioned lessons and games;
+- `asfai_evidence` prepares assessment, records justified observations and claims, reports, and exchanges scoped progress;
+- `asfai_resource` manages immutable educator resources, collections, rooms, quizzes, sharing, publication previews, and resumable artifact jobs; and
+- `asfai_storage` returns and verifies IndexedDB, local JSON, or Solid Pod persistence procedures.
+
+The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. The public server does not durably persist learner identity, progress, educator workspaces, sessions, room membership, or jobs.
+
+The **ASFAI Learning** plugin packages the public MCP, one compact routing skill, and a two-tool private companion. After installation, a learner can connect a Solid Pod or use verified storage on the device; a learner or teacher can also exchange work through one provider-neutral classroom bridge, with Google as the first adapter. No repository clone, dependency installation, or manual MCP configuration is required. See [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
+See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
+
+The first bundled lesson is [Block Algebra](docs/BLOCK-ALGEBRA-PILOT.md), with a guided walkthrough and a fluency game. Chat remains the primary interface; a game opens only for the activity that needs it.
 
 ## Deployment
 
@@ -47,7 +56,7 @@ The Next.js app uses `/education` as its base path so it can be independently de
 https://constitution.asfai.org/education
 ```
 
-The `asfai-constitution` project rewrites `/education/*` to the separately running education service. Production is released manually to the shared ASFAI AWS host using the deployment package in `redbeard-26/asfai-constitution`; GitHub pushes do not deploy either service. The public education origin is `https://education.asfai.org`, while the constitution container reaches this service over the private Docker network.
+The `asfai-constitution` project rewrites `/education/*` to the separately running education service. Production is released manually to the shared ASFAI AWS host using the deployment package in `redbeard-26/asfai-constitution`; GitHub pushes do not deploy either service. Until a custom education hostname is moved, the stack's AWS-issued `TemporaryMcpOrigin` serves both `/education` and `/education/api/mcp`. The constitution container reaches education over the private Docker network.
 
 The repository-level `Dockerfile` produces the standalone Next.js image consumed by that release. The competency graph continues to use the upstream GitHub fetch/cache implementation; taxonomy files are not copied into the deployment repository or image beyond normal application source.
 
@@ -57,11 +66,19 @@ The MCP endpoint is:
 /education/api/mcp
 ```
 
+Production requires a non-secret public origin and a secret used only to sign one-hour artifact launches:
+
+```text
+ASFAI_SITE_ORIGIN=https://<api-id>.execute-api.<region>.amazonaws.com
+ASFAI_ARTIFACT_LAUNCH_SECRET=<at least 32 random characters>
+```
+
 For local development:
 
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
 Then open `http://localhost:3000/education`.
@@ -88,6 +105,12 @@ No student records are committed to this repository.
 - [Core data model](docs/DATA-MODEL.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
+- [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
+- [Personal storage MCP companion](docs/PERSONAL-STORAGE-COMPANION.md)
+- [Classroom connectors](docs/CLASSROOM-CONNECTORS.md)
+- [Lessons and artifacts](docs/LESSONS-AND-ARTIFACTS.md)
+- [Lesson progress exchange](docs/PROGRESS-EXCHANGE.md)
+- [Block Algebra pilot](docs/BLOCK-ALGEBRA-PILOT.md)
 - [Licensing policy](docs/LICENSING.md)
 - [Implementation roadmap](docs/ROADMAP.md)
 

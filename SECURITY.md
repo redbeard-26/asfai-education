@@ -1,6 +1,10 @@
 # Security and Student Privacy
 
-ASFAI Education is currently a design repository and does not operate a production service. Do not include real student data, secrets, credentials, private assessment content, or production endpoints in issues, pull requests, examples, or test fixtures.
+ASFAI Education operates an early public service, but it is not a managed learner-record system. Do not include real student data, secrets, credentials, private assessment content, or private learner endpoints in issues, pull requests, examples, or test fixtures.
+
+The production artifact relay requires `ASFAI_ARTIFACT_LAUNCH_SECRET` with at least 32 random characters. Never expose it through `NEXT_PUBLIC_*`, lesson manifests, MCP tool arguments, logs, or client code. Rotate it after suspected disclosure; outstanding artifact launches will become invalid.
+
+The current relay is process-local, accepts at most 128 KB, uses opaque one-hour capabilities, and deletes content after one successful claim. Do not use it for raw conversations, direct identifiers, media, or high-stakes assessment. A shared deployment must replace it with a TTL-backed store and preserve single-consumption semantics.
 
 ## Reporting a vulnerability
 

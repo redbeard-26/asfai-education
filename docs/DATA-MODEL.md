@@ -13,6 +13,11 @@ The data model separates curricular meaning, observed evidence, assessment judgm
 | `RubricCriterion` | A dimension of performance described by a rubric |
 | `PerformanceLevel` | An ordered level with observable descriptors |
 | `Course` | An organized learning offering |
+| `LessonDefinition` | A public, immutable plan connecting objectives, activities, artifacts, assessment methods, and report rules |
+| `LessonAssignment` | Teacher-owned configuration and sharing policy for one lesson version |
+| `LessonRun` | Learner-owned state for one attempt through a lesson |
+| `LessonReport` | A lesson-scoped projection of linked evidence and claims |
+| `ProgressEnvelope` | A consent-scoped message exchanged between learner and teacher roles |
 | `Activity` | A game, assignment, lesson, project, or observation opportunity |
 | `ActivityObjectiveAlignment` | A sourced claim that an activity teaches or elicits an objective |
 | `EvidenceEvent` | An immutable observation of learner activity |
@@ -71,6 +76,14 @@ An internal event can be serialized to xAPI where appropriate, but the internal 
 ```
 
 The example uses a pseudonymous learner identifier. Production payloads should avoid copying raw conversations or unnecessary personal data into the evidence ledger.
+
+### Evidence artifacts and inline transcripts
+
+The portable learner profile keeps learner-owned artifacts in a top-level `artifacts` map. Evidence events link them through `artifactIds`, so one submission can support several objective-specific observations without duplicating its transcript. The original file may remain in a classroom provider or another owner-controlled store.
+
+Inline transcript text is limited to **8 KiB of UTF-8 text per artifact**. This is large enough for short answers and several pages of ordinary prose while keeping `learner.json` compact. For larger text or any binary file, retain the provider/object reference and digest, store at most a 2,000-character summary inline, and keep the original outside `learner.json`. Do not base64-encode images, audio, video, or documents into the learner profile.
+
+An artifact records its type, media type, byte length and SHA-256 digest when available, provider-neutral provenance, and an optional transcript. A transcript identifies how it was produced, whether it has been reviewed, confidence when applicable, and whether it is complete. AI transcription of obscured handwriting should remain `unreviewed` and `complete:false` until a person confirms it.
 
 ## Assessment claim
 

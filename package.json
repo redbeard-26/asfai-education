@@ -1,6 +1,6 @@
 {
   "name": "asfai-education",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": "22.x"
@@ -8,12 +8,18 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:plugin": "node scripts/build-plugin.mjs",
+    "configure:google-classroom": "node scripts/configure-google-classroom.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "personal-storage:mcp": "tsx scripts/personal-storage-mcp.ts",
+    "lint": "eslint",
+    "test:plugin": "node scripts/smoke-test-plugin.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@inrupt/solid-client": "^3.0.0",
     "@inrupt/solid-client-authn-browser": "^5.0.0",
+    "@inrupt/solid-client-authn-node": "^5.0.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "events": "^3.3.0",
     "fflate": "^0.8.3",
@@ -29,6 +35,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
-    "typescript": "^5"
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.12",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

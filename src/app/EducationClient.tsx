@@ -120,56 +120,38 @@ export default function EducationClient() {
 
   async function startLearning(objective: Objective) {
     if (!profile) return;
-    const state = {
-      objectiveId: objective.id,
-      level: "developing" as const,
-      supportingEvidenceCount: profile.objectiveStates[objective.id]?.supportingEvidenceCount ?? 0,
-      claimIds: profile.objectiveStates[objective.id]?.claimIds ?? [],
-      lastObservedAt: new Date().toISOString(),
-      policyVersion: "self-directed-v0.1",
+    const currentQueue = Array.isArray(profile.preferences?.learningQueue)
+      ? profile.preferences.learningQueue.filter((item): item is string => typeof item === "string")
+      : [];
+    const next = {
+      ...profile,
+      updatedAt: new Date().toISOString(),
+      preferences: {
+        ...profile.preferences,
+        learningQueue: [...new Set([...currentQueue, objective.id])],
+      },
     };
-    setProfile(await store.putObjectiveState(state));
-    setStatus(`Tracking ${objective.name} as in progress in ${store.kind === "solid" ? "your Solid Pod" : "IndexedDB"}.`);
+    await store.save(next);
+    setProfile(next);
+    setStatus(`Added ${objective.name} to your learning queue in ${store.kind === "solid" ? "your Solid Pod" : "IndexedDB"}.`);
   }
 
-  async function recordSelfAssessedMastery(objective: Objective) {
+  async function recordSelfAssessment(objective: Objective) {
     if (!profile) return;
     const now = new Date().toISOString();
     const evidenceId = `urn:uuid:${crypto.randomUUID()}`;
-    const claimId = `urn:uuid:${crypto.randomUUID()}`;
-    let next = await store.appendEvidence({
+    const next = await store.appendEvidence({
       id: evidenceId,
       learnerId: profile.learnerId,
       objectiveId: objective.id,
       occurredAt: now,
-      verb: "self-assessed-mastery",
-      result: { selfReported: true },
+      verb: "self-assessment-recorded",
+      artifactIds: [],
+      result: { selfReported: true, claimedLevel: "mastered" },
       source: { system: "asfai-education", version: "0.1.0" },
     });
-    next = await store.appendAssessmentClaim({
-      id: claimId,
-      learnerId: profile.learnerId,
-      objectiveId: objective.id,
-      evidenceIds: [evidenceId],
-      level: "mastered",
-      confidence: 0.5,
-      rationale: "Learner self-assessed this objective as mastered; independent evidence has not yet been established.",
-      assessor: { type: "human", system: "learner-self-assessment" },
-      createdAt: now,
-      supersedes: null,
-    });
-    next = await store.putObjectiveState({
-      objectiveId: objective.id,
-      level: "mastered",
-      confidence: 0.5,
-      supportingEvidenceCount: 1,
-      independentEvidenceCount: 0,
-      lastObservedAt: now,
-      claimIds: [claimId],
-      policyVersion: "self-directed-v0.1",
-    });
     setProfile(next);
-    setStatus(`Recorded self-assessed mastery of ${objective.name}.`);
+    setStatus(`Recorded your self-assessment of ${objective.name} as evidence. It did not set mastery by itself.`);
   }
 
   const mastered = profile ? masteredIds(profile) : [];
@@ -240,7 +222,7 @@ export default function EducationClient() {
             {selectedLevel && <p><strong>Current state:</strong> {selectedLevel}</p>}
             <div className="actions">
               <button onClick={() => startLearning(selected.objective)}>Start learning</button>
-              <button onClick={() => recordSelfAssessedMastery(selected.objective)}>Record self-assessed mastery</button>
+              <button onClick={() => recordSelfAssessment(selected.objective)}>Record a self-assessment</button>
             </div>
             <div className="neighbor-grid">
               <div>
