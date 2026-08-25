@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education/api/mcp"
     },
-    "asfai_personal_storage": {
+    "asfai_personal_storage_and_classroom": {
       "command": "cmd.exe",
       "args": [
         "/d",

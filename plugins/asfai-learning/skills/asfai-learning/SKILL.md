@@ -5,7 +5,7 @@ description: Use or verify the installed ASFAI Learning plugin in chat to teach,
 
 # ASFAI learning
 
-This installed plugin already includes the public ASFAI education MCP and a private local companion. Use the public ASFAI MCP for learning objectives, lesson guidance, assessment preparation, and portable record construction. Use private `asfai_personal_storage` for learner-, teacher-, and classroom-owned storage. Use private `asfai_classroom` to exchange work with a configured classroom provider. The public service must not receive Solid credentials, classroom OAuth tokens, raw private student work, private signing keys, or complete private profiles.
+This installed plugin already includes the public ASFAI education MCP and one private local MCP server displayed as **ASFAI Personal Storage and Classroom**. That local server exports two tools: use `asfai_personal_storage` for learner-, teacher-, and classroom-owned storage, and use `asfai_classroom` for Google Classroom or another configured classroom provider. There is intentionally no separate Google Classroom MCP server. Use the public ASFAI MCP for learning objectives, lesson guidance, assessment preparation, and portable record construction. The public service must not receive Solid credentials, classroom OAuth tokens, raw private student work, private signing keys, or complete private profiles.
 
 ## Recognize the installed plugin
 
@@ -13,6 +13,8 @@ This installed plugin already includes the public ASFAI education MCP and a priv
 
 - public `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, and `asfai_storage`;
 - private local `asfai_personal_storage` and `asfai_classroom`.
+
+Seeing exactly two MCP servers in plugin settings is correct: **ASFAI Education** and **ASFAI Personal Storage and Classroom**. Do not look for or claim that a third Google Classroom connector is required. When Classroom is requested, inspect the callable tools from the local server and call `asfai_classroom` directly.
 
 When asked whether ASFAI is available, inspect the callable tools for those names and, when possible, call `asfai_capability` action `manifest` or `asfai_personal_storage` action `status`. Do not search the public plugin directory or registry to decide whether this locally installed personal-marketplace plugin is present. A directory search lists installable directory entries and can miss a locally installed plugin.
 
