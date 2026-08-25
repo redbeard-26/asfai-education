@@ -49,7 +49,7 @@ describe("provider-neutral classroom connector", () => {
     const google = new GoogleClassroomAdapter({ clientId: "", clientSecret: "" });
     await expect(google.createAssignment({
       courseId: "course-1",
-      assignment: { title: "Balance equations", state: "DRAFT", materials: [] },
+      assignment: { title: "Balance equations", state: "DRAFT", materials: [], documents: [] },
       objectiveIds: ["objective-1"],
       confirmed: false,
     })).resolves.toMatchObject({
@@ -58,6 +58,86 @@ describe("provider-neutral classroom connector", () => {
       externalMutationPerformed: false,
       preview: { title: "Balance equations", state: "DRAFT" },
     });
+  });
+
+  it("previews teacher-authored assignment documents without exposing their content", async () => {
+    const google = new GoogleClassroomAdapter({ clientId: "", clientSecret: "" });
+    const result = await google.createAssignment({
+      courseId: "course-1",
+      assignment: {
+        title: "Balance equations",
+        state: "DRAFT",
+        materials: [],
+        documents: [{ title: "Student guide", content: "Keep both sides balanced.", contentType: "text/plain", format: "google_doc", shareMode: "VIEW" }],
+      },
+      objectiveIds: ["objective-1"],
+      confirmed: false,
+    });
+    expect(result).toMatchObject({
+      requiresConfirmation: true,
+      externalMutationPerformed: false,
+      preview: { generatedDocuments: [{ title: "Student guide", format: "google_doc" }] },
+    });
+    expect(JSON.stringify(result)).not.toContain("Keep both sides balanced");
+  });
+
+  it("creates and attaches teacher-authored documents only after confirmation", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "asfai-google-doc-create-"));
+    const target = path.join(directory, "google-session.protected.json");
+    const protector: StorageProtector = {
+      id: "user-file-permissions",
+      protect: async (value) => value,
+      unprotect: async (value) => value,
+    };
+    const scopes = googleClassroomScopes({ role: "teacher", readOnly: false, includeDriveContent: false });
+    const requests: Array<{ url: string; method: string; body?: string }> = [];
+    const fetchImpl = (async (request: string | URL | Request, init?: RequestInit) => {
+      const url = String(request);
+      const method = init?.method ?? "GET";
+      requests.push({ url, method, body: typeof init?.body === "string" ? init.body : undefined });
+      if (url.includes("oauth2.googleapis.com/token")) {
+        return Response.json({ access_token: "teacher-access-token", expires_in: 3600, scope: scopes.join(" ") });
+      }
+      if (url.includes("/upload/drive/v3/files")) {
+        return Response.json({ id: "doc-1", name: "Student guide", mimeType: "application/vnd.google-apps.document", webViewLink: "https://docs.google.com/document/d/doc-1" });
+      }
+      if (url.endsWith("/courses/course-1/courseWork") && method === "POST") {
+        return Response.json({
+          id: "assignment-1", title: "Balance equations", state: "DRAFT", workType: "ASSIGNMENT",
+          materials: [{ driveFile: { driveFile: { id: "doc-1", title: "Student guide" } } }],
+        });
+      }
+      throw new Error(`Unexpected test request: ${method} ${url}`);
+    }) as typeof fetch;
+    try {
+      const storage = new DeviceProtectedStorage(target, protector);
+      await storage.set(GOOGLE_AUTHORIZATION_KEY, JSON.stringify({
+        schemaVersion: "1", refreshToken: "teacher-refresh-token", accountEmail: "teacher@example.com",
+        grantedScopes: scopes, role: "teacher", readOnly: false, includeDriveContent: false, savedAt: new Date().toISOString(),
+      }));
+      const google = new GoogleClassroomAdapter({
+        clientId: "web-client-id", clientSecret: "web-client-secret", authorizationStorage: storage, fetchImpl,
+      });
+      await google.status();
+      const result = await google.createAssignment({
+        courseId: "course-1",
+        assignment: {
+          title: "Balance equations", state: "DRAFT", materials: [],
+          documents: [{ title: "Student guide", content: "Keep both sides balanced.", contentType: "text/plain", format: "google_doc", shareMode: "STUDENT_COPY" }],
+        },
+        objectiveIds: ["objective-1"],
+        confirmed: true,
+      });
+      expect(result).toMatchObject({
+        externalMutationPerformed: true,
+        createdDocuments: [{ id: "doc-1", name: "Student guide" }],
+        assignment: { id: "assignment-1", title: "Balance equations" },
+      });
+      expect(requests.some((item) => item.url.includes("/upload/drive/v3/files") && item.body?.includes("Keep both sides balanced."))).toBe(true);
+      expect(requests.some((item) => item.url.endsWith("/courses/course-1/courseWork") && item.body?.includes('"shareMode":"STUDENT_COPY"') && item.body.includes('"driveFile":{"id":"doc-1"'))).toBe(true);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("reports local credential boundaries without exposing secrets", async () => {

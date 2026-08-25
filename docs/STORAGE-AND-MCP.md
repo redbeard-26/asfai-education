@@ -37,11 +37,13 @@ Do not put client secrets, passwords, access tokens, or session cookies in this 
 
 ## MCP boundary
 
-The Education MCP server is intentionally stateless with respect to durable learner identity. It hosts public graph operations, conversational assessment, lesson orchestration, evidence transformation, reporting, progress-envelope validation, and skill installation.
+The Education MCP server does not require an ASFAI user account. It hosts public graph operations, conversational assessment, lesson orchestration, evidence transformation, reporting, progress-envelope validation, skill installation, and an authenticated tenant boundary for private provider connections.
 
-The **ASFAI Learning** plugin exposes two private tools beside the public eight-tool MCP: `asfai_personal_storage` and provider-neutral `asfai_classroom`. The plugin bundles its runtime, so learners do not clone the repository, install dependencies, edit MCP settings, or choose a filesystem path. The storage tool performs Solid OIDC through a loopback browser callback once, protects the reusable Solid authorization for the current device user, silently restores it across chats and restarts, and performs authenticated Pod reads/writes. On Windows its complete Solid session map is encrypted with current-user DPAPI. It also provides verified atomic local JSON storage and owner-controlled Ed25519 signatures. The classroom tool separately performs provider OAuth, protects the reusable Google authorization with the same device-user boundary, restores it across chats and restarts, normalizes imported work, and previews confirmed external writes. Neither private tool is deployed as part of the public AWS MCP: putting user tokens or raw student submissions in the shared server would violate the owner-controlled boundary.
+The **ASFAI Learning** plugin contains exactly one remote MCP connector. OAuth 2.1 with PKCE creates a pseudonymous connector tenant; an email address or ASFAI login is not required. The same connection exposes nine compact tools, including `asfai_storage` and the provider-neutral `asfai_classroom`. Provider authorization is completed on the provider's hosted page. Reusable Solid and Google grants are encrypted with AES-256-GCM and isolated by connector tenant; they never appear in tool arguments or model-visible output.
 
-The companion uses these stable documents:
+`asfai_storage` uses the Pod whenever a valid Solid grant is available. Without a Pod it uses a tenant-isolated AWS fallback on encrypted storage and reports the fallback explicitly. This prevents a failed save while preserving the Pod as the primary source of truth. `load` and `save` perform digest-based conflict checks and independent read-back. `identity`, `sign`, and `verify_signature` provide owner-scoped Ed25519 progress signatures without exporting a private key.
+
+The gateway uses these stable documents:
 
 ```text
 <POD_ROOT>/asfai/learner.json
@@ -49,7 +51,7 @@ The companion uses these stable documents:
 <POD_ROOT>/asfai/classroom.json
 ```
 
-The temporary AWS Education page can complete browser Solid OIDC even before a custom education domain exists. The custom domain is an alias, not a storage or MCP prerequisite.
+The temporary AWS origin can complete hosted Solid OIDC even before a custom education domain exists. The custom domain is an alias, not a storage or MCP prerequisite. Saved provider authorization persists until the user explicitly forgets it, revokes the provider grant, or revokes the ASFAI connector. Closing a chat or browser is not a disconnect event.
 
 Public graph actions use `asfai_graph`:
 
@@ -61,15 +63,15 @@ Public graph actions use `asfai_graph`:
 - `get_frontier`
 - `find_path`
 
-When personalized graph calculations are needed, the client reads its own learner store and sends only the required objective IDs (for example, `masteredIds`) to the MCP tool. The MCP server neither signs the learner into ASFAI nor writes learner records to an ASFAI database. Tools that change a profile return the complete updated JSON and tell the host to save it through browser IndexedDB, a local file, or the learner's authenticated Solid fetch.
+When personalized graph calculations are needed, the client reads its own learner store and sends only the required objective IDs (for example, `masteredIds`) to the graph action. Tools that change a profile return the complete updated JSON and the host saves it with `asfai_storage`; the tool selects the Pod or fallback rather than requiring the model to implement Solid HTTP.
 
-`asfai_storage` action `instructions` returns the exact write and read-back procedure for learner or educator state. The AI host must first confirm that it actually has one of these capabilities:
+For direct web or developer clients, `asfai_storage` action `instructions` still returns the exact write and read-back procedure for learner or educator state. Such a client must first confirm that it actually has one of these capabilities:
 
 - browser JavaScript executing on the ASFAI Education origin for IndexedDB;
 - a persistent filesystem writer for local JSON; or
 - a logged-in Solid session with authenticated fetch for a Pod.
 
-IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. A generic remote MCP client with neither browser execution, filesystem access, nor authenticated Solid fetch cannot persist the profile. It must return downloadable JSON and say saving is pending. After writing, the host rereads the complete object and calls `asfai_storage` action `verify`; it may say progress is saved only when `verified` is true.
+IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. The installed plugin does not depend on these host capabilities: its authenticated remote `asfai_storage` actions perform the write. Direct clients may say progress is saved only after read-back verification succeeds.
 
 Hosted game launches use an optional one-hour pseudonymous result relay. The relay receives a minimized game summary, not the learner profile, and deletes the result after one successful claim. Its process-local pilot implementation is not a durable learner-record store.
 

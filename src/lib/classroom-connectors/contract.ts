@@ -5,7 +5,10 @@ export const classroomRoleSchema = z.enum(["learner", "teacher"]);
 
 export const classroomMaterialSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("link"), url: z.string().url(), title: z.string().max(500).optional() }),
-  z.object({ type: z.literal("drive_file"), id: z.string().min(1), title: z.string().max(500).optional() }),
+  z.object({
+    type: z.literal("drive_file"), id: z.string().min(1), title: z.string().max(500).optional(),
+    shareMode: z.enum(["VIEW", "EDIT", "STUDENT_COPY"]).default("VIEW"),
+  }),
   z.object({ type: z.literal("youtube_video"), id: z.string().min(1), title: z.string().max(500).optional() }),
 ]);
 
@@ -16,6 +19,16 @@ export const classroomAssignmentExportSchema = z.object({
   maxPoints: z.number().min(0).max(100000).optional(),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   materials: z.array(classroomMaterialSchema).max(20).default([]),
+  documents: z.array(z.object({
+    title: z.string().min(1).max(250),
+    content: z.string().min(1).max(200000),
+    contentType: z.enum(["text/plain", "text/markdown"]).default("text/plain"),
+    format: z.enum(["google_doc", "file"]).default("google_doc"),
+    fileName: z.string().min(1).max(250).optional(),
+    shareMode: z.enum(["VIEW", "EDIT", "STUDENT_COPY"]).default("VIEW"),
+  })).max(20).default([]),
+}).refine((value) => value.materials.length + value.documents.length <= 20, {
+  message: "A classroom assignment may contain at most 20 materials and generated documents combined.",
 });
 
 export const classroomWorkExportSchema = z.object({

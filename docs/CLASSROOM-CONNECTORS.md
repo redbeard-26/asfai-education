@@ -1,12 +1,12 @@
 # Classroom connectors
 
-ASFAI treats a classroom system as a transport and roster context, not as the source of truth for learning mastery. The local plugin companion exposes one provider-neutral MCP tool, `asfai_classroom`. Each request includes a provider identifier; the first adapter uses `provider: "google"`. Future Canvas, Schoology, Moodle, or other adapters can implement the same normalized operations without adding more default MCP tools.
+ASFAI treats a classroom system as a transport and roster context, not as the source of truth for learning mastery. The single authenticated ASFAI Learning connector exposes one provider-neutral MCP tool, `asfai_classroom`. Each request includes a provider identifier; the first adapter uses `provider: "google"`. Future Canvas, Schoology, Moodle, or other adapters can implement the same normalized operations without adding more default MCP tools.
 
 ## Complete AI workflow
 
 ```text
 configured classroom provider
-          │ local OAuth
+          │ hosted OAuth
           ▼
   asfai_classroom import_work
           │ normalized work + provenance
@@ -17,43 +17,37 @@ configured classroom provider
  asfai_evidence assessment
           │ concise observations/claims
           ▼
-asfai_personal_storage verified save
+ asfai_storage verified save
           │ explicit preview + approval
           ▼
 asfai_classroom export_work / return_evaluation
 ```
 
-The public AWS MCP remains stateless. Classroom passwords, authorization codes, access and refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles never go to it. The local companion protects the reusable Google refresh grant for the current device user and restores it silently across chats, MCP exits, application restarts, and computer restarts. On Windows the complete authorization record is encrypted with current-user DPAPI. It remains available until the user explicitly chooses `forget_authorization` or revokes ASFAI in their Google Account. Detailed evidence is saved to the learner's or educator's local JSON/Solid Pod document, not retained by the classroom bridge. When the original artifact remains in Classroom, the learner record may retain its provider reference and an inline transcript of at most 8 KiB; larger transcripts use a concise summary and reference instead.
+Classroom passwords, authorization codes, access tokens, refresh tokens, OAuth client secrets, raw student submissions, and complete private profiles are never placed in tool arguments or model-visible results. The connector encrypts the reusable Google grant with AES-256-GCM and binds it to the pseudonymous connector tenant. It restores that grant across chats and devices whenever the host reuses the same installed connector authorization. It remains available until the user explicitly chooses `forget_authorization`, revokes ASFAI in their Google Account, or revokes the ASFAI connector. Detailed evidence is saved through `asfai_storage`: to the Solid Pod whenever connected, otherwise to the clearly identified connector-scoped fallback. When the original artifact remains in Classroom, the learner record may retain its provider reference and an inline transcript of at most 8 KiB; larger transcripts use a concise summary and reference instead.
 
 ## Tool actions
 
 | Action | Purpose | External mutation |
 |---|---|---|
 | `status` | Restore and report provider configuration, connection, scopes, and limitations | No |
-| `connect` | Reuse sufficient saved permission or start local browser OAuth for missing permission | Opens provider authorization only when needed |
-| `disconnect` | Close a pending browser authorization without forgetting the saved grant | Local pending state only |
-| `forget_authorization` | Remove the reusable grant from this device after an explicit user request | Deletes protected local authorization |
+| `connect` | Reuse sufficient saved permission or start hosted browser OAuth for missing permission | Opens provider authorization only when needed |
+| `disconnect` | Close a pending browser authorization without forgetting the saved grant | Pending connector state only |
+| `forget_authorization` | Remove the reusable grant for this connector tenant after an explicit user request | Deletes protected authorization |
 | `list_courses` | Select a course | No |
 | `list_learners` | Select a learner from a teacher-authorized course roster | No |
 | `list_assignments` | Select an assignment | No |
 | `import_work` | Normalize assignment and submission content with objective references | No |
-| `create_assignment` | Create a draft or published assignment | Preview and explicit confirmation |
+| `create_assignment` | Create a draft or published assignment and optionally generate/attach Google Docs or files as view, edit, or per-student-copy material | Preview and explicit confirmation |
 | `export_work` | Attach text, Drive files, or links and optionally turn work in | Preview and explicit confirmation |
 | `return_evaluation` | Set draft/published grade and optionally return a submission | Preview and explicit confirmation |
 
-The bridge does not decide mastery. The AI maps work to learning objectives, uses `asfai_evidence` to form evidence-backed observations and claims, and saves those records with `asfai_personal_storage`. A Classroom grade, completion flag, or turned-in state is never converted directly into mastery.
+The bridge does not decide mastery. The AI maps work to learning objectives, uses `asfai_evidence` to form evidence-backed observations and claims, and saves those records with `asfai_storage`. A Classroom grade, completion flag, or turned-in state is never converted directly into mastery.
 
 ## Google configuration
 
-The Google adapter uses a Desktop OAuth client, PKCE, and a loopback callback. The distributed ASFAI plugin includes the production Desktop client ID, so a fresh installation is configured for Google Classroom without a per-user credential file or environment variable. Google treats installed applications as public clients that cannot keep a client secret confidential; the distributed file therefore contains only the client ID. Every user still grants access to their own Google account, and the resulting authorization remains protected on that user's device.
+The Google adapter uses a Web OAuth client and the connector's hosted callback at `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`. The AWS deployment supplies the client ID and secret as server-side environment variables. Every user grants access to their own Google account; the client credentials are never distributed in the plugin.
 
-For a separate Google Cloud project or managed-host override, an administrator can install a downloaded Desktop client JSON without printing its values:
-
-```text
-npm run configure:google-classroom -- <downloaded-desktop-client.json>
-```
-
-The adapter also accepts `ASFAI_GOOGLE_CLASSROOM_CREDENTIALS_FILE` or client ID and client secret environment variables. These override the bundled public client identity. `ASFAI_CLASSROOM_OAUTH_PORT=18766` remains optional.
+Set `ASFAI_GOOGLE_CLASSROOM_CLIENT_ID` and `ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET` in the education service's protected environment. A checked-in or user-supplied credential file is not part of the plugin installation.
 
 The adapter defaults to read-only access. Drive attachment text is opt-in because reading arbitrary Drive files can require a broader restricted scope. Assignment creation and work/grade writes require a new consent for writable Classroom scopes; creating an ASFAI text attachment also uses `drive.file`. A sufficient saved grant is reused without opening another consent page.
 

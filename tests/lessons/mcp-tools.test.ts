@@ -46,7 +46,7 @@ describe("compact ASFAI MCP surface", () => {
 
     const result = await registeredServer().asfai_capability.handler({ action: "manifest" });
     expect(result.isError).not.toBe(true);
-    expect(resultJson(result)).toMatchObject({ catalog: { counts: { total: 172 } }, contextBudget: { defaultToolCount: 8 } });
+    expect(resultJson(result)).toMatchObject({ catalog: { counts: { total: 172 } }, contextBudget: { defaultToolCount: 9 } });
   });
 
   it("validates the selected capability payload after routing", async () => {

@@ -1,44 +1,44 @@
-# Personal storage MCP companion
+# Private storage gateway
 
-The public ASFAI Education MCP is deliberately unable to read or write private learner and teacher data. The **ASFAI Learning** plugin packages the private `asfai-personal-storage` MCP alongside the public AWS MCP.
+The **ASFAI Learning** plugin uses one authenticated remote MCP connector for public learning workflows, private storage, and classroom exchange. It does not install a local companion or require the ASFAI Education website.
 
 ## Learner installation
 
-The intended learner flow is:
+The intended flow is:
 
-1. Install **ASFAI Learning** from the plugin directory.
-2. Start a chat and say, “Connect my private Pod,” or begin learning with storage on this device.
-3. If using a Pod, approve access on the Pod provider page and return to chat.
+1. Install or update **ASFAI Learning** from the plugin directory.
+2. Approve the ASFAI connector once. This creates a pseudonymous connector tenant; no ASFAI account or email address is required.
+3. Say, “Connect my private Pod,” and approve access on the Pod provider page.
+4. Continue in chat. The connector restores the saved Pod grant until the user explicitly revokes or forgets it.
 
-The learner does not clone a repository, install Node packages, edit MCP settings, or choose filesystem paths. The plugin includes the compiled runtime and a compact skill that guides the assistant. The public MCP continues to supply specialized lesson and assessment guidance only when needed.
+The learner does not clone a repository, install Node packages, edit MCP settings, select a filesystem path, or keep a webpage open. A repository developer may still run `npm run personal-storage:mcp` as a legacy local test harness; it is not packaged in the plugin.
 
-Repository developers can still run `npm run personal-storage:mcp` directly. This is a development fallback, not a learner installation procedure.
+## Pod-first storage
 
-The plugin exposes one private stdio MCP tool, `asfai_personal_storage`. By default, private local state goes under `.asfai-personal-storage` in the current user's profile; `ASFAI_PERSONAL_DATA_DIR` may select a different approved local root for managed deployments.
-
-## Solid authorization
-
-Call `connect_solid` with only:
+Call `asfai_storage` with action `connect_pod` and only the Pod root and OIDC issuer, for example:
 
 ```json
 {
-  "podRoot": "https://albertawhitecarey.privatedatapod.com/",
-  "oidcIssuer": "https://privatedatapod.com/"
+  "action": "connect_pod",
+  "payload": {
+    "podRoot": "https://albertawhitecarey.privatedatapod.com/",
+    "oidcIssuer": "https://privatedatapod.com/"
+  }
 }
 ```
 
-On first use, the companion starts a loopback callback on `127.0.0.1:18765` and returns the provider authorization URL. Open that URL in the user's browser. Authentication and consent happen entirely on the provider page. The user must never paste a password, cookie, token, refresh token, client secret, or DPoP key into chat.
+The connector returns a hosted provider authorization URL when consent is needed. Authentication occurs entirely on the provider page. Never paste a password, cookie, authorization code, token, client secret, or DPoP key into chat.
 
-After approval, the companion saves Solid's client registration, refresh token, and DPoP material in device-user-protected storage. On Windows the complete session map is encrypted with current-user DPAPI; on other supported hosts it is restricted to an owner-only file until a native vault is available. `status` silently refreshes and restores the session after a new chat, MCP process, application restart, or computer restart. A normal lifecycle event never logs out or deletes the saved grant.
+After `status` reports a connected Pod, use `load` and `save` with document `learner`, `educator`, or `classroom`. Do not reconnect at the start of a chat or lesson. `save` performs conflict checking and independent read-back. Pass the digest returned by the prior `load` as `expectedDigest` when updating an existing document.
 
-The authorization remains available until the user explicitly calls `forget_solid_authorization` (which removes the local reusable grant) or revokes ASFAI through the Pod provider. A revoked, expired, or otherwise invalid grant requires one new browser approval if the user reconnects. Assistants must never call the forget action as end-of-chat or end-of-lesson cleanup.
+The authorization persists across chats and, when the host shares the installed connector authorization, across the user's devices. It ends only when the user calls `forget_pod_authorization`, revokes ASFAI at the Pod provider, or revokes the ASFAI connector itself. Assistants must never call the forget action as cleanup.
 
-After `status` reports `isLoggedIn: true`, use `load` and `save` with document `learner`, `educator`, or `classroom`; do not call `connect_solid` again. `save` performs a write and independent read-back. Pass the digest returned by the prior `load` as `expectedDigest`; a conflict fails instead of silently overwriting newer data.
+## Fallback and identity
 
-## Local fallback and classroom identity
+If no Pod is available, `load` and `save` use a tenant-isolated AWS fallback on encrypted-at-rest storage and return `backend: "asfai_cloud_fallback"`. The assistant must state that fallback clearly. Connecting a Pod makes it the primary store; migration or merging of an existing fallback document must be explicit to avoid overwriting newer data.
 
-`configure_local` uses atomic, permission-restricted JSON files under the selected root. This mode needs no browser and preserves the same portable schemas.
+`identity` creates an owner-scoped Ed25519 key. `sign` never exports the private key. Signed progress envelopes can move through a classroom system or another transport while `asfai_evidence` verifies the envelope, recipient, fingerprint, and replay state.
 
-`identity` creates an owner-controlled Ed25519 key under `asfai/identity/`. `sign` never exports the private key. Signed progress envelopes can be queued in a learner outbox and accepted in a teacher inbox only after the public MCP verifies envelope integrity and the classroom reducer verifies signature, recipient, and replay status.
+## Security boundary
 
-The ASFAI Education website is not a coordinator for this process. It is only an optional browser client and OIDC test surface.
+The connector uses OAuth 2.1 with PKCE. Reusable provider grants are encrypted with AES-256-GCM and isolated by pseudonymous connector tenant. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model. The AWS fallback and signing state are tenant-isolated and encrypted at rest.

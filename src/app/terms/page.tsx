@@ -18,7 +18,7 @@ export default function TermsPage() {
         <p>
           ASFAI Education provides open-source educational software, public learning-objective information,
           AI-assisted lesson and assessment workflows, and optional connections to user-controlled storage
-          and classroom services. By using the hosted service or an installed ASFAI companion, you agree to
+          and classroom services. By using the hosted service or the ASFAI Learning connector, you agree to
           these terms and the privacy policy.
         </p>
       </section>
