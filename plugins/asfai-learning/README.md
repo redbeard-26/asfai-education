@@ -1,6 +1,6 @@
 # ASFAI Learning plugin
 
-This plugin installs one authenticated remote MCP server displayed as **ASFAI Learning**. It works without the education website or a desktop companion and is intended to use the same connection from Windows, iPhone, and iPad.
+This plugin works with ChatGPT/Codex and Claude and installs one authenticated remote MCP server displayed as **ASFAI Learning**. It works without the education website or a desktop companion and is intended to use the same connection from Windows, iPhone, and iPad.
 
 The compact callable surface contains nine gateway tools: `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, `asfai_storage`, and `asfai_classroom`. Classroom is provider-neutral; pass `provider: "google"` for Google Classroom today. There is no separate Pod, storage, or Google connector.
 
@@ -12,7 +12,9 @@ After installing or updating the plugin, keep its toggle enabled and start a new
 
 ## Download and install
 
-The current packaged plugin is available at [constitution.asfai.org](https://constitution.asfai.org/downloads/asfai-education-plugin.zip). Unzip it, open a terminal in the extracted `asfai-education-plugin` folder, and run:
+The universal plugin ZIP is available at [constitution.asfai.org](https://constitution.asfai.org/downloads/asfai-education-plugin.zip).
+
+For ChatGPT/Codex, unzip it, open a terminal in the extracted folder, and run:
 
 ```text
 codex plugin marketplace add .
@@ -20,3 +22,5 @@ codex plugin add asfai-learning@asfai
 ```
 
 Start a new chat after installation so the current skill and MCP tools are loaded.
+
+For Claude, keep the file zipped and upload it from **Customize → Plugins**. Enable **ASFAI Learning** and start a new chat. Claude Code users can run `/reload-plugins` when updating it in an active session.
