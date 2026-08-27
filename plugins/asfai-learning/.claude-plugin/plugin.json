@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "asfai-learning",
+  "displayName": "ASFAI Learning",
+  "version": "0.1.1",
+  "description": "Teach and plan with ASFAI, use Pod-first private storage, and exchange work with classroom providers through one remote MCP connector.",
+  "author": {
+    "name": "ASFAI",
+    "url": "https://github.com/redbeard-26"
+  },
+  "homepage": "https://constitution.asfai.org/education",
+  "repository": "https://github.com/redbeard-26/asfai-education",
+  "license": "Apache-2.0",
+  "keywords": [
+    "education",
+    "learning",
+    "lessons",
+    "solid",
+    "private-data"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
