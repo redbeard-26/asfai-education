@@ -13,7 +13,7 @@ The intended flow is:
 
 The learner does not clone a repository, install Node packages, edit MCP settings, select a filesystem path, or keep a webpage open. A repository developer may still run `npm run personal-storage:mcp` as a legacy local test harness; it is not packaged in the plugin.
 
-## Pod-first storage
+## Pod-only remote storage
 
 Call `asfai_storage` with action `connect_pod` and only the Pod root and OIDC issuer, for example:
 
@@ -35,10 +35,12 @@ The authorization persists across chats and, when the host shares the installed 
 
 ## Fallback and identity
 
-If no Pod is available, `load` and `save` use a tenant-isolated AWS fallback on encrypted-at-rest storage and return `backend: "asfai_cloud_fallback"`. The assistant must state that fallback clearly. Connecting a Pod makes it the primary store; migration or merging of an existing fallback document must be explicit to avoid overwriting newer data.
+If no Pod is available, `status` returns `mode: "not_connected"`. Private `load`, `save`, object, identity, and signing actions stop without creating an ASFAI-hosted record. The assistant may continue without persistence or return portable JSON while the user connects a Pod.
+
+Large course files and derived text use the object actions `put_object`, `get_object`, `head_object`, `list_objects`, and `delete_object`. Paths are confined beneath the Pod's `asfai/` container, reads are bounded, and writes and deletes support digest conflict checks.
 
 `identity` creates an owner-scoped Ed25519 key. `sign` never exports the private key. Signed progress envelopes can move through a classroom system or another transport while `asfai_evidence` verifies the envelope, recipient, fingerprint, and replay state.
 
 ## Security boundary
 
-The connector uses OAuth 2.1 with PKCE. Reusable provider grants are encrypted with AES-256-GCM and isolated by pseudonymous connector tenant. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model. The AWS fallback and signing state are tenant-isolated and encrypted at rest.
+The connector uses OAuth 2.1 with PKCE. Reusable provider grants are encrypted with AES-256-GCM and isolated by pseudonymous connector tenant. This authorization material is the only durable connector-side private state. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model. Owner signing keys are stored in the connected Pod rather than an ASFAI tenant data directory.

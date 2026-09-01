@@ -2,7 +2,14 @@ import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sig
 import { createServer, type Server } from "node:http";
 import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createContainerAt, getFile, overwriteFile } from "@inrupt/solid-client";
+import {
+  createContainerAt,
+  deleteFile,
+  getContainedResourceUrlAll,
+  getFile,
+  getSolidDataset,
+  overwriteFile,
+} from "@inrupt/solid-client";
 import { clearSessionFromStorageAll, getSessionFromStorage, Session } from "@inrupt/solid-client-authn-node";
 import { classroomExchangeStoreSchema, newClassroomExchangeStore } from "@/lib/capabilities/personal-state";
 import { educatorWorkspaceSchema, newEducatorWorkspace } from "@/lib/capabilities/workspace";
@@ -12,6 +19,23 @@ import { learnerProfileSchema, migrateLearnerProfile, newLearnerProfile } from "
 export const personalDocumentKinds = ["learner", "educator", "classroom"] as const;
 export type PersonalDocumentKind = (typeof personalDocumentKinds)[number];
 
+export const PERSONAL_OBJECT_MAX_BYTES = 50 * 1024 * 1024;
+export const PERSONAL_OBJECT_READ_BYTES = 1024 * 1024;
+
+export type PersonalObjectRead = {
+  path: string;
+  location: string;
+  contentType: string;
+  size: number;
+  digest: string;
+  offset: number;
+  returnedBytes: number;
+  complete: boolean;
+  text?: string;
+  base64?: string;
+  serverRetained: false;
+};
+
 const FILES: Record<PersonalDocumentKind, string> = {
   learner: "learner.json",
   educator: "educator.json",
@@ -20,6 +44,19 @@ const FILES: Record<PersonalDocumentKind, string> = {
 
 function withSlash(value: string) {
   return value.endsWith("/") ? value : `${value}/`;
+}
+
+export function normalizePersonalObjectPath(value: string) {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 1000 || normalized.startsWith("/") || normalized.endsWith("/")) {
+    throw new Error("A non-empty ASFAI object path naming a file is required.");
+  }
+  if (normalized.includes("\\") || normalized.includes("\0")) throw new Error("The ASFAI object path is invalid.");
+  const segments = normalized.split("/");
+  if (segments.some((segment) => !segment || segment === "." || segment === ".." || !/^[A-Za-z0-9._-]+$/.test(segment))) {
+    throw new Error("ASFAI object paths may contain only letters, digits, '.', '_', '-', and '/'.");
+  }
+  return segments.join("/");
 }
 
 function canonical(value: unknown): string {
@@ -353,6 +390,12 @@ export class PersonalStorageService {
     return new URL(`asfai/${FILES[kind]}`, this.podRoot).toString();
   }
 
+  private solidObjectUrl(objectPath: string) {
+    if (!this.podRoot) throw new Error("No Solid Pod is configured.");
+    const safePath = normalizePersonalObjectPath(objectPath).split("/").map(encodeURIComponent).join("/");
+    return new URL(`asfai/${safePath}`, this.podRoot).toString();
+  }
+
   private async ensureSolidContainer() {
     if (!this.session?.info.isLoggedIn || !this.podRoot) throw new Error("The Solid session is not authenticated. Call connect_solid and complete browser authorization first.");
     try {
@@ -361,6 +404,120 @@ export class PersonalStorageService {
       const message = error instanceof Error ? error.message : String(error);
       if (!/409|already exists|405/i.test(message)) throw error;
     }
+  }
+
+  private async requireSolid() {
+    await this.restoreSavedSession();
+    if (this.mode !== "solid" || !this.session?.info.isLoggedIn || !this.podRoot) {
+      throw new Error("Private storage is not connected. Connect a Solid Pod before reading or writing private ASFAI data.");
+    }
+  }
+
+  private async ensureSolidObjectContainers(objectPath: string) {
+    await this.ensureSolidContainer();
+    const segments = normalizePersonalObjectPath(objectPath).split("/").slice(0, -1);
+    let relative = "asfai/";
+    for (const segment of segments) {
+      relative += `${encodeURIComponent(segment)}/`;
+      try {
+        await createContainerAt(new URL(relative, this.podRoot).toString(), { fetch: this.session!.fetch });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/409|already exists|405/i.test(message)) throw error;
+      }
+    }
+  }
+
+  async getObject(objectPath: string, offset = 0, length = PERSONAL_OBJECT_READ_BYTES): Promise<PersonalObjectRead> {
+    await this.requireSolid();
+    if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Object offset must be a non-negative integer.");
+    if (!Number.isSafeInteger(length) || length < 1 || length > PERSONAL_OBJECT_READ_BYTES) {
+      throw new Error(`Object reads are limited to ${PERSONAL_OBJECT_READ_BYTES} bytes per request.`);
+    }
+    const path = normalizePersonalObjectPath(objectPath);
+    const location = this.solidObjectUrl(path);
+    const file = await getFile(location, { fetch: this.session!.fetch });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const slice = bytes.slice(offset, Math.min(bytes.length, offset + length));
+    const contentType = file.type || "application/octet-stream";
+    const textual = /^text\//i.test(contentType) || /(?:json|xml|javascript|markdown|ndjson)/i.test(contentType);
+    return {
+      path,
+      location,
+      contentType,
+      size: bytes.length,
+      digest: createHash("sha256").update(bytes).digest("hex"),
+      offset,
+      returnedBytes: slice.length,
+      complete: offset + slice.length >= bytes.length,
+      ...(textual ? { text: new TextDecoder().decode(slice) } : { base64: Buffer.from(slice).toString("base64") }),
+      serverRetained: false,
+    };
+  }
+
+  async headObject(objectPath: string) {
+    const result = await this.getObject(objectPath, 0, 1);
+    const metadata: Record<string, unknown> = { ...result };
+    delete metadata.text;
+    delete metadata.base64;
+    return metadata;
+  }
+
+  async putObject(input: { path: string; contentType: string; text?: string; base64?: string; expectedDigest?: string }) {
+    await this.requireSolid();
+    const path = normalizePersonalObjectPath(input.path);
+    if ((input.text === undefined) === (input.base64 === undefined)) throw new Error("Provide exactly one of text or base64 object content.");
+    if (!input.contentType || input.contentType.length > 200) throw new Error("A valid content type is required.");
+    const bytes = input.text !== undefined ? Buffer.from(input.text, "utf8") : Buffer.from(input.base64!, "base64");
+    if (bytes.length > PERSONAL_OBJECT_MAX_BYTES) throw new Error(`ASFAI Pod objects are limited to ${PERSONAL_OBJECT_MAX_BYTES} bytes.`);
+    if (input.expectedDigest) {
+      try {
+        const existing = await this.headObject(path);
+        if (existing.digest !== input.expectedDigest) throw new Error("The stored object changed. Reload it and reconcile before saving.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/404|not found/i.test(message)) throw error;
+        throw new Error("The expected object does not exist. Reload the course manifest before saving.");
+      }
+    }
+    await this.ensureSolidObjectContainers(path);
+    const location = this.solidObjectUrl(path);
+    await overwriteFile(location, new Blob([bytes], { type: input.contentType }), {
+      contentType: input.contentType,
+      fetch: this.session!.fetch,
+    });
+    const readBack = await this.getObject(path, 0, 1);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    if (readBack.digest !== digest || readBack.size !== bytes.length) throw new Error("Read-back verification failed after saving the Pod object.");
+    return { path, location, contentType: input.contentType, size: bytes.length, digest, verified: true, serverRetained: false };
+  }
+
+  async deleteObject(objectPath: string, expectedDigest?: string) {
+    await this.requireSolid();
+    const path = normalizePersonalObjectPath(objectPath);
+    const current = await this.headObject(path);
+    if (expectedDigest && current.digest !== expectedDigest) throw new Error("The stored object changed. Reload it before deleting.");
+    await deleteFile(this.solidObjectUrl(path), { fetch: this.session!.fetch });
+    return { path, deleted: true, priorDigest: current.digest, serverRetained: false };
+  }
+
+  async listObjects(containerPath = "courses", offset = 0, limit = 100) {
+    await this.requireSolid();
+    const normalized = normalizePersonalObjectPath(`${containerPath.replace(/\/$/, "")}/placeholder`).replace(/\/placeholder$/, "");
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 200) {
+      throw new Error("Object listing offset or limit is invalid.");
+    }
+    const containerUrl = new URL(`asfai/${normalized.split("/").map(encodeURIComponent).join("/")}/`, this.podRoot).toString();
+    const dataset = await getSolidDataset(containerUrl, { fetch: this.session!.fetch });
+    const urls = getContainedResourceUrlAll(dataset).sort();
+    return {
+      containerPath: normalized,
+      objects: urls.slice(offset, offset + limit).map((url) => ({ url })),
+      offset,
+      nextOffset: offset + limit < urls.length ? offset + limit : undefined,
+      total: urls.length,
+      serverRetained: false,
+    };
   }
 
   async load(kind: PersonalDocumentKind, ownerRole: "learner" | "teacher" = "learner") {
@@ -412,6 +569,29 @@ export class PersonalStorageService {
   }
 
   private async identityFiles() {
+    if (this.mode === "solid") {
+      await this.requireSolid();
+      const privatePath = "identity/ed25519-private.pem";
+      const publicPath = "identity/ed25519-public.pem";
+      try {
+        const [privateObject, publicObject] = await Promise.all([
+          this.getObject(privatePath, 0, PERSONAL_OBJECT_READ_BYTES),
+          this.getObject(publicPath, 0, PERSONAL_OBJECT_READ_BYTES),
+        ]);
+        if (typeof privateObject.text !== "string" || typeof publicObject.text !== "string") throw new Error("The Pod identity resources are not text.");
+        return { privatePem: privateObject.text, publicPem: publicObject.text };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/404|not found/i.test(message)) throw error;
+        const pair = generateKeyPairSync("ed25519", {
+          privateKeyEncoding: { type: "pkcs8", format: "pem" },
+          publicKeyEncoding: { type: "spki", format: "pem" },
+        });
+        await this.putObject({ path: privatePath, text: pair.privateKey, contentType: "application/x-pem-file" });
+        await this.putObject({ path: publicPath, text: pair.publicKey, contentType: "application/x-pem-file" });
+        return { privatePem: pair.privateKey, publicPem: pair.publicKey };
+      }
+    }
     const directory = path.resolve(this.baseDirectory, "asfai", "identity");
     const privatePath = path.join(directory, "ed25519-private.pem");
     const publicPath = path.join(directory, "ed25519-public.pem");

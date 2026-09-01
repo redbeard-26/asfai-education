@@ -1,6 +1,6 @@
 # Learner-owned storage procedure
 
-The authenticated ASFAI Learning connector can load and save the portable profile through `asfai_storage`. Call `status` first. A connected Solid Pod is primary; otherwise the connector reports its encrypted fallback explicitly. Load before assessment and save the complete update with the prior digest as `expectedDigest`. Claim success only when the tool returns `verified:true`.
+The authenticated ASFAI Learning connector can load and save the portable profile through `asfai_storage`. Call `status` first. A connected Solid Pod is required for remote persistence; otherwise continue without persistence or return portable JSON. Load before assessment and save the complete update with the prior digest as `expectedDigest`. Claim success only when the tool returns `verified:true`.
 
 Use the host-side procedures below only when the remote private-storage actions are genuinely unavailable. They are compatibility fallbacks, not prerequisites for the normal MCP workflow.
 

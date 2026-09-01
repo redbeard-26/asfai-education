@@ -41,7 +41,7 @@ The Education MCP server does not require an ASFAI user account. It hosts public
 
 The **ASFAI Learning** plugin contains exactly one remote MCP connector. OAuth 2.1 with PKCE creates a pseudonymous connector tenant; an email address or ASFAI login is not required. The same connection exposes nine compact tools, including `asfai_storage` and the provider-neutral `asfai_classroom`. Provider authorization is completed on the provider's hosted page. Reusable Solid and Google grants are encrypted with AES-256-GCM and isolated by connector tenant; they never appear in tool arguments or model-visible output.
 
-`asfai_storage` uses the Pod whenever a valid Solid grant is available. Without a Pod it uses a tenant-isolated AWS fallback on encrypted storage and reports the fallback explicitly. This prevents a failed save while preserving the Pod as the primary source of truth. `load` and `save` perform digest-based conflict checks and independent read-back. `identity`, `sign`, and `verify_signature` provide owner-scoped Ed25519 progress signatures without exporting a private key.
+`asfai_storage` uses the Pod whenever a valid Solid grant is available. Without a Pod, private remote reads and writes stop and persistence remains pending; ASFAI does not create a fallback education record. `load` and `save` perform digest-based conflict checks and independent read-back. `identity`, `sign`, and `verify_signature` use a Pod-owned Ed25519 key without exporting it through the tool. Large course objects are stored beneath the Pod's `asfai/courses/` container through bounded, digest-verified object actions.
 
 The gateway uses these stable documents:
 
@@ -63,7 +63,7 @@ Public graph actions use `asfai_graph`:
 - `get_frontier`
 - `find_path`
 
-When personalized graph calculations are needed, the client reads its own learner store and sends only the required objective IDs (for example, `masteredIds`) to the graph action. Tools that change a profile return the complete updated JSON and the host saves it with `asfai_storage`; the tool selects the Pod or fallback rather than requiring the model to implement Solid HTTP.
+When personalized graph calculations are needed, the client reads its own learner store and sends only the required objective IDs (for example, `masteredIds`) to the graph action. Tools that change a profile return the complete updated JSON and the host saves it with `asfai_storage` when a Pod is connected. The gateway performs Solid HTTP without exposing provider credentials to the model. When no Pod is connected, the host retains the portable result and reports that saving is pending.
 
 For direct web or developer clients, `asfai_storage` action `instructions` still returns the exact write and read-back procedure for learner or educator state. Such a client must first confirm that it actually has one of these capabilities:
 
