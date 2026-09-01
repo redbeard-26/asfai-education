@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { podObjectReferenceSchema, type PodObjectReference } from "@/lib/capabilities/course-knowledge";
 
 const timestampSchema = z.string().datetime({ offset: true });
 
@@ -9,7 +10,8 @@ export const educatorResourceSchema = z.object({
   title: z.string().min(1).max(300),
   kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]),
   status: z.enum(["draft", "published", "retired"]),
-  content: z.unknown(),
+  content: z.unknown().optional(),
+  contentRef: podObjectReferenceSchema.optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
   parentVersionId: z.string().optional(),
@@ -22,6 +24,9 @@ export const educatorResourceSchema = z.object({
     license: z.string().max(300).optional(),
     aiGenerated: z.boolean().default(false),
   }),
+}).refine((resource) => resource.content !== undefined || resource.contentRef !== undefined, {
+  message: "A resource requires inline content or an external Pod content reference.",
+  path: ["content"],
 });
 
 export const collectionSchema = z.object({
@@ -83,7 +88,8 @@ function history(workspace: EducatorWorkspace, action: string, targetId?: string
 export function createResource(workspaceInput: unknown, input: {
   title: string;
   kind?: EducatorResource["kind"];
-  content: unknown;
+  content?: unknown;
+  contentRef?: PodObjectReference;
   author?: string;
   capabilityId?: string;
   capabilityVersion?: string;
@@ -91,6 +97,7 @@ export function createResource(workspaceInput: unknown, input: {
   license?: string;
   aiGenerated?: boolean;
 }) {
+  if (input.content === undefined && input.contentRef === undefined) throw new Error("A resource requires inline content or a Pod content reference.");
   const workspace = parseWorkspace(workspaceInput);
   const now = new Date().toISOString();
   const id = uuidUrn();
@@ -101,9 +108,10 @@ export function createResource(workspaceInput: unknown, input: {
     kind: input.kind ?? "document",
     status: "draft",
     content: input.content,
+    contentRef: input.contentRef,
     createdAt: now,
     updatedAt: now,
-    digest: digest(input.content),
+    digest: digest(input.content ?? input.contentRef),
     provenance: {
       author: input.author,
       capabilityId: input.capabilityId,
@@ -124,23 +132,27 @@ export function createResource(workspaceInput: unknown, input: {
   };
 }
 
-export function versionResource(workspaceInput: unknown, resourceId: string, input: { title?: string; content: unknown }) {
+export function versionResource(workspaceInput: unknown, resourceId: string, input: { title?: string; content?: unknown; contentRef?: PodObjectReference }) {
   const workspace = parseWorkspace(workspaceInput);
   const existing = workspace.resources[resourceId];
   if (!existing) throw new Error(`No educator resource '${resourceId}'.`);
   const now = new Date().toISOString();
   const id = uuidUrn();
+  const content = input.content !== undefined ? input.content : input.contentRef !== undefined ? undefined : existing.content;
+  const contentRef = input.contentRef !== undefined ? input.contentRef : input.content !== undefined ? undefined : existing.contentRef;
+  if (content === undefined && contentRef === undefined) throw new Error("A resource version requires inline content or a Pod content reference.");
   const resource = educatorResourceSchema.parse({
     ...existing,
     id,
     version: existing.version + 1,
     title: input.title ?? existing.title,
-    content: input.content,
+    content,
+    contentRef,
     status: "draft",
     createdAt: now,
     updatedAt: now,
     parentVersionId: existing.id,
-    digest: digest(input.content),
+    digest: digest(content ?? contentRef),
   });
   return {
     resource,

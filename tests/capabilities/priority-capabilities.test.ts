@@ -5,7 +5,7 @@ import { validatePriorityCapability } from "@/lib/capabilities/priority-capabili
 
 describe("priority teaching capability slices", () => {
   it("publishes specialized, versioned MCP contracts for all five slices", () => {
-    for (const id of ["T18", "T24", "T41", "T48", "S25"]) {
+    for (const id of ["P18", "T01", "T18", "T24", "T41", "T48", "S03", "S06", "S25"]) {
       const capability = getCapability(id);
       expect(capability?.version).toBe("1.1.0");
       expect(capability?.evaluators.length).toBeGreaterThanOrEqual(5);

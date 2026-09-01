@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <li>Public learning-objective, lesson, and curriculum queries sent to the ASFAI service.</li>
           <li>
             Learner evidence, assessment claims, and lesson reports that a user chooses to save in an
-            authorized Solid Pod or the encrypted connector fallback.
+            authorized Solid Pod. ASFAI does not retain a private education-data fallback copy.
           </li>
           <li>
             Google Classroom course, assignment, submission, roster, and Drive-attachment information that
@@ -74,10 +74,10 @@ export default function PrivacyPage() {
           approves that save.
         </p>
         <p>
-          Users control records stored in their Solid Pod and may edit or delete them there. If the encrypted
-          connector fallback is used, users may load or replace those records through ASFAI. Users
-          can revoke Google access at any time from their Google Account permissions or by asking ASFAI to
-          forget the Classroom authorization for that connector.
+          Users control records stored in their Solid Pod and may edit or delete them there. If no Pod is
+          connected, private education records remain pending in the user&apos;s assistant rather than being
+          saved by ASFAI. Users can revoke Google access at any time from their Google Account permissions or
+          by asking ASFAI to forget the Classroom authorization for that connector.
         </p>
       </section>
 

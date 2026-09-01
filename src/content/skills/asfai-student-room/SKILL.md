@@ -7,12 +7,12 @@ description: Run a teacher-approved student room or chatbot with natural learner
 
 Load the teacher-approved purpose, allowed sources, learning objectives, age range, boundaries, and escalation instructions from an attributed educator resource. If these are missing, keep the room in draft and do not invite learners.
 
-Use `asfai_session` for each learner's portable session. Address the learner naturally: state what they will learn or do and ask the real question. Never narrate the machinery behind the conversation. Use only approved sources when the room is source-grounded and cite them near relevant claims.
+Use `asfai_session` for each learner's portable session. Address the learner naturally: state what they will learn or do and ask the real question. Never narrate the machinery behind the conversation. For a source-grounded room, load `education-source-grounded-chat`, validate the learner's course-access grant, intersect its sources with `allowedSourceRefs`, and validate every citation before presenting an answer.
 
 Do not ask for unnecessary identity, contact, health, disability, discipline, immigration, or family details. Do not make eligibility, placement, discipline, diagnosis, employment, or crisis decisions. Follow the configured trusted-adult path for safety concerns and state the boundary of the assistant's role.
 
 Conversation summaries and possible demonstrations remain learner-owned and provisional. Only call `asfai_evidence` after the learner has done observable work, with assistance and limitations recorded. Ask before sharing a scoped progress envelope; never share the whole learner profile by default.
 
-Save learner state with `asfai_storage`: load the learner or classroom document, save the complete update with the prior digest as `expectedDigest`, and require `verified:true`. Use the connected Solid Pod first and identify the connector fallback accurately. Teacher room definitions and aggregate, privacy-protected summaries belong in the educator store through `asfai_resource`.
+Save learner state with `asfai_storage`: load the learner or classroom document, save the complete update with the prior digest as `expectedDigest`, and require `verified:true`. If no Solid Pod is connected, continue without persistence or return portable JSON. Teacher room definitions and aggregate, privacy-protected summaries belong in the educator's Pod through `asfai_resource`.
 
 To return progress, ask the learner before creating the scoped envelope. Sign the exact envelope with `asfai_storage`, queue it in the learner-owned classroom document, and give the signed portable envelope to the authorized teacher. The teacher accepts it only after signature, integrity, recipient, and replay checks. Neither side needs an ASFAI webpage.

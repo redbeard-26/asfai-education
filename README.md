@@ -37,12 +37,12 @@ The education MCP server is also in this repository. The installed plugin connec
 - `asfai_lesson` authors, validates, reviews, publishes, assigns, and facilitates versioned lessons and games;
 - `asfai_evidence` prepares assessment, records justified observations and claims, reports, and exchanges scoped progress;
 - `asfai_resource` manages immutable educator resources, collections, rooms, quizzes, sharing, publication previews, and resumable artifact jobs; and
-- `asfai_storage` connects and writes a Solid Pod, uses a connector-scoped fallback when no Pod is available, and retains the host-side storage procedures for compatibility; and
+- `asfai_storage` connects and writes a Solid Pod, manages large private course objects, and retains host-side IndexedDB/local-file procedures for direct-client compatibility; and
 - `asfai_classroom` connects a named classroom provider, imports work, creates assignments and supporting documents, exports work, and returns approved evaluations.
 
-The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. Public learning operations do not retain learner identity or raw work. The two private gateways use the authenticated connector tenant: `asfai_storage` writes the Pod or explicit fallback, while `asfai_classroom` retains only encrypted reusable provider authorization.
+The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. Public learning operations do not retain learner identity or raw work. The two private gateways use the authenticated connector tenant: `asfai_storage` writes education data only to the connected Pod, while `asfai_classroom` retains only encrypted reusable provider authorization.
 
-The **ASFAI Learning** plugin contains one remote MCP connector and one compact routing skill. The connector authenticates through OAuth with no ASFAI account, uses a connected Solid Pod as the primary store, and falls back to tenant-isolated AWS storage only while a Pod is unavailable. The same connector provides a provider-neutral classroom bridge, with Google as the first adapter. No repository clone, local runtime, website session, or manual MCP configuration is required. See [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
+The **ASFAI Learning** plugin contains one remote MCP connector and one compact routing skill. The connector authenticates through OAuth with no ASFAI account and writes private education data only to a connected Solid Pod. Without a Pod it continues without persistence or returns portable state; ASFAI does not retain a fallback education record. The same connector provides a provider-neutral classroom bridge, with Google as the first adapter. No repository clone, local runtime, website session, or manual MCP configuration is required. See [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md), [Private course knowledge](docs/COURSE-KNOWLEDGE.md), and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
 See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.
@@ -108,6 +108,7 @@ No student records are committed to this repository.
 - [Core data model](docs/DATA-MODEL.md)
 - [Taxonomies and data sources](docs/TAXONOMY-AND-DATA-SOURCES.md)
 - [Accountless storage and MCP](docs/STORAGE-AND-MCP.md)
+- [Private assistant-executed course knowledge](docs/COURSE-KNOWLEDGE.md)
 - [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md)
 - [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md)
 - [Classroom connectors](docs/CLASSROOM-CONNECTORS.md)
