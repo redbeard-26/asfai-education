@@ -1,11 +1,12 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { Session } from "@inrupt/solid-client-authn-node";
 import { describe, expect, it, vi } from "vitest";
 import { acceptClassroomEnvelope, newClassroomExchangeStore, queueClassroomEnvelope } from "@/lib/capabilities/personal-state";
 import { DeviceProtectedStorage, type StorageProtector } from "@/lib/device-protected-storage";
-import { PersonalStorageService } from "@/lib/personal-storage";
+import { normalizePersonalObjectPath, PersonalStorageService } from "@/lib/personal-storage";
+import { remoteStorageAction } from "@/lib/remote-private-tools";
 import { createReportEnvelope } from "@/lib/lessons/progress";
 import { lessonAssignmentSchema, lessonReportSchema } from "@/lib/lessons/schemas";
 
@@ -21,6 +22,30 @@ function reportEnvelope() {
 }
 
 describe("personal storage MCP companion", () => {
+  it("confines course-object paths to the ASFAI Pod container", () => {
+    expect(normalizePersonalObjectPath("courses/course-1/manifest.json")).toBe("courses/course-1/manifest.json");
+    for (const path of ["../secret", "/absolute", "courses/../../secret", "courses\\secret", "courses//file"]) {
+      expect(() => normalizePersonalObjectPath(path)).toThrow();
+    }
+  });
+
+  it("does not create remote fallback education records when no Pod is connected", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "asfai-no-fallback-"));
+    const priorDirectory = process.env.ASFAI_REMOTE_DATA_DIR;
+    const priorKey = process.env.ASFAI_REMOTE_ENCRYPTION_KEY;
+    process.env.ASFAI_REMOTE_DATA_DIR = directory;
+    process.env.ASFAI_REMOTE_ENCRYPTION_KEY = "test-only-encryption-key-at-least-32-bytes";
+    try {
+      await expect(remoteStorageAction("status", {}, "tenant-no-pod")).resolves.toMatchObject({ mode: "not_connected", fallbackStore: null, serverRetainedEducationData: false });
+      await expect(remoteStorageAction("load", { document: "learner" }, "tenant-no-pod")).rejects.toThrow("Connect a Solid Pod");
+      const files = await readdir(directory, { recursive: true }).catch(() => [] as string[]);
+      expect(files.some((file) => file.endsWith("learner.json"))).toBe(false);
+    } finally {
+      if (priorDirectory === undefined) delete process.env.ASFAI_REMOTE_DATA_DIR; else process.env.ASFAI_REMOTE_DATA_DIR = priorDirectory;
+      if (priorKey === undefined) delete process.env.ASFAI_REMOTE_ENCRYPTION_KEY; else process.env.ASFAI_REMOTE_ENCRYPTION_KEY = priorKey;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   it("persists session values through a protected owner-only store", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "asfai-protected-storage-"));
     const target = path.join(directory, "session.json");

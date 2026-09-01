@@ -15,7 +15,7 @@ Each definition includes an immutable ID and version, audience, category, purpos
 | `asfai_lesson` | author/search/get/validate/review/publish/assign/run/step/artifact relay |
 | `asfai_evidence` | assessment, learner/lesson evidence, summary, report, progress export/import |
 | `asfai_resource` | resources, immutable versions, collections, sharing, rooms, quizzes, workflows, jobs, export |
-| `asfai_storage` | Pod connect/status/load/save, fallback storage, signatures, instructions, export, and verification |
+| `asfai_storage` | Pod connect/status/load/save, large private objects, signatures, instructions, export, and verification |
 | `asfai_classroom` | provider connect/status, import, assignment/document creation, export, and evaluation return |
 
 CI requires exactly nine default tools and no more than 10,000 serialized characters for names, titles, descriptions, and input schemas. Private profile and lesson schemas are therefore validated after routing rather than expanded in `tools/list`.
@@ -42,7 +42,7 @@ Quizzes keep answer keys in the teacher-owned definition and omit them from lear
 - District configuration, audit, Knowledge, moderation, analytics, and integration state require a separately authenticated tenant boundary.
 - Restricted workflows produce drafts for qualified human review and never make diagnosis, eligibility, placement, discipline, employment, grading, service, or crisis decisions.
 
-`asfai_storage` makes a learner or educator Solid Pod the primary durable store whenever the user has connected one. When no Pod is connected, the same tool uses a tenant-isolated, encrypted-at-rest AWS fallback and says so explicitly. Browser IndexedDB and host-local JSON remain supported for direct web and developer clients. A write is successful only after an independent read-back produces the same digest.
+`asfai_storage` uses a learner or educator Solid Pod as the only remote durable store. When no Pod is connected, private writes stop and remain pending. Browser IndexedDB and host-local JSON remain supported for direct web and developer clients. A write is successful only after an independent read-back produces the same digest.
 
 The **ASFAI Learning** plugin installs exactly one authenticated remote MCP connector. Its OAuth grant establishes a pseudonymous connector tenant without an ASFAI account; provider grants are encrypted and bound to that tenant. `asfai_storage` performs authenticated Solid operations and owner-controlled signatures. `asfai_classroom` is a provider-neutral bridge for classroom import/export; every call names a provider and Google is the first adapter. Specialized guidance remains on demand. See [Private storage gateway](PERSONAL-STORAGE-COMPANION.md) and [Classroom connectors](CLASSROOM-CONNECTORS.md).
 

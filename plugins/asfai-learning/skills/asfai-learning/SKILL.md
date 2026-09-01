@@ -1,6 +1,6 @@
 ---
 name: asfai-learning
-description: Use or verify the ASFAI Learning plugin in chat to teach, learn, assess, plan lessons, save progress to a PrivateDataPod or connector fallback, or exchange work with a configured classroom provider. Trigger when a user asks to use ASFAI, connect a Pod, save progress, continue a lesson, or import or create Classroom work.
+description: Use or verify the ASFAI Learning plugin in chat to teach, learn, assess, manage private course sources, save progress to a Solid Pod, or exchange work with a configured classroom provider.
 ---
 
 # ASFAI Learning
@@ -39,7 +39,9 @@ If the user asks to connect a Pod and no valid Pod grant is restored, call `asfa
 
 Show the returned URL as **Connect private storage**. Never request a password, cookie, authorization code, access token, refresh token, client secret, or DPoP key in chat. After approval, call `status` again. The grant persists for this authenticated connector until the user explicitly forgets it or revokes it at the provider.
 
-Load with payload `{ "document": "learner" }`, `{ "document": "educator" }`, or `{ "document": "classroom" }`. Save the complete updated document with the digest returned by `load` as `expectedDigest`. Say data was saved only when `save` returns `verified:true` after read-back. The Pod is primary whenever connected; if status reports `asfai_cloud_fallback`, describe it accurately and do not call it a Pod save.
+Load with payload `{ "document": "learner" }`, `{ "document": "educator" }`, or `{ "document": "classroom" }`. Save the complete updated document with the digest returned by `load` as `expectedDigest`. Say data was saved only when `save` returns `verified:true` after read-back. If status reports `not_connected`, connect a Pod or continue without persistence; ASFAI retains no fallback education record.
+
+For course ingestion use the `education-course-material-ingestion` skill. For teacher or learner questions against approved sources use `education-source-grounded-chat`. The host assistant performs extraction, retrieval judgment, teaching, and answer generation. Use Pod object operations for original files and derived text, leaving only references in educator state.
 
 Never call `forget_pod_authorization` as cleanup. Use it only after an explicit request to forget or revoke the Pod connection.
 

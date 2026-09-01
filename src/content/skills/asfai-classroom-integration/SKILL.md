@@ -45,7 +45,7 @@ Use `asfai_evidence` to create objective-linked observations and assessment clai
 
 Before returning a grade or feedback, save the concise objective-level evidence and report through `asfai_storage`:
 
-1. Call `status`; use the connected Pod when available and accurately identify the connector fallback otherwise.
+1. Call `status`; require a connected Pod before saving private evidence. If none is connected, keep the result portable and say persistence is pending.
 2. Load the appropriate `learner`, `educator`, or `classroom` document.
 3. Append the minimum useful evidence, assessment claim, and report reference. Avoid unnecessary personal data, full submission copies, and verbatim conversations.
 4. Save the complete updated document with the prior digest as `expectedDigest`.
