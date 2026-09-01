@@ -10,9 +10,11 @@ The architecture therefore separates six concerns that are often collapsed into 
 
 ### MCP access boundary
 
-The installed ASFAI Learning plugin contains one authenticated remote MCP connector. OAuth 2.1 with PKCE establishes a pseudonymous, accountless connector tenant. Nine compact gateway tools serve public learning operations, private Pod-first storage, and provider-neutral classroom exchange without requiring a coordinating website or local runtime.
+The installed ASFAI Learning plugin contains one authenticated remote MCP connector. OAuth 2.1 with PKCE establishes a pseudonymous, accountless connector tenant. Nine compact gateway tools serve public learning operations, private Pod-only remote storage, and provider-neutral classroom exchange without requiring a coordinating website or local runtime.
 
-Solid and classroom OAuth grants are encrypted and isolated by connector tenant. A connected Solid Pod is the primary learner and educator store. When no Pod is available, the gateway uses a clearly identified tenant-scoped AWS fallback rather than pretending that model output has been persisted. Classroom systems transport assignments, documents, submissions, and approved evaluations; they do not become the source of truth for mastery.
+Solid and classroom OAuth grants are encrypted and isolated by connector tenant. A connected Solid Pod is the only remote learner, educator, course, and evidence store. When no Pod is available, the gateway performs no private persistence. Classroom systems transport assignments, documents, submissions, approved evaluations, and signed course references; they do not become the source of truth for mastery.
+
+The user's connected AI assistant performs document interpretation, extraction, retrieval judgment, tutoring, generation, and assessment. ASFAI supplies versioned skills, public graph data, deterministic schemas, reducers and validators, and authenticated Pod transport. ASFAI does not operate a backend course-chat, OCR, embedding, or generation model.
 
 ### 1. Competency graph
 
@@ -89,17 +91,16 @@ An activity can target technical objectives and durable practices at once. For e
 
 ## Recommended first implementation
 
-A graph database is not required for the first release. A relational store can hold versioned objectives and edges, while an append-only event table and object storage hold evidence and artifacts. Graph projections or a dedicated graph database can be added when traversal, inference, and alignment workloads justify them.
+An ASFAI learner or educator database is not required. Public objective metadata may be fetched and cached by the service; private courses, activities, evidence, artifacts, and derived learner state remain in owner-controlled Pods. The portable schemas allow a Pod implementation to split large append-oriented collections into immutable resources without changing the assistant workflow.
 
-An initial service boundary could be:
+The implementation boundary is:
 
 ```text
-Competency service       versioned frameworks, objectives, edges, rubrics
-Activity service         courses, activities, resources, alignments
-Evidence service         events, artifacts, provenance, supersession
-Assessment service       human/machine claims against rubric criteria
-Mastery service          aggregation policies and learner-objective state
-Integration gateway      xAPI, CASE, QTI, LTI, OneRoster, CLR adapters
+Public MCP               versioned frameworks, objectives, workflow contracts
+User AI assistant        extraction, retrieval judgment, tutoring, generation, assessment
+Solid Pod                courses, activities, resources, evidence, profiles, private indexes
+Deterministic reducers   validation, versioning, citations, mastery projections
+Integration gateway      authenticated Pod and classroom transport
 ```
 
 ## Privacy and governance

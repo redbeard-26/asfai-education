@@ -50,9 +50,6 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
   if (input.version && input.version !== capability.version) {
     throw new Error(`Capability '${capability.id}' version '${input.version}' is unavailable; current version is '${capability.version}'.`);
   }
-  if (capability.mode === "interactive") {
-    throw new Error(`Capability '${capability.id}' is interactive. Use asfai_session with action 'start'.`);
-  }
   const allowed = new Set(Object.keys((capability.inputSchema.properties as Record<string, unknown>) ?? {}));
   const unknown = Object.keys(input.input).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Capability '${capability.id}' does not accept input field(s): ${unknown.join(", ")}.`);
@@ -69,6 +66,9 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
       validation: validatePriorityCapability(capability.id, input.candidate),
       persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: capability.mcp.stateOwner === "educator-store" ? "asfai_resource" : "asfai_storage" },
     };
+  }
+  if (capability.mode === "interactive") {
+    throw new Error(`Capability '${capability.id}' is interactive. Use asfai_session with action 'start'.`);
   }
   const review = capability.mcp.confirmation === "human-review"
     ? "Return a draft only. An authorized, qualified human must review and approve any consequential conclusion or action."

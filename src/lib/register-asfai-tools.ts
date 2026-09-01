@@ -45,6 +45,22 @@ import { answerQuizItem, createQuiz, finishQuizAttempt, publishQuiz, quizAttempt
 import { advanceWorkflow, cancelWorkflow, createWorkflow, startWorkflow, workflowCheckpointSchema, workflowDefinitionSchema } from "@/lib/capabilities/workflows";
 import { prepareCustomCapabilityPublication, validateCustomCapability } from "@/lib/capabilities/custom";
 import {
+  addMaterialVersion,
+  courseAccessGrantSchema,
+  courseKnowledgePackageSchema,
+  courseMaterialVersionSchema,
+  createCourseAccessGrant,
+  createCoursePackage,
+  groundedAnswerSchema,
+  podObjectReferenceSchema,
+  retireMaterialVersion,
+  revokeCourseAccessGrant,
+  validateCourseAccess,
+  validateCoursePackage,
+  validateGroundedAnswer,
+  versionCoursePackage,
+} from "@/lib/capabilities/course-knowledge";
+import {
   getObjective,
   learningFrontier,
   learningPath,
@@ -151,11 +167,13 @@ const evidenceActionSchema = z.enum([
 
 const resourceActionSchema = z.enum([
   "initialize", "search", "get", "create", "version", "delete", "publish", "retire", "create_collection", "update_collection", "share_collection", "revoke_collection", "export", "start_job", "get_job", "update_job", "cancel_job", "create_room", "update_room", "publish_room", "close_room", "create_quiz", "update_quiz", "publish_quiz", "retire_quiz", "create_workflow", "start_workflow", "advance_workflow", "cancel_workflow", "initialize_classroom", "store_room", "store_membership", "queue_exchange", "accept_exchange", "classroom_summary",
+  "create_course", "version_course", "add_material", "retire_material", "validate_course", "validate_grounded_answer", "prepare_course_share", "revoke_course_share", "validate_course_access",
 ]);
 
 const storageActionSchema = z.enum([
   "instructions", "verify", "export", "initialize",
   "status", "connect_pod", "forget_pod_authorization", "load", "save", "identity", "sign", "verify_signature",
+  "put_object", "get_object", "head_object", "list_objects", "delete_object",
 ]);
 
 function persistenceNotice(owner: "learner" | "educator") {
@@ -175,7 +193,7 @@ async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, 
       catalog: { version: "2.0.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
       defaultTools: ASFAI_DEFAULT_TOOL_NAMES,
       contextBudget: { defaultToolCount: 9, maximumToolCount: 12, serializedCharacterTarget: 8000, serializedCharacterMaximum: 10000 },
-      state: "Public graph and capability metadata are cacheable. The authenticated connector routes private records to the user's Solid Pod when connected and otherwise uses its encrypted fallback store.",
+      state: "Public graph and capability metadata are cacheable. Private education records and course objects are written only to the user's connected Solid Pod; without one, persistence remains pending.",
     };
   }
   if (action === "list" || action === "search" || action === "recommend") {
@@ -393,6 +411,62 @@ async function evidenceAction(action: z.infer<typeof evidenceActionSchema>, payl
 }
 
 function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: Record<string, unknown>) {
+  if (action === "create_course") {
+    const input = z.object({
+      courseId: z.string().optional(), title: z.string(), description: z.string().optional(),
+      owner: z.object({ id: z.string(), webId: z.string().url().optional() }),
+      retrievalModes: z.array(z.enum(["host_native", "pod_lexical", "direct_reading"])).optional(),
+    }).parse(payload);
+    return { course: createCoursePackage(input), ...persistenceNotice("educator") };
+  }
+  if (action === "version_course") {
+    const input = z.object({
+      course: courseKnowledgePackageSchema,
+      patch: z.object({
+        title: z.string().optional(), description: z.string().optional(), status: z.enum(["draft", "published", "retired"]).optional(),
+        objectiveIds: z.array(z.string()).optional(), retrievalModes: z.array(z.enum(["host_native", "pod_lexical", "direct_reading"])).optional(),
+      }),
+    }).parse(payload);
+    return { course: versionCoursePackage(input.course, input.patch), ...persistenceNotice("educator") };
+  }
+  if (action === "add_material") {
+    const input = z.object({ course: courseKnowledgePackageSchema, material: courseMaterialVersionSchema }).parse(payload);
+    return { course: addMaterialVersion(input.course, input.material), ...persistenceNotice("educator") };
+  }
+  if (action === "retire_material") {
+    const input = z.object({ course: courseKnowledgePackageSchema, materialVersionId: z.string() }).parse(payload);
+    return { course: retireMaterialVersion(input.course, input.materialVersionId), ...persistenceNotice("educator") };
+  }
+  if (action === "validate_course") return validateCoursePackage(payload.course);
+  if (action === "validate_grounded_answer") {
+    const input = z.object({ candidate: groundedAnswerSchema, chunks: z.array(z.unknown()), allowedMaterialVersionIds: z.array(z.string()) }).parse(payload);
+    return validateGroundedAnswer(input.candidate, input.chunks, input.allowedMaterialVersionIds);
+  }
+  if (action === "prepare_course_share") {
+    const input = z.object({
+      course: courseKnowledgePackageSchema, manifestRef: podObjectReferenceSchema, recipientId: z.string().optional(),
+      expiresAt: z.string().datetime({ offset: true }).optional(), confirmed: z.boolean().default(false),
+    }).parse(payload);
+    if (!input.confirmed) {
+      return {
+        preview: { courseId: input.course.courseId, courseVersion: input.course.version, recipientId: input.recipientId, manifestRef: input.manifestRef.href, expiresAt: input.expiresAt },
+        confirmationRequired: true,
+      };
+    }
+    return { grant: createCourseAccessGrant(input), signingRequired: true, ...persistenceNotice("educator"), nextTool: "asfai_storage" };
+  }
+  if (action === "revoke_course_share") {
+    const input = z.object({ grant: courseAccessGrantSchema, confirmed: z.boolean().default(false) }).parse(payload);
+    if (!input.confirmed) return { preview: { grantId: input.grant.id, status: "revoked" }, confirmationRequired: true };
+    return { grant: revokeCourseAccessGrant(input.grant), ...persistenceNotice("educator") };
+  }
+  if (action === "validate_course_access") {
+    const input = z.object({
+      grant: courseAccessGrantSchema, recipientId: z.string().optional(), courseId: z.string().optional(),
+      courseVersion: z.number().int().positive().optional(), manifestDigest: z.string().optional(),
+    }).parse(payload);
+    return validateCourseAccess(input.grant, input);
+  }
   if (action === "initialize_classroom") {
     const input = z.object({ ownerRole: z.enum(["learner", "teacher"]), ownerId: z.string().optional() }).parse(payload);
     return { store: newClassroomExchangeStore(input.ownerRole, input.ownerId), ...persistenceNotice(input.ownerRole === "teacher" ? "educator" : "learner") };
@@ -477,11 +551,11 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
     return resource;
   }
   if (action === "create") {
-    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
+    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
     return { ...createResource(workspace, input), ...persistenceNotice("educator") };
   }
   if (action === "version") {
-    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown() }).parse(payload);
+    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional() }).parse(payload);
     return { ...versionResource(workspace, input.resourceId, input), ...persistenceNotice("educator") };
   }
   if (action === "delete") {
@@ -595,7 +669,7 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
   server.registerTool("asfai_resource", { title: "Manage educator-owned resources", description: "Portable versioned resources, collections, sharing previews, and export.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save learner and educator records, using the user's Solid Pod first when connected; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save records and course objects in the user's Solid Pod; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
     try { return json(await storageAction(action, data(payload), tenantId(extra))); } catch (error) { return err(error); }
   });
   server.registerTool("asfai_classroom", { title: "Exchange work with a classroom provider", description: "Connect a provider such as Google, import work, create assignments with documents, export learner work, and return approved evaluations.", inputSchema: { action: classroomActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
