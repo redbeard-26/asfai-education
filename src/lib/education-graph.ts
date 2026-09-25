@@ -113,27 +113,39 @@ export async function getObjective(id: string) {
 
 export async function searchObjectives(query: string, limit = 20) {
   const graph = await loadGraph();
-  const normalized = query.trim().toLowerCase();
+  const normalized = query.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!normalized) return [];
+  const stopWords = new Set(["a", "an", "and", "are", "about", "can", "do", "for", "how", "in", "is", "lesson", "of", "on", "or", "the", "to", "what", "with"]);
+  const terms = [...new Set((normalized.match(/[\p{L}\p{N}]+/gu) ?? [])
+    .filter((term) => !stopWords.has(term))
+    .map((term) => term.length > 4 && term.endsWith("s") ? term.slice(0, -1) : term))];
+  const fields = graph.topics.map((topic) => [topic.name, topic.domain, topic.description, ...topic.evidence].map((field) => field.toLowerCase()));
+  const frequency = new Map(terms.map((term) => [term, fields.filter((parts) => parts.some((part) => part.includes(term))).length]));
   return graph.topics
-    .map((topic) => {
-      const name = topic.name.toLowerCase();
-      const description = topic.description.toLowerCase();
-      const score =
+    .map((topic, index) => {
+      const [name, domain, description, ...evidence] = fields[index];
+      const phraseRank =
         name === normalized
           ? 0
           : name.startsWith(normalized)
             ? 1
             : name.includes(normalized)
               ? 2
-              : topic.domain.toLowerCase().includes(normalized)
+              : domain.includes(normalized)
                 ? 3
                 : description.includes(normalized)
                   ? 4
                   : 99;
-      return { topic, score };
+      const termScore = terms.reduce((score, term) => {
+        // Keep distinctive terms (for example, "snail") ahead of generic words such as "body".
+        const rarity = Math.log1p(graph.topics.length / (1 + (frequency.get(term) ?? 0))) ** 2;
+        const weight = name.includes(term) ? 4 : domain.includes(term) ? 2 : description.includes(term) ? 1.5 : evidence.some((item) => item.includes(term)) ? 1 : 0;
+        return score + rarity * weight;
+      }, 0);
+      return { topic, phraseRank, termScore };
     })
-    .filter(({ score }) => score < 99)
-    .sort((a, b) => a.score - b.score || b.topic.centrality - a.topic.centrality)
+    .filter(({ phraseRank, termScore }) => phraseRank < 99 || termScore > 0)
+    .sort((a, b) => a.phraseRank - b.phraseRank || b.termScore - a.termScore || b.topic.centrality - a.topic.centrality)
     .slice(0, limit)
     .map(({ topic }) => topic);
 }

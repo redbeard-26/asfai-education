@@ -27,6 +27,8 @@ Call `asfai_lesson` action `prepare_authoring` with the teacher's idea, audience
 
 Use the learning-objective tools to find appropriate public objectives. When the public graph has no sufficiently specific objective, create a scoped ASFAI objective identifier and record sourced external alignments rather than copying taxonomy records.
 
+Search can accept a natural phrase, but inspect the returned objectives and retry with shorter or alternate terms if the matches are weak. Do not cite a standard as graph-grounded merely because the code sounds relevant. For each cited standard, call `asfai_graph` action `verify_standard_alignment` with its objective ID and code, then retain that ID and the verified fully qualified code in the lesson's source references. If verification fails, label it a proposed external alignment for teacher review rather than a graph result. An old plan without objective IDs cannot be retroactively certified as graph-grounded.
+
 For every objective, establish:
 
 - what the learner will do or create;

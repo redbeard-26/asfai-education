@@ -88,7 +88,7 @@ export const transformArtifactSchema = z.object({
   message: "A transformation must reference or include a generated output.",
 });
 
-const lessonIntakeSchema = z.object({
+export const lessonIntakeSchema = z.object({
   mode: z.enum(["new", "polish", "expand"]).default("new"),
   topic: shortText.optional(),
   course: shortText.optional(),
@@ -99,9 +99,9 @@ const lessonIntakeSchema = z.object({
   polishGoals: z.array(z.enum(["clarity", "gaps", "objective-mapping", "formatting", "full-review"])).max(5).optional(),
   expansionGoals: z.array(shortText).max(15).optional(),
   assumptions: z.array(z.object({ field: shortText, value: shortText, sourceRef: sourceRefSchema })).max(30).optional(),
-});
+}).strict();
 
-const evaluationIntakeSchema = z.object({
+export const evaluationIntakeSchema = z.object({
   lessonPlan: z.object({
     ref: sourceRefSchema,
     title: shortText,
@@ -119,16 +119,16 @@ const evaluationIntakeSchema = z.object({
   availableResources: z.array(shortText).max(30).optional(),
   priorAssignmentRefs: z.array(sourceRefSchema).max(20).optional(),
   assumptions: z.array(z.object({ field: shortText, value: shortText, sourceRef: sourceRefSchema })).max(30).optional(),
-});
+}).strict();
 
-const transformIntakeSchema = z.object({
+export const transformIntakeSchema = z.object({
   sourceRef: sourceRefSchema.optional(),
   operation: transformArtifactSchema.shape.operation.optional(),
   targetRepresentation: shortText.optional(),
   targetLanguage: shortText.optional(),
   targetAudience: shortText.optional(),
   requirements: z.array(shortText).max(30).optional(),
-});
+}).strict();
 
 function question(id: string, prompt: string, reason: string, options?: string[], multiple = false) {
   return workflowQuestionSchema.parse({ id, prompt, reason, kind: options ? multiple ? "multiple-choice" : "single-choice" : "open", options });
