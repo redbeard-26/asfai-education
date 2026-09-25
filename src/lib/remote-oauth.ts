@@ -194,6 +194,10 @@ export function oauthMetadata() {
 
 function allowedRedirectUri(value: string) {
   const url = new URL(value);
+  if (url.username || url.password || url.hash) return false;
+  if (url.protocol === "https:" && ["claude.ai", "claude.com"].includes(url.hostname)) {
+    return url.pathname === "/api/mcp/auth_callback" && !url.search;
+  }
   if (url.protocol === "https:" && ["chatgpt.com", "platform.openai.com"].includes(url.hostname)) return true;
   if (url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname)) return true;
   return process.env.NODE_ENV !== "production" && url.protocol === "http:";

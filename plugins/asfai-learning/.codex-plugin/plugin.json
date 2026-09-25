@@ -1,7 +1,7 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.1+codex.20260827053701",
-  "description": "Teach and plan with ASFAI, use Pod-first private storage, and exchange work with classroom providers through one remote MCP connector.",
+  "version": "0.1.2+codex.20260925",
+  "description": "Plan lessons, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
@@ -19,20 +19,24 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "ASFAI Learning",
-    "shortDescription": "ASFAI learning, private data, and classroom exchange.",
-    "longDescription": "Create and run lessons through chat, use the ASFAI learning graph, connect PrivateDataPod and other Solid Pods, and exchange work with configurable classroom providers through one authenticated remote MCP connector. A connected Pod is the primary learning-record store. Pod and Google Classroom authorization is encrypted, isolated to the user's connector, and restored across devices using that connection until explicit removal or provider revocation.",
+    "shortDescription": "ASFAI lessons, evaluations, asset transformations, and private learning data.",
+    "longDescription": "Plan lessons, design evaluations, transform teaching assets, and teach through chat using the ASFAI learning graph. Connect PrivateDataPod and other Solid Pods, and exchange work with configurable classroom providers through one authenticated remote MCP connector. A connected Pod is the primary learning-record store. Pod and Google Classroom authorization is encrypted, isolated to the user's connector, and restored across devices using that connection until explicit removal or provider revocation.",
     "developerName": "ASFAI",
     "category": "Education",
     "capabilities": [
       "Learning",
       "Lesson planning",
+      "Evaluation design",
+      "Teaching asset transformation",
       "Private storage",
       "Classroom exchange"
     ],
     "defaultPrompt": [
       "Connect my private Pod and continue my lesson.",
       "Help me learn a concept and save my progress.",
-      "Create a lesson or import classroom work and evaluate it."
+      "Create a lesson outline for my course.",
+      "Design an evaluation from my lesson plan.",
+      "Transform my lesson notes into teaching slides."
     ]
   },
   "mcpServers": "./.mcp.json"

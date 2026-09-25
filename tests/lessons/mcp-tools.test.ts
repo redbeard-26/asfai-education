@@ -126,8 +126,36 @@ describe("compact ASFAI MCP surface", () => {
       "asfai-learning-outcomes",
       "asfai-student-room",
       "education-concept-assessment",
+      "education-asset-transform",
+      "education-evaluation-design",
       "education-lesson-authoring",
       "education-lesson-facilitation",
     ]));
+  });
+
+  it("routes the three teacher primitives through existing gateway tools", async () => {
+    const tools = registeredServer();
+    const lesson = resultJson(await tools.asfai_lesson.handler({
+      action: "prepare_outline", payload: { topic: "Fractions", course: "Math" },
+    }));
+    expect(lesson).toMatchObject({ primitive: "Lesson", state: "clarifying" });
+    expect((lesson.questions as Array<{ id: string }>).map((item) => item.id)).toEqual(["audience", "learning_outcomes"]);
+
+    const evaluation = resultJson(await tools.asfai_evidence.handler({ action: "design_evaluation", payload: {} }));
+    expect(evaluation).toMatchObject({ primitive: "Evaluation", state: "clarifying" });
+
+    const transform = resultJson(await tools.asfai_resource.handler({
+      action: "prepare_transform", payload: { sourceRef: "attachment:lesson", operation: "slides", targetRepresentation: "PPTX" },
+    }));
+    expect(transform).toMatchObject({ primitive: "Transform", state: "ready_to_draft" });
+  });
+
+  it("delivers the new workflow skills through the MCP capability installer", async () => {
+    const tool = registeredServer().asfai_capability;
+    for (const name of ["education-lesson-authoring", "education-evaluation-design", "education-asset-transform"]) {
+      const installed = resultJson(await tool.handler({ action: "install_skill", payload: { name, delivery: "inline" } }));
+      expect(installed).toMatchObject({ name, delivery: "inline" });
+      expect((installed.files as Array<{ path: string }>).some((file) => file.path === `${name}/SKILL.md`)).toBe(true);
+    }
   });
 });

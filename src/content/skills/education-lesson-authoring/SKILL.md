@@ -13,7 +13,15 @@ Student instructions and any suggested assistant dialogue must use ordinary lang
 
 Keep technical directions in the assistant or teacher fields. For example, write the student instruction as “Explain how the rectangle's side lengths relate to the factors,” not “Complete this interaction so the assistant can create evidence against the rubric.” Review every student instruction for this separation before validation.
 
-## Begin with the evidence
+## Begin with a scoped outline
+
+Call `asfai_lesson` action `prepare_outline` before drafting. Use `mode:"new"` for an idea, `mode:"polish"` for a supplied draft, or `mode:"expand"` for an existing outline. Inspect any attachment first and pass only source-backed facts or inferences; include the source reference for inferred values. Treat memory as a tentative preference, not proof of course requirements. Ask the returned questions in ordinary teacher-facing language, grouping related questions where useful. Do not invent an audience or learning outcome to bypass clarification.
+
+For a new outline, the topic, course, audience, and observable learning outcomes must be clear. A rough draft may already supply these; ask what “polish” means before changing it unless the requested edit is explicit. Formatting-only edits do not require a full pedagogical intake. For gap analysis or objective mapping, confirm the intended learners and outcomes. Preserve the original and show substantive changes separately from cosmetic ones.
+
+Draft a versioned `lesson-outline` artifact, then call `asfai_lesson` action `validate_outline`. Review it with the teacher before expanding it into the existing full lesson definition. The outline is not a published lesson or an evaluation.
+
+## Begin the full plan with evidence
 
 Call `asfai_lesson` action `prepare_authoring` with the teacher's idea, audience, constraints, and teaching modes. Ask only for missing choices that materially affect the lesson.
 

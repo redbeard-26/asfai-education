@@ -1,6 +1,6 @@
 ---
 name: asfai-learning
-description: Use or verify the ASFAI Learning plugin in chat to teach, learn, assess, manage private course sources, save progress to a Solid Pod, or exchange work with a configured classroom provider.
+description: Use or verify the ASFAI Learning plugin in chat to plan lessons, design evaluations, transform teaching assets, teach, assess, save to a Solid Pod, or exchange classroom work.
 ---
 
 # ASFAI Learning
@@ -20,6 +20,8 @@ Keep orchestration private. With a learner, say what they are learning and ask t
 ## Use only the guidance needed
 
 For a new goal, use `asfai_capability` to recommend the relevant capability and install detailed guidance only when needed. Use `asfai_graph` for objectives and paths, `asfai_lesson` for lessons, and `asfai_evidence` for assessment records. Keep private evaluator guidance and answer keys out of learner-facing messages.
+
+For teacher requests, retrieve `education-lesson-authoring` when making or polishing an outline or full plan, `education-evaluation-design` when designing an evaluation from a completed lesson plan, and `education-asset-transform` when converting an existing source to a new representation. These are available through `asfai_capability` action `get_skill` or `install_skill`; do not add three more always-on MCP connectors. Use `asfai_lesson` actions `prepare_outline` and `validate_outline`, `asfai_evidence` actions `design_evaluation` and `validate_evaluation`, and `asfai_resource` actions `prepare_transform` and `validate_transform`. Ask the returned questions before generating; the chat host creates content and ASFAI validates the resulting artifact.
 
 ## Save to the Pod first
 

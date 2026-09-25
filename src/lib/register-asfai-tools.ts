@@ -94,6 +94,14 @@ import {
 import { lessonContentDigest, validateLesson } from "@/lib/lessons/validation";
 import { buildLessonReport, getNextActivity, startLessonRun } from "@/lib/lessons/workflow";
 import { reviewLesson } from "@/lib/register-lesson-tools";
+import {
+  prepareEvaluationDesign,
+  prepareLessonOutline,
+  prepareTransform,
+  validateEvaluationDesign,
+  validateLessonOutline,
+  validateTransformArtifact,
+} from "@/lib/educator-artifact-workflows";
 import { readSkillFiles } from "@/lib/skill-bundle";
 import { listSkills } from "@/lib/skills";
 import {
@@ -158,16 +166,15 @@ const graphActionSchema = z.enum([
 const sessionActionSchema = z.enum(["start", "resume", "continue", "finish", "join_room", "start_quiz", "answer_quiz", "finish_quiz"]);
 
 const lessonActionSchema = z.enum([
-  "prepare_authoring", "search", "get", "validate", "review", "prepare_publication", "create_assignment", "start_run", "next_step", "create_artifact_launch", "claim_artifact_result",
+  "prepare_outline", "validate_outline", "prepare_authoring", "search", "get", "validate", "review", "prepare_publication", "create_assignment", "start_run", "next_step", "create_artifact_launch", "claim_artifact_result",
 ]);
 
 const evidenceActionSchema = z.enum([
-  "prepare_assessment", "record_learning", "profile_summary", "record_lesson", "generate_report", "export_progress", "import_progress", "prepare_progress_signature", "verify_signed_progress",
+  "design_evaluation", "validate_evaluation", "prepare_assessment", "record_learning", "profile_summary", "record_lesson", "generate_report", "export_progress", "import_progress", "prepare_progress_signature", "verify_signed_progress",
 ]);
 
 const resourceActionSchema = z.enum([
-  "initialize", "search", "get", "create", "version", "delete", "publish", "retire", "create_collection", "update_collection", "share_collection", "revoke_collection", "export", "start_job", "get_job", "update_job", "cancel_job", "create_room", "update_room", "publish_room", "close_room", "create_quiz", "update_quiz", "publish_quiz", "retire_quiz", "create_workflow", "start_workflow", "advance_workflow", "cancel_workflow", "initialize_classroom", "store_room", "store_membership", "queue_exchange", "accept_exchange", "classroom_summary",
-  "create_course", "version_course", "add_material", "retire_material", "validate_course", "validate_grounded_answer", "prepare_course_share", "revoke_course_share", "validate_course_access",
+  "create_course", "version_course", "add_material", "retire_material", "validate_course", "validate_grounded_answer", "prepare_course_share", "revoke_course_share", "validate_course_access", "prepare_transform", "validate_transform",
 ]);
 
 const storageActionSchema = z.enum([
@@ -271,6 +278,8 @@ async function graphAction(action: z.infer<typeof graphActionSchema>, payload: R
 }
 
 async function lessonAction(action: z.infer<typeof lessonActionSchema>, payload: Record<string, unknown>, siteOrigin: string) {
+  if (action === "prepare_outline") return prepareLessonOutline(payload);
+  if (action === "validate_outline") return validateLessonOutline(payload.outline);
   if (action === "prepare_authoring") {
     const input = z.object({ idea: z.string().min(1).max(8000), audience: z.string().min(1).max(2000), constraints: z.array(z.string()).max(30).optional(), preferredModes: z.array(z.string()).max(10).optional() }).parse(payload);
     return {
@@ -357,6 +366,8 @@ async function lessonAction(action: z.infer<typeof lessonActionSchema>, payload:
 }
 
 async function evidenceAction(action: z.infer<typeof evidenceActionSchema>, payload: Record<string, unknown>, siteOrigin: string) {
+  if (action === "design_evaluation") return prepareEvaluationDesign(payload);
+  if (action === "validate_evaluation") return validateEvaluationDesign(payload.evaluation);
   if (action === "prepare_progress_signature") return prepareProgressEnvelopeSignature(payload.envelope);
   if (action === "verify_signed_progress") {
     const input = z.object({ envelope: progressEnvelopeSchema, signature: z.string().min(1).max(2000), publicKeyPem: z.string().min(1).max(10000) }).parse(payload);
@@ -411,6 +422,8 @@ async function evidenceAction(action: z.infer<typeof evidenceActionSchema>, payl
 }
 
 function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: Record<string, unknown>) {
+  if (action === "prepare_transform") return prepareTransform(payload);
+  if (action === "validate_transform") return validateTransformArtifact(payload.artifact);
   if (action === "create_course") {
     const input = z.object({
       courseId: z.string().optional(), title: z.string(), description: z.string().optional(),
@@ -660,13 +673,13 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
       return json(finishLearningSession({ session: input.session, abandon: input.abandon === true }));
     } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_lesson", { title: "Author and run ASFAI lessons", description: "Lesson planning, publication preparation, assignments, activities, and artifact relay.", inputSchema: { action: lessonActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_lesson", { title: "Author and run ASFAI lessons", description: "Clarify and draft lesson outlines, review plans, prepare publication, and run activities.", inputSchema: { action: lessonActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(await lessonAction(action, data(payload), siteOrigin)); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_evidence", { title: "Record and report learning evidence", description: "Assessment preparation, evidence claims, reports, and scoped progress exchange.", inputSchema: { action: evidenceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_evidence", { title: "Design evaluations and record evidence", description: "Design lesson-grounded evaluations, record evidence, report outcomes, and exchange scoped progress.", inputSchema: { action: evidenceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(await evidenceAction(action, data(payload), siteOrigin)); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_resource", { title: "Manage educator-owned resources", description: "Portable versioned resources, collections, sharing previews, and export.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_resource", { title: "Manage and transform educator resources", description: "Prepare source-grounded transformations; manage portable versioned resources and sharing.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
   server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save records and course objects in the user's Solid Pod; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {

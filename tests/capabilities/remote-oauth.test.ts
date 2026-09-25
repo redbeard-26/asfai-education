@@ -90,4 +90,26 @@ describe("remote ASFAI connector OAuth", () => {
     expect(verifyCallbackToken(token, "google-callback")).toBe("tenant-example");
     expect(() => verifyCallbackToken(token, "solid-callback")).toThrow("Invalid ASFAI provider callback");
   });
+
+  it("registers Claude's web callback without accepting lookalike redirects", async () => {
+    for (const callback of [
+      "https://claude.ai/api/mcp/auth_callback",
+      "https://claude.com/api/mcp/auth_callback",
+    ]) {
+      const client = await registerOAuthClient({
+        client_name: "Claude",
+        redirect_uris: [callback],
+        token_endpoint_auth_method: "none",
+      });
+      expect(client).toMatchObject({ redirect_uris: [callback] });
+    }
+
+    for (const callback of [
+      "https://claude.ai.evil.example/api/mcp/auth_callback",
+      "https://claude.ai/other/callback",
+      "https://claude.ai/api/mcp/auth_callback?next=https://evil.example",
+    ]) {
+      await expect(registerOAuthClient({ redirect_uris: [callback] })).rejects.toThrow("invalid_redirect_uri");
+    }
+  });
 });
