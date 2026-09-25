@@ -2,7 +2,7 @@
   "mcpServers": {
     "asfai_learning": {
       "type": "http",
-      "url": "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education/api/mcp"
+      "url": "https://constitution.asfai.org/education/api/mcp"
     }
   }
 }

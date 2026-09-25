@@ -9,12 +9,20 @@ assert.equal(entries.length, 1, "The plugin must expose exactly one MCP connecto
 assert.equal(entries[0][0], "asfai_learning");
 assert.deepEqual(entries[0][1], {
   type: "http",
-  url: "https://twd7jms9v5.execute-api.us-west-2.amazonaws.com/education/api/mcp",
+  url: "https://constitution.asfai.org/education/api/mcp",
 });
 
 const manifest = JSON.parse(await readFile(path.join(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
 assert.equal(manifest.interface.displayName, "ASFAI Learning");
 assert.match(manifest.interface.longDescription, /one authenticated remote MCP connector/i);
+
+const claudeManifest = JSON.parse(
+  await readFile(path.join(pluginRoot, ".claude-plugin", "plugin.json"), "utf8"),
+);
+assert.equal(claudeManifest.name, "asfai-learning");
+assert.equal(claudeManifest.displayName, "ASFAI Learning");
+assert.equal(claudeManifest.skills, "./skills/");
+assert.equal(claudeManifest.mcpServers, "./.mcp.json");
 
 const skill = await readFile(path.join(pluginRoot, "skills", "asfai-learning", "SKILL.md"), "utf8");
 assert.match(skill, /exactly one authenticated remote MCP server/i);
@@ -26,4 +34,6 @@ for (const removed of ["server.mjs", "google-oauth-public-client.json", path.joi
   await assert.rejects(access(path.join(pluginRoot, removed)), undefined, `${removed} should not be packaged`);
 }
 
-process.stdout.write("ASFAI plugin smoke test passed (one remote connector, no local companion).\n");
+process.stdout.write(
+  "ASFAI plugin smoke test passed (ChatGPT/Codex + Claude, one remote connector, no local companion).\n",
+);

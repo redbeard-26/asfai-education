@@ -45,7 +45,7 @@ The bridge does not decide mastery. The AI maps work to learning objectives, use
 
 ## Google configuration
 
-The Google adapter uses a Web OAuth client and the connector's hosted callback at `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`. The AWS deployment supplies the client ID and secret as server-side environment variables. Every user grants access to their own Google account; the client credentials are never distributed in the plugin.
+The Google adapter uses a Web OAuth client and the connector's hosted callback at `<ASFAI_SITE_ORIGIN>/education/oauth/google/callback`. `ASFAI_SITE_ORIGIN` is the verified public origin and may proxy to the AWS-issued transport URL. The AWS deployment supplies the client ID and secret as server-side environment variables. Every user grants access to their own Google account; the client credentials are never distributed in the plugin.
 
 Set `ASFAI_GOOGLE_CLASSROOM_CLIENT_ID` and `ASFAI_GOOGLE_CLASSROOM_CLIENT_SECRET` in the education service's protected environment. A checked-in or user-supplied credential file is not part of the plugin installation.
 
