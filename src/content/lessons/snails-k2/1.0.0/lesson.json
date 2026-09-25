@@ -1,0 +1,326 @@
+{
+  "schemaVersion": "0.1",
+  "id": "urn:asfai:lesson:snails-k2",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "Snails: Body Parts, Needs, and Dangers",
+  "description": "A hands-on K-2 science lesson with live snails. Children learn a snail's body parts, how it moves, what it needs to live, and what dangers it faces, then record their own observation. Includes an optional grade 2 life-cycle extension for a separate day.",
+  "audience": {
+    "ageRangeStart": 5,
+    "ageRangeEnd": 8,
+    "description": "Grades K-2, early readers, little or no prior knowledge of snails. Part of a K-2 science unit on animal needs and body parts."
+  },
+  "estimatedMinutes": 48,
+  "interactionModes": ["teacher-led", "collaborative"],
+  "objectives": [
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:body-parts",
+      "name": "Name a snail's body parts",
+      "description": "Point to and name a snail's shell, foot, tentacles/eyes, and mouth on a picture or live snail.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "ngss-k5:1-LS1-1", "relationship": "relatedTo", "source": "NGSS" }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:needs",
+      "name": "Explain what a snail needs",
+      "description": "Name at least 2 things a snail needs to live: food (leaves), water or damp air, and shelter.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "mt_e6PP4ip39V", "relationship": "relatedTo", "source": "https://github.com/withmarbleapp/os-taxonomy" },
+        { "objectiveId": "ngss-k5:K-LS1-1", "relationship": "narrowerThan", "source": "NGSS" }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:movement",
+      "name": "Describe how a snail moves",
+      "description": "Tell how a snail glides on its one foot using slime.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "ngss-k5:1-LS1-1", "relationship": "relatedTo", "source": "NGSS" }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:dangers",
+      "name": "Name dangers snails face",
+      "description": "Say at least 2 dangers snails face, such as birds and other animals that eat them, drying out in hot sun, salt, garden sprays, or being stepped on.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "mt_ppENoD8vf1", "relationship": "relatedTo", "source": "https://github.com/withmarbleapp/os-taxonomy" }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:observation-record",
+      "name": "Record an observation",
+      "description": "Draw a snail and label at least one body part or write or dictate one thing observed.",
+      "alignmentType": "elicits",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "mt_ppENoD8vf1", "relationship": "relatedTo", "source": "https://github.com/withmarbleapp/os-taxonomy" }
+      ]
+    },
+    {
+      "objectiveId": "urn:asfai:objective:snails-k2:life-cycle",
+      "name": "Order the snail life cycle (grade 2 extension)",
+      "description": "Put the stages egg, baby snail, growing snail, and adult snail in order and tell how the shell grows with the snail.",
+      "alignmentType": "teaches",
+      "source": "ASFAI Snails K-2 1.0",
+      "externalAlignments": [
+        { "objectiveId": "mt_-vsLvsxp0L", "relationship": "relatedTo", "source": "https://github.com/withmarbleapp/os-taxonomy" }
+      ]
+    }
+  ],
+  "prerequisites": [],
+  "artifacts": [],
+  "assessmentMethods": [
+    {
+      "id": "snails-quick-check",
+      "type": "performance",
+      "title": "One-on-one quick check",
+      "objectiveIds": [
+        "urn:asfai:objective:snails-k2:body-parts",
+        "urn:asfai:objective:snails-k2:needs",
+        "urn:asfai:objective:snails-k2:movement",
+        "urn:asfai:objective:snails-k2:dangers"
+      ],
+      "rubricVersion": "0.1-pilot",
+      "criteria": [
+        {
+          "id": "body-parts",
+          "description": "Child points to and names snail body parts on a picture or live snail.",
+          "evidenceDescriptors": [
+            "Got it: names and points to all 4 (shell, foot, tentacles/eyes, mouth)",
+            "Getting there: names 2-3, or points correctly when the teacher says the name",
+            "Not yet: names 0-1"
+          ]
+        },
+        {
+          "id": "needs",
+          "description": "Child names things a snail needs to live.",
+          "evidenceDescriptors": [
+            "Got it: names 2 or more (food/leaves, water/damp, shelter/hiding place)",
+            "Getting there: names 1, or picks 2 correct picture cards when shown",
+            "Not yet: names none or only things snails do not need"
+          ]
+        },
+        {
+          "id": "movement",
+          "description": "Child tells or shows how a snail moves.",
+          "evidenceDescriptors": [
+            "Got it: mentions the one foot and the slime",
+            "Getting there: mentions either the foot or the slime, or acts out gliding",
+            "Not yet: says it walks with legs or cannot explain"
+          ]
+        },
+        {
+          "id": "dangers",
+          "description": "Child names dangers snails face.",
+          "evidenceDescriptors": [
+            "Got it: names 2 or more dangers",
+            "Getting there: names 1 danger",
+            "Not yet: names none"
+          ]
+        }
+      ],
+      "policy": {
+        "stage": "pilot",
+        "use": "formative only; guides reteaching",
+        "observer": "teacher, attributed",
+        "assistance": "record whether the child used a picture card or teacher prompt"
+      },
+      "consequential": false
+    },
+    {
+      "id": "snails-journal",
+      "type": "writing",
+      "title": "Observation journal page",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:observation-record"],
+      "rubricVersion": "0.1-pilot",
+      "criteria": [
+        {
+          "id": "observation-record",
+          "description": "Journal page shows a real observation of the snail.",
+          "evidenceDescriptors": [
+            "Got it: drawing shows a shell and body, with at least one correct label or one written/dictated observation",
+            "Getting there: drawing is recognizable but has no label or sentence",
+            "Not yet: page does not show the snail"
+          ]
+        }
+      ],
+      "policy": {
+        "stage": "pilot",
+        "use": "formative only",
+        "note": "Dictated sentences count; mark them as dictated. Judge the looking, not spelling or drawing skill."
+      },
+      "consequential": false
+    },
+    {
+      "id": "snails-lifecycle-check",
+      "type": "performance",
+      "title": "Life-cycle card order (extension)",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:life-cycle"],
+      "rubricVersion": "0.1-pilot",
+      "criteria": [
+        {
+          "id": "life-cycle",
+          "description": "Child puts life-cycle cards in order and explains them.",
+          "evidenceDescriptors": [
+            "Got it: correct order and says the shell grows with the snail",
+            "Getting there: correct order with help, or order right but no explanation",
+            "Not yet: cards out of order"
+          ]
+        }
+      ],
+      "policy": { "stage": "pilot", "use": "formative only" },
+      "consequential": false
+    }
+  ],
+  "activities": [
+    {
+      "id": "hook-mystery-shell",
+      "title": "Hook: Mystery Shell",
+      "type": "conversation",
+      "mode": "teacher-led",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:body-parts"],
+      "instructions": {
+        "student": "Reach into the bag and feel the mystery object. Don't peek! What does it feel like? Who do you think lived inside it? Tell us one thing you notice and one thing you wonder.",
+        "assistant": "Open with curiosity. Ask what the object feels like and who might have lived in it. Accept all guesses. Collect 'I notice' and 'I wonder' ideas in the child's own words. Do not explain snail facts yet. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: empty snail shell in a cloth bag, chart paper. Pass the bag around the circle. After guesses, reveal the shell. Make a two-column chart: 'I notice' and 'I wonder'. Keep the chart up to return to at the end."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 0 },
+      "estimatedMinutes": 5
+    },
+    {
+      "id": "body-parts",
+      "title": "Meet the Snail: Body Parts",
+      "type": "conversation",
+      "mode": "teacher-led",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:body-parts"],
+      "instructions": {
+        "student": "Let's meet the snail! Find the shell, the foot, the tentacles, and the mouth. Play 'Snail Says': touch your shell (your back), wiggle your tentacles (your fingers on your head), wave your foot. Then point to each part on your partner's picture and say its name.",
+        "assistant": "Teach four parts with their jobs: shell is the snail's house and protection; foot is one big muscle it glides on; the long top tentacles have eyes on the tips and the short bottom ones feel and smell; the mouth is under the head and scrapes up food. Then run a quick movement game and partner practice. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: large labeled snail poster, small unlabeled snail pictures (one per pair). Teach each part with its job. Play 'Snail Says' for 2 minutes. Pairs take turns pointing and naming. Listen in for who is unsure."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 0 },
+      "estimatedMinutes": 8
+    },
+    {
+      "id": "how-snails-move",
+      "title": "How Snails Move",
+      "type": "performance",
+      "mode": "teacher-led",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:movement"],
+      "instructions": {
+        "student": "Look under the snail. What do you see on its foot? Now be a snail: lie on your tummy and glide very slowly. Next, rub your dry hand on paper, then your wet hand. Which one slides better? Why do you think snails make slime?",
+        "assistant": "Help the child notice the ripples on the snail's foot and connect slime to sliding. Ask why wet slides better than dry. Guide toward: a snail has one foot and makes slime so it can glide and stay safe on rough ground. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: live snail on a clear plastic sheet or lid, held up so children see the foot from underneath; short video as backup; paper and a cup of water. Handle snails gently with wet hands. Keep the snail damp."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 0 },
+      "estimatedMinutes": 7
+    },
+    {
+      "id": "what-snails-need",
+      "title": "What Snails Need",
+      "type": "group-work",
+      "mode": "collaborative",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:needs"],
+      "instructions": {
+        "student": "Sort the picture cards. Does a snail need it, or not? Put leaves, water drops, and a damp hiding place in the 'needs' pile. Put toys, candy, and TV in the 'doesn't need' pile. Then help build our snail home and say what each thing is for.",
+        "assistant": "Guide sorting with questions like 'Would a snail eat this?' or 'Where would a snail hide?' Connect to the idea that all animals need food, water, and shelter. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: needs/doesn't-need picture cards (one set per small group), clear tank with air holes, damp soil, a rock or bark for shelter, lettuce or cucumber, spray bottle. Groups sort for 4 minutes, then build the class snail home together, naming each need as it goes in."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 0 },
+      "estimatedMinutes": 8
+    },
+    {
+      "id": "snail-dangers",
+      "title": "Snail Dangers",
+      "type": "conversation",
+      "mode": "teacher-led",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:dangers"],
+      "instructions": {
+        "student": "Look at each picture. How could this hurt a snail? What does a snail do to stay safe? What is one thing you can do to help snails?",
+        "assistant": "Walk through dangers: birds, beetles, frogs, and other animals eat snails; hot dry sun dries them out; salt and garden sprays hurt them; people can step on them. Explain that a snail hides in its shell and can close the opening with dried slime to stay damp. End with one kind action from each child. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: danger picture cards (bird, beetle, frog, hot sun, salt shaker, spray bottle, shoe). Do not demonstrate salt on a live snail. Collect 'ways to help' on the chart."
+      },
+      "assessmentMethodIds": [],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 0 },
+      "estimatedMinutes": 7
+    },
+    {
+      "id": "observation-journal",
+      "title": "Scientist Observation Journal",
+      "type": "writing",
+      "mode": "collaborative",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:observation-record"],
+      "instructions": {
+        "student": "You are a scientist! Look closely at the snail with your magnifier. Draw what you see. Label one part, like 'shell' or 'foot'. Then finish a sentence: 'I see the snail's ____.' or 'The snail is ____.'",
+        "assistant": "Encourage careful looking with questions like 'What color is the shell?' or 'What are the tentacles doing?' Accept dictated sentences. Praise details, not drawing skill. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: journal page with a drawing box and sentence frames, magnifiers, crayons, 1 live snail per small group on a damp plate, photo cards for any child who prefers not to be near a snail. Write dictated sentences for children who need it and mark them 'dictated'. Collect pages."
+      },
+      "assessmentMethodIds": ["snails-journal"],
+      "completion": { "type": "submission", "minimumEvidence": 1 },
+      "estimatedMinutes": 8
+    },
+    {
+      "id": "wrap-up-check",
+      "title": "Wrap-Up and Quick Check",
+      "type": "performance",
+      "mode": "teacher-led",
+      "objectiveIds": [
+        "urn:asfai:objective:snails-k2:body-parts",
+        "urn:asfai:objective:snails-k2:needs",
+        "urn:asfai:objective:snails-k2:movement",
+        "urn:asfai:objective:snails-k2:dangers"
+      ],
+      "instructions": {
+        "student": "Let's look at our wonder chart. What can we answer now? Then show me: point to the snail's foot. What does a snail need? How does a snail move? What is one danger for a snail?",
+        "assistant": "Answer wonder-chart questions together. Then ask each child the four check questions one at a time. Note if a picture card or hint was used. Speak naturally; do not describe these steps.",
+        "teacher": "Use the quick-check criteria while children finish journals or as they line up. Record Got it / Getting there / Not yet for each outcome and note any hints. Everyone washes hands with soap. Return snails to the tank or to the place outside where they were found."
+      },
+      "assessmentMethodIds": ["snails-quick-check"],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 1 },
+      "estimatedMinutes": 5
+    },
+    {
+      "id": "lifecycle-extension",
+      "title": "Grade 2 Extension: Snail Life Cycle",
+      "description": "Separate day. Not part of the core 48 minutes.",
+      "type": "group-work",
+      "mode": "collaborative",
+      "objectiveIds": ["urn:asfai:objective:snails-k2:life-cycle"],
+      "instructions": {
+        "student": "Here are four snail pictures: eggs, a baby snail, a growing snail, and a grown-up snail. Put them in order. Then tell the story of how a snail grows. Does a snail ever leave its shell?",
+        "assistant": "Guide ordering with 'What comes first?' Explain that snails hatch from small eggs laid in soil with a thin, soft shell, and the shell grows bigger as the snail grows. A snail never leaves its shell. Speak naturally; do not describe these steps.",
+        "teacher": "Materials: life-cycle picture cards (one set per pair). Pairs order the cards, then share the story. Check each child's order and explanation."
+      },
+      "assessmentMethodIds": ["snails-lifecycle-check"],
+      "completion": { "type": "teacher-confirmed", "minimumEvidence": 1 },
+      "estimatedMinutes": 15,
+      "optional": true
+    }
+  ],
+  "report": {
+    "title": "Snails Lesson Report",
+    "includeActivityTimeline": true,
+    "includeObjectiveEvidence": true,
+    "includeArtifacts": false,
+    "includeNextSteps": true
+  },
+  "provenance": {
+    "author": "Mike, drafted with ASFAI lesson authoring",
+    "license": "CC-BY-4.0",
+    "sourceUrls": [],
+    "createdAt": "2026-09-25T09:00:00-07:00",
+    "updatedAt": "2026-09-25T09:30:00-07:00"
+  }
+}
