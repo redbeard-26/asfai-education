@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { driveDocumentProcedure } from "@/lib/drive-storage";
 import { lessonReportSchema, lessonRunSchema } from "@/lib/lessons/schemas";
 
 export const ASSESSMENT_POLICY_VERSION = "asfai-assessment-0.2";
@@ -117,11 +118,11 @@ export const learningInteractionSchema = z.object({
 });
 
 export const storageTargetSchema = z.object({
-  mode: z.enum(["indexeddb", "local_file", "solid_pod"]).default("local_file"),
+  mode: z.enum(["indexeddb", "local_file", "solid_pod", "google_drive"]).default("local_file"),
   location: z
     .string()
     .optional()
-    .describe("Local profile path, IndexedDB location, or the learner's HTTPS Pod root/profile URL"),
+    .describe("Local profile path, IndexedDB location, the learner's HTTPS Pod root/profile URL, or the ID of the learner's ASFAI Google Drive folder"),
 });
 
 export type MasteryLevel = z.infer<typeof masteryLevelSchema>;
@@ -231,9 +232,10 @@ export function persistenceFor(storage?: StorageTarget) {
         "Read key 'current' back in a new readonly transaction and verify learnerId, schemaVersion, updatedAt, and collection counts match the returned profile.",
       ],
       instruction:
-        "Write and verify the complete returned profile in the ASFAI Education origin's IndexedDB. If this host cannot execute browser JavaScript on that origin, do not claim it was saved; offer a local JSON file or authenticated Solid Pod instead.",
+        "Write and verify the complete returned profile in the ASFAI Education origin's IndexedDB. If this host cannot execute browser JavaScript on that origin, do not claim it was saved; offer a local JSON file, an authenticated Solid Pod, or Google Drive through the assistant's Drive connector instead.",
     };
   }
+  if (target.mode === "google_drive") return driveDocumentProcedure("learner", target.location);
   if (target.mode === "solid_pod") {
     if (!target.location) {
       throw new Error("A Solid Pod root or learner profile URL is required for solid_pod storage.");

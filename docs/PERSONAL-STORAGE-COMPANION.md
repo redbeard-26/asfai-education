@@ -13,7 +13,11 @@ The intended flow is:
 
 The learner does not clone a repository, install Node packages, edit MCP settings, select a filesystem path, or keep a webpage open. A repository developer may still run `npm run personal-storage:mcp` as a legacy local test harness; it is not packaged in the plugin.
 
-## Pod-only remote storage
+## Google Drive
+
+Users who prefer Google Drive keep the same records in an `ASFAI` folder in their My Drive. The assistant writes those files with its own Google Drive connector; ASFAI never receives Drive credentials or content. `asfai_storage` action `instructions` with `target.mode: "google_drive"` returns the steps. See [Google Drive storage](GOOGLE-DRIVE-STORAGE.md).
+
+## Pod storage
 
 Call `asfai_storage` with action `connect_pod` and only the Pod root and OIDC issuer, for example:
 
@@ -35,7 +39,7 @@ The authorization persists across chats and, when the host shares the installed 
 
 ## Fallback and identity
 
-If no Pod is available, `status` returns `mode: "not_connected"`. Private `load`, `save`, object, identity, and signing actions stop without creating an ASFAI-hosted record. The assistant may continue without persistence or return portable JSON while the user connects a Pod.
+If no Pod is available, `status` returns `mode: "not_connected"`. Private `load`, `save`, object, identity, and signing actions stop without creating an ASFAI-hosted record. The assistant may use a Google Drive store, continue without persistence, or return portable JSON while the user connects a Pod.
 
 Large course files and derived text use the object actions `put_object`, `get_object`, `head_object`, `list_objects`, and `delete_object`. Paths are confined beneath the Pod's `asfai/` container, reads are bounded, and writes and deletes support digest conflict checks.
 
@@ -43,17 +47,17 @@ Large course files and derived text use the object actions `put_object`, `get_ob
 
 ## Essays and writing feedback
 
-A student's essays and writing feedback are saved only in the student's own Pod, from the student's own chat, after the student agrees. A teacher's connector cannot write to a student's Pod. The teacher approves the T30 grade and feedback first; the student then saves it during S17 Writing Feedback.
+A student's essays and writing feedback are saved only in the student's own Pod or Google Drive, from the student's own chat, after the student agrees. A teacher's connector cannot write to a student's store. The teacher approves the T30 grade and feedback first; the student then saves it during S17 Writing Feedback.
 
 ```text
-<pod-root>/asfai/writing/<assignment-id>/
+<pod-root>/asfai/writing/<assignment-id>/   (Drive: My Drive/ASFAI/writing/<assignment-id>/)
   essay-v1.txt         the student's text, exactly as written
   feedback-v1.json     teacher-approved grade and feedback, with essayPath and essayDigest
   essay-v2.txt         each revision is a new file; saved drafts are never overwritten
   revision-v2.json     revision check, with previous and revised essay paths and digests
 ```
 
-Files are written with `put_object` and confirmed by read-back. Each essay version also gets an `artifacts` entry in `learner.json` that points to its object path and digest; the full text is kept inline only up to 8,192 bytes. The step-by-step instructions are in the `asfai-personal-storage` skill. These storage calls are the only ASFAI calls that carry essay text: the grading and revision tools ignore it, and the storage gateway writes it to the Pod without keeping a copy.
+Pod files are written with `put_object`; Drive files are uploaded by the assistant. Both are confirmed by read-back. Each essay version also gets an `artifacts` entry in `learner.json` that points to its Pod path or Drive file ID; the full text is kept inline only up to 8,192 bytes. The step-by-step instructions are in the `asfai-personal-storage` skill. With a Pod, these storage calls are the only ASFAI calls that carry essay text: the grading and revision tools ignore it, and the storage gateway writes it to the Pod without keeping a copy. With Drive, essay text never reaches ASFAI.
 
 ## Security boundary
 

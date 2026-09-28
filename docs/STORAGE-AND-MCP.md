@@ -4,11 +4,12 @@ ASFAI Education does not require an ASFAI learner account.
 
 ## Storage boundary
 
-Learner progress is private, user-controlled state. The initial implementation supports two interchangeable browser stores behind the `LearnerStore` interface, plus a host-local JSON option for MCP chat clients:
+Learner progress is private, user-controlled state. The initial implementation supports two interchangeable browser stores behind the `LearnerStore` interface, plus host-side options for MCP chat clients:
 
 1. **IndexedDB** — default, zero-setup persistence in the current browser profile.
 2. **Solid Pod** — portable cloud persistence using Solid OIDC. PrivateDataPod is the first tested provider, but the implementation uses Solid standards rather than provider-specific APIs.
 3. **Local JSON** — a host-approved `asfai/learner.json` file when the AI chat environment has persistent filesystem access.
+4. **Google Drive** — `My Drive/ASFAI/learner.json`, written by the AI assistant's own Google Drive connector. ASFAI never receives Drive credentials or content. See [Google Drive storage](GOOGLE-DRIVE-STORAGE.md).
 
 The learner profile retains a pseudonymous learner UUID, evidence events, learner-owned artifact metadata and short transcripts, assessment claims, derived learner-objective states, lesson runs, and lesson reports. Moving a profile from IndexedDB to a Pod preserves the same learner UUID. Schema `0.2` migrates existing `0.1` profiles in place. Inline artifact transcripts are capped at 8 KiB of UTF-8 text; larger or binary artifacts stay in their owner-controlled source and are referenced from the profile.
 
@@ -41,7 +42,7 @@ The Education MCP server does not require an ASFAI user account. It hosts public
 
 The **ASFAI Learning** plugin contains exactly one remote MCP connector. OAuth 2.1 with PKCE creates a pseudonymous connector tenant; an email address or ASFAI login is not required. The same connection exposes nine compact tools, including `asfai_storage` and the provider-neutral `asfai_classroom`. Provider authorization is completed on the provider's hosted page. Reusable Solid and Google grants are encrypted with AES-256-GCM and isolated by connector tenant; they never appear in tool arguments or model-visible output.
 
-`asfai_storage` uses the Pod whenever a valid Solid grant is available. Without a Pod, private remote reads and writes stop and persistence remains pending; ASFAI does not create a fallback education record. `load` and `save` perform digest-based conflict checks and independent read-back. `identity`, `sign`, and `verify_signature` use a Pod-owned Ed25519 key without exporting it through the tool. Large course objects are stored beneath the Pod's `asfai/courses/` container through bounded, digest-verified object actions.
+`asfai_storage` uses the Pod whenever a valid Solid grant is available. Without a Pod, private remote reads and writes stop; the assistant may use a Google Drive store with its own connector, or persistence remains pending. ASFAI does not create a fallback education record. `load` and `save` perform digest-based conflict checks and independent read-back. `identity`, `sign`, and `verify_signature` use a Pod-owned Ed25519 key without exporting it through the tool. Large course objects are stored beneath the Pod's `asfai/courses/` container through bounded, digest-verified object actions.
 
 The gateway uses these stable documents:
 
@@ -69,13 +70,14 @@ For direct web or developer clients, `asfai_storage` action `instructions` still
 
 - browser JavaScript executing on the ASFAI Education origin for IndexedDB;
 - a persistent filesystem writer for local JSON; or
-- a logged-in Solid session with authenticated fetch for a Pod.
+- a logged-in Solid session with authenticated fetch for a Pod; or
+- the assistant's own Google Drive connector for Drive (`host_google_drive`).
 
-IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. The installed plugin does not depend on these host capabilities: its authenticated remote `asfai_storage` actions perform the write. Direct clients may say progress is saved only after read-back verification succeeds.
+IndexedDB is origin-bound, and a WebID by itself is not an authenticated Solid session. For Pod storage the installed plugin does not depend on these host capabilities: its authenticated remote `asfai_storage` actions perform the write. Google Drive is the exception: the assistant's own Drive connector performs the write and read-back. Direct clients may say progress is saved only after read-back verification succeeds.
 
 Hosted game launches use an optional one-hour pseudonymous result relay. The relay receives a minimized game summary, not the learner profile, and deletes the result after one successful claim. Its process-local pilot implementation is not a durable learner-record store.
 
-This boundary allows an AI assistant to reason over the public graph while keeping durable learner data in IndexedDB or a user-owned Pod.
+This boundary allows an AI assistant to reason over the public graph while keeping durable learner data in IndexedDB, a user-owned Pod, or the user's Google Drive.
 
 See [Lessons and artifacts](LESSONS-AND-ARTIFACTS.md) and [Lesson progress exchange](PROGRESS-EXCHANGE.md).
 

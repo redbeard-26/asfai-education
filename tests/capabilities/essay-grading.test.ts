@@ -114,7 +114,7 @@ describe("S17 revision check", () => {
   });
 });
 
-describe("essay Pod save instructions", () => {
+describe("essay save instructions", () => {
   it("describe a learner artifact entry that matches the learner schema", () => {
     const entry = {
       id: "essay-bees-v1",

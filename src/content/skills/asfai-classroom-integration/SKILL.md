@@ -7,7 +7,7 @@ description: Import or export assignments and student work through a configured 
 
 Use this guidance when a learner or teacher wants to move work between an AI conversation and a classroom system. The single ASFAI Learning connector exposes one provider-neutral tool named `asfai_classroom`. Always pass a provider identifier; pass `provider: "google"` for Google Classroom. Future providers implement the same workflow instead of adding more connectors or always-loaded tools.
 
-Classroom OAuth grants are encrypted and isolated to the authenticated connector. Never ask for or expose tokens, authorization codes, secrets, or passwords. Import only the selected work needed for the educational task, then save concise evidence to the Pod-first learner store.
+Classroom OAuth grants are encrypted and isolated to the authenticated connector. Never ask for or expose tokens, authorization codes, secrets, or passwords. Import only the selected work needed for the educational task, then save concise evidence to the user's own store (Solid Pod or Google Drive).
 
 ## Natural conversation
 
@@ -43,13 +43,13 @@ Use `asfai_evidence` to create objective-linked observations and assessment clai
 
 ## Save before external passback
 
-Before returning a grade or feedback, save the concise objective-level evidence and report through `asfai_storage`:
+Before returning a grade or feedback, save the concise objective-level evidence and report in the user's store (Pod through `asfai_storage`, or Google Drive through the assistant's own Drive connector as described in `asfai-personal-storage`):
 
-1. Call `status`; require a connected Pod before saving private evidence. If none is connected, keep the result portable and say persistence is pending.
+1. Choose the store as described in `asfai-personal-storage`. If there is neither a connected Pod nor a Drive store, keep the result portable and say persistence is pending.
 2. Load the appropriate `learner`, `educator`, or `classroom` document.
 3. Append the minimum useful evidence, assessment claim, and report reference. Avoid unnecessary personal data, full submission copies, and verbatim conversations.
-4. Save the complete updated document with the prior digest as `expectedDigest`.
-5. Treat it as saved only when the result has `verified:true`.
+4. Save the complete updated document with that store's conflict check (Pod: the prior digest as `expectedDigest`; Drive: an unchanged modified time).
+5. Treat it as saved only after read-back verification (Pod: `verified:true`).
 
 If the original file remains in Classroom, add one learner-owned entry to the profile's top-level `artifacts` map with `{ id, createdAt, kind, title?, mediaType?, byteLength?, sha256?, provenance:{ system, externalId?, url?, retrievedAt? }, transcript?:{ text?, summary?, language?, method, reviewStatus, confidence?, complete } }`, and add that artifact ID to each relevant evidence event's `artifactIds`. Preserve the full transcript only when it is at most 8,192 UTF-8 bytes. For larger transcripts, preserve a summary of at most 2,000 characters and the Classroom reference; do not embed the original binary or a base64 copy. Record how the transcript was produced, review status, confidence when available, and whether it is complete. An uncertain handwriting transcription stays `ai-transcribed`, `unreviewed`, and incomplete until confirmed. Do not send the transcript or complete learner profile to the public ASFAI MCP.
 

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <main className="legal-page">
       <p className="eyebrow">ASFAI Education</p>
       <h1>Privacy policy</h1>
-      <p className="legal-updated">Effective August 24, 2026</p>
+      <p className="legal-updated">Effective September 28, 2026</p>
 
       <section>
         <h2>Our privacy model</h2>
@@ -19,8 +19,8 @@ export default function PrivacyPage() {
           ASFAI Education is designed so that a learner&apos;s detailed progress and schoolwork remain under
           that learner&apos;s or educator&apos;s control. The ASFAI Learning connector supplies learning objectives,
           lesson guidance, private-storage routing, and classroom exchange. It creates an accountless,
-          connector-scoped identifier rather than requiring a learner account. A connected Solid Pod is the
-          primary home for private learning records.
+          connector-scoped identifier rather than requiring a learner account. Private learning records live
+          in storage the user owns: a connected Solid Pod or the user&apos;s Google Drive.
         </p>
       </section>
 
@@ -31,6 +31,11 @@ export default function PrivacyPage() {
           <li>
             Learner evidence, assessment claims, and lesson reports that a user chooses to save in an
             authorized Solid Pod. ASFAI does not retain a private education-data fallback copy.
+          </li>
+          <li>
+            Records a user chooses to keep in Google Drive are written by the user&apos;s own AI assistant
+            through its own Google connection. ASFAI does not receive Google Drive credentials or the content
+            of those files.
           </li>
           <li>
             Google Classroom course, assignment, submission, roster, and Drive-attachment information that
@@ -74,9 +79,9 @@ export default function PrivacyPage() {
           approves that save.
         </p>
         <p>
-          Users control records stored in their Solid Pod and may edit or delete them there. If no Pod is
-          connected, private education records remain pending in the user&apos;s assistant rather than being
-          saved by ASFAI. Users can revoke Google access at any time from their Google Account permissions or
+          Users control records stored in their Solid Pod or Google Drive and may edit or delete them there.
+          If neither is available, private education records remain pending in the user&apos;s assistant rather
+          than being saved by ASFAI. Users can revoke Google access at any time from their Google Account permissions or
           by asking ASFAI to forget the Classroom authorization for that connector.
         </p>
       </section>

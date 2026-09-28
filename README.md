@@ -28,6 +28,8 @@ Learner state is accessed through a common `LearnerStore` interface with two ini
 - **IndexedDB** — the zero-setup default, stored in the current browser profile.
 - **Solid Pod** — portable cloud storage using Solid OIDC; PrivateDataPod is the first provider targeted for testing.
 
+In AI chat, records can also be kept in **Google Drive**: the assistant writes an `ASFAI` folder in the user's My Drive with its own Google Drive connector, and ASFAI never receives Drive credentials or content. See [Google Drive storage](docs/GOOGLE-DRIVE-STORAGE.md).
+
 The education MCP server is also in this repository. The installed plugin connects to one authenticated remote MCP with nine compact gateways rather than one tool for each feature:
 
 - `asfai_capability` discovers 33 platform, 88 educator, and 51 student capabilities and delivers workflow guidance;
@@ -37,12 +39,12 @@ The education MCP server is also in this repository. The installed plugin connec
 - `asfai_lesson` authors, validates, reviews, publishes, assigns, and facilitates versioned lessons and games;
 - `asfai_evidence` prepares assessment, records justified observations and claims, reports, and exchanges scoped progress;
 - `asfai_resource` manages immutable educator resources, collections, rooms, quizzes, sharing, publication previews, and resumable artifact jobs; and
-- `asfai_storage` connects and writes a Solid Pod, manages large private course objects, and retains host-side IndexedDB/local-file procedures for direct-client compatibility; and
+- `asfai_storage` connects and writes a Solid Pod, manages large private course objects, and returns host-side procedures for Google Drive, IndexedDB, and local files; and
 - `asfai_classroom` connects a named classroom provider, imports work, creates assignments and supporting documents, exports work, and returns approved evaluations.
 
-The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. Public learning operations do not retain learner identity or raw work. The two private gateways use the authenticated connector tenant: `asfai_storage` writes education data only to the connected Pod, while `asfai_classroom` retains only encrypted reusable provider authorization.
+The serialized default tool definitions are kept below 6,000 characters in CI. Exact capability schemas, policy, provenance, and workflow guidance are fetched only after selection. Public learning operations do not retain learner identity or raw work. The two private gateways use the authenticated connector tenant: `asfai_storage` writes education data only to the connected Pod (Drive files are written by the assistant, never by ASFAI), while `asfai_classroom` retains only encrypted reusable provider authorization.
 
-The **ASFAI Learning** plugin contains one remote MCP connector and one compact routing skill. The connector authenticates through OAuth with no ASFAI account and writes private education data only to a connected Solid Pod. Without a Pod it continues without persistence or returns portable state; ASFAI does not retain a fallback education record. The same connector provides a provider-neutral classroom bridge, with Google as the first adapter. No repository clone, local runtime, website session, or manual MCP configuration is required. See [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md), [Private course knowledge](docs/COURSE-KNOWLEDGE.md), and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
+The **ASFAI Learning** plugin contains one remote MCP connector and one compact routing skill. The connector authenticates through OAuth with no ASFAI account and writes private education data only to a connected Solid Pod. Users may instead keep their records in Google Drive, written by the assistant's own Drive connector. Without either it continues without persistence or returns portable state; ASFAI does not retain a fallback education record. The same connector provides a provider-neutral classroom bridge, with Google as the first adapter. No repository clone, local runtime, website session, or manual MCP configuration is required. See [Private storage gateway](docs/PERSONAL-STORAGE-COMPANION.md), [Google Drive storage](docs/GOOGLE-DRIVE-STORAGE.md), [Private course knowledge](docs/COURSE-KNOWLEDGE.md), and [Classroom connectors](docs/CLASSROOM-CONNECTORS.md).
 
 See [Accountless learner storage and Education MCP](docs/STORAGE-AND-MCP.md).
 See [Capability catalog and compact MCP](docs/CAPABILITIES-AND-MCP.md) for the complete contract and compatibility mapping.

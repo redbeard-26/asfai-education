@@ -1,6 +1,6 @@
 # Learner-owned storage procedure
 
-The authenticated ASFAI Learning connector can load and save the portable profile through `asfai_storage`. Call `status` first. A connected Solid Pod is required for remote persistence; otherwise continue without persistence or return portable JSON. Load before assessment and save the complete update with the prior digest as `expectedDigest`. Claim success only when the tool returns `verified:true`.
+The authenticated ASFAI Learning connector can load and save the portable profile through `asfai_storage`. Call `status` first. A connected Solid Pod is required for persistence through the connector. If the learner uses Google Drive instead, follow the Google Drive procedure below with the assistant's own Drive connector. With neither, continue without persistence or return portable JSON. Load before assessment and save the complete update with the prior digest as `expectedDigest`. Claim success only when the tool returns `verified:true`.
 
 Use the host-side procedures below only when the remote private-storage actions are genuinely unavailable. They are compatibility fallbacks, not prerequisites for the normal MCP workflow.
 
@@ -10,7 +10,8 @@ When using a host-side fallback, inspect which capability is real:
 
 - `browser_indexeddb`: JavaScript can run on the ASFAI Education origin and use IndexedDB;
 - `local_filesystem`: the host can read, atomically replace, and reread a learner-approved file;
-- `authenticated_solid_fetch`: the host has a logged-in Solid session and fetch bound to that session.
+- `authenticated_solid_fetch`: the host has a logged-in Solid session and fetch bound to that session;
+- `host_google_drive`: the assistant has its own Google Drive connector that can create, read, and update files in the learner's My Drive.
 
 Call `asfai_storage` action `instructions` with `owner: "learner"`, the target, and confirmed capabilities. Do not offer an unavailable target as though it will work. Do not prefer these procedures over a working `asfai_storage` private save.
 
@@ -25,7 +26,7 @@ IndexedDB is origin-bound. A generic chat or remote MCP process cannot write the
 5. Wait for the transaction's `complete` event. A successful request event alone does not prove the transaction committed.
 6. Open a new `readonly` transaction, read `current`, and call `asfai_storage` action `verify` with the expected returned profile and actual read-back. Confirm that `verified` is true.
 
-If browser execution on the correct origin is unavailable, use a local JSON file or authenticated Pod instead.
+If browser execution on the correct origin is unavailable, use a local JSON file, an authenticated Pod, or Google Drive instead.
 
 ## Local JSON file
 
@@ -48,6 +49,19 @@ If the host cannot write files, offer the returned profile as a downloadable JSO
 7. Read the resource back with authenticated fetch and call `asfai_storage` action `verify` with the expected and actual profiles.
 
 Do not pass passwords, access tokens, refresh tokens, DPoP keys, or session cookies to any ASFAI MCP tool. If the chat host lacks authenticated Solid fetch, explain that it cannot save to the Pod yet and offer another target.
+
+## Google Drive
+
+Use this when the assistant has its own Google Drive connector and the learner chooses Drive. ASFAI never receives Drive credentials or file content.
+
+1. Call `asfai_storage` action `instructions` with `owner: "learner"` and `target: { "mode": "google_drive" }` (add `"location": "<ASFAI folder ID>"` once known).
+2. Find the learner's `ASFAI` folder in My Drive, marked by `asfai-store.json`. With the learner's agreement, create it if absent. Never use a shared drive.
+3. Read and parse `ASFAI/learner.json`. If it does not exist, begin without `learnerProfile`. Note the file's modified time.
+4. Before saving, check the modified time again. If it changed, reload and reconcile instead of overwriting.
+5. Replace the file content with the complete returned profile as a plain `application/json` file. Do not convert it to a Google Doc.
+6. Read it back and confirm the parsed JSON is identical to what was written. Do not send the profile to ASFAI to compare.
+
+If the assistant has no Drive connector, explain that it cannot save to Drive yet and offer another target.
 
 ## Confirmation
 

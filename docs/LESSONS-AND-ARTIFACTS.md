@@ -7,8 +7,8 @@ ASFAI lessons are public, immutable plans that coordinate objectives, activities
 | Record | Purpose | Default owner |
 |---|---|---|
 | `LessonDefinition` | Public versioned plan | ASFAI lesson catalog |
-| `LessonAssignment` | Teacher configuration and sharing scope | Teacher local store or Pod |
-| `LessonRun` | One learner's activity state and evidence references | Learner local store or Pod |
+| `LessonAssignment` | Teacher configuration and sharing scope | Teacher local store, Pod, or Drive |
+| `LessonRun` | One learner's activity state and evidence references | Learner local store, Pod, or Drive |
 | `LessonReport` | Lesson-scoped projection of evidence and claims | Learner until explicitly shared |
 
 The learner-profile schema is `0.2`. Existing `0.1` profiles are upgraded without changing the learner identifier or existing evidence and claims. Lesson runs and reports are added as separate collections.

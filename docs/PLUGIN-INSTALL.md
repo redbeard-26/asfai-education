@@ -15,7 +15,7 @@ The same download works with ChatGPT/Codex and Claude. It connects to the hosted
 
 4. Keep **ASFAI Learning** enabled in Plugins and start a new chat so its current skill and MCP tools are loaded.
 
-Existing installations can be refreshed with the second command after replacing the extracted files. Do not configure separate student, teacher, Pod, storage, or Google Classroom connectors: the plugin deliberately exposes one authenticated ASFAI Education MCP connector.
+Existing installations can be refreshed with the second command after replacing the extracted files. Do not configure separate student, teacher, Pod, storage, or Google Classroom connectors: the plugin deliberately exposes one authenticated ASFAI Education MCP connector. Google Drive storage uses the assistant's own Google Drive connector, which is separate from ASFAI.
 
 ## Install in Claude
 

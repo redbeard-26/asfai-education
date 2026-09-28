@@ -1,6 +1,6 @@
 ---
 name: education-concept-assessment
-description: Run an adaptive ASFAI learning-objective assessment entirely in chat, create evidence and an assessment claim, and persist the portable learner profile locally or in the learner's Solid Pod without requiring the education website.
+description: Run an adaptive ASFAI learning-objective assessment entirely in chat, create evidence and an assessment claim, and persist the portable learner profile locally, in the learner's Solid Pod, or in the learner's Google Drive without requiring the education website.
 ---
 
 # ASFAI conversational learning assessment
@@ -22,6 +22,7 @@ Inspect the host's available capabilities first, then ask the learner only about
 - IndexedDB: use database `asfai-education`, version `1`, object store `learner-profile`, key `current`. This requires browser JavaScript executing on the ASFAI Education origin; an ordinary remote MCP server or chat without browser execution cannot access it.
 - Local file: use a persistent, user-approved path such as `asfai/learner.json`. This requires a host filesystem tool.
 - Solid Pod: use `<pod-root>/asfai/learner.json`. This requires a learner-authenticated Solid fetch in the chat host or connected app. The public ASFAI MCP cannot perform the login or receive authentication secrets.
+- Google Drive: use `ASFAI/learner.json` in the learner's My Drive. This requires the assistant's own Google Drive connector; ASFAI never receives Drive credentials or content.
 - No supported writer: continue as practice or return the updated profile as downloadable JSON. Say that saving is still pending.
 
 Read [references/learner-storage.md](references/learner-storage.md) before loading or saving a profile. Follow its procedure exactly, including the read-back check.
@@ -63,6 +64,7 @@ For `storage`:
 - local file: `{ "mode": "local_file", "location": "<chosen path>" }`
 - browser IndexedDB: `{ "mode": "indexeddb" }`
 - Solid Pod: `{ "mode": "solid_pod", "location": "<pod root or full learner.json URL>" }`
+- Google Drive: `{ "mode": "google_drive" }`, adding `"location": "<ASFAI folder ID>"` once known
 
 The tool returns a complete updated `profile`, not a server-side write confirmation. Follow every returned persistence step immediately and save exactly that profile. Read it back and compare `learnerId`, `schemaVersion`, `updatedAt`, and collection counts. Confirm saving to the learner only after that verification succeeds.
 

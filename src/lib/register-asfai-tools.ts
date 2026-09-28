@@ -52,7 +52,7 @@ import {
   createCourseAccessGrant,
   createCoursePackage,
   groundedAnswerSchema,
-  podObjectReferenceSchema,
+  storageObjectReferenceSchema,
   retireMaterialVersion,
   revokeCourseAccessGrant,
   validateCourseAccess,
@@ -92,6 +92,7 @@ import {
   progressEnvelopeSchema,
 } from "@/lib/lessons/schemas";
 import { lessonContentDigest, validateLesson } from "@/lib/lessons/validation";
+import { DRIVE_HOST_CAPABILITY, driveDocumentKinds, driveDocumentProcedure, driveObjectProcedure } from "@/lib/drive-storage";
 import { buildLessonReport, getNextActivity, startLessonRun } from "@/lib/lessons/workflow";
 import { reviewLesson } from "@/lib/register-lesson-tools";
 import {
@@ -200,7 +201,7 @@ async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, 
       catalog: { version: "2.0.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
       defaultTools: ASFAI_DEFAULT_TOOL_NAMES,
       contextBudget: { defaultToolCount: 9, maximumToolCount: 12, serializedCharacterTarget: 8000, serializedCharacterMaximum: 10000 },
-      state: "Public graph and capability metadata are cacheable. Private education records and course objects are written only to the user's connected Solid Pod; without one, persistence remains pending.",
+      state: "Public graph and capability metadata are cacheable. Private education records and course objects are written only to the user's own storage: the connected Solid Pod through asfai_storage, or the user's Google Drive through the assistant's own Drive connector. ASFAI never accesses Drive. Without either, persistence remains pending.",
     };
   }
   if (action === "list" || action === "search" || action === "recommend") {
@@ -457,16 +458,20 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
   }
   if (action === "prepare_course_share") {
     const input = z.object({
-      course: courseKnowledgePackageSchema, manifestRef: podObjectReferenceSchema, recipientId: z.string().optional(),
+      course: courseKnowledgePackageSchema, manifestRef: storageObjectReferenceSchema, recipientId: z.string().optional(),
       expiresAt: z.string().datetime({ offset: true }).optional(), confirmed: z.boolean().default(false),
     }).parse(payload);
     if (!input.confirmed) {
       return {
-        preview: { courseId: input.course.courseId, courseVersion: input.course.version, recipientId: input.recipientId, manifestRef: input.manifestRef.href, expiresAt: input.expiresAt },
+        preview: { courseId: input.course.courseId, courseVersion: input.course.version, recipientId: input.recipientId, manifestRef: input.manifestRef.storage === "solid_pod" ? input.manifestRef.href : `drive:${input.manifestRef.path}`, expiresAt: input.expiresAt },
         confirmationRequired: true,
       };
     }
-    return { grant: createCourseAccessGrant(input), signingRequired: true, ...persistenceNotice("educator"), nextTool: "asfai_storage" };
+    const grant = createCourseAccessGrant(input);
+    if (input.manifestRef.storage === "google_drive") {
+      return { grant, signingRequired: false, driveSharing: "With the assistant's Drive connector, share the course folder read-only with the recipient only after the educator confirms. Signed grants need a Pod identity, so a Drive grant is unsigned and Drive sharing controls access.", ...persistenceNotice("educator") };
+    }
+    return { grant, signingRequired: true, ...persistenceNotice("educator"), nextTool: "asfai_storage" };
   }
   if (action === "revoke_course_share") {
     const input = z.object({ grant: courseAccessGrantSchema, confirmed: z.boolean().default(false) }).parse(payload);
@@ -564,11 +569,11 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
     return resource;
   }
   if (action === "create") {
-    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
+    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown().optional(), contentRef: storageObjectReferenceSchema.optional(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
     return { ...createResource(workspace, input), ...persistenceNotice("educator") };
   }
   if (action === "version") {
-    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional() }).parse(payload);
+    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown().optional(), contentRef: storageObjectReferenceSchema.optional() }).parse(payload);
     return { ...versionResource(workspace, input.resourceId, input), ...persistenceNotice("educator") };
   }
   if (action === "delete") {
@@ -602,6 +607,7 @@ function educatorPersistence(target?: { mode?: string; location?: string }) {
     if (new URL(location).protocol !== "https:") throw new Error("Solid Pod storage requires HTTPS.");
     return { mode, location, requiredCapability: "authenticated_solid_fetch", steps: ["Use the educator's authenticated Solid session; never send credentials to ASFAI.", "Read first and preserve ETag when available.", "Write the complete JSON with application/json.", "Read back and compare digest, schemaVersion, owner identifier, and collection counts."], serverRetained: false };
   }
+  if (mode === "google_drive") return driveDocumentProcedure("educator", target?.location);
   if (mode === "indexeddb") return { mode, location: "indexeddb://asfai-education/educator-workspace/current", requiredCapability: "browser_indexeddb", steps: ["Put the complete workspace at key current in a readwrite transaction.", "Wait for transaction completion.", "Read back in a new transaction and compare digest and counts."], serverRetained: false };
   return { mode: "local_file", location: target?.location ?? "asfai/educator-workspace.json", requiredCapability: "local_filesystem", steps: ["Write a temporary JSON file in the same directory.", "Atomically replace the target.", "Read back and compare digest and counts."], serverRetained: false };
 }
@@ -616,10 +622,17 @@ async function storageAction(action: z.infer<typeof storageActionSchema>, payloa
     return owner === "learner" ? { state: migrateLearnerProfile(), ...persistenceNotice("learner") } : { state: newEducatorWorkspace(), ...persistenceNotice("educator") };
   }
   if (action === "instructions") {
-    const input = z.object({ owner: z.enum(["learner", "educator"]), target: z.record(z.string(), z.unknown()).optional(), hostCapabilities: z.array(z.string()).max(10).optional() }).parse(payload);
+    const input = z.object({
+      owner: z.enum(["learner", "educator"]), target: z.record(z.string(), z.unknown()).optional(), hostCapabilities: z.array(z.string()).max(10).optional(),
+      document: z.enum(driveDocumentKinds).optional(), objectPath: z.string().optional(), contentType: z.string().max(200).optional(),
+    }).parse(payload);
     const target = input.target as { mode?: string; location?: string } | undefined;
-    const persistence = input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(target);
-    const required = target?.mode === "indexeddb" ? "browser_indexeddb" : target?.mode === "solid_pod" ? "authenticated_solid_fetch" : "local_filesystem";
+    const persistence = target?.mode === "google_drive"
+      ? input.objectPath
+        ? driveObjectProcedure(input.objectPath, input.contentType ?? "application/octet-stream", target.location)
+        : driveDocumentProcedure(input.document ?? input.owner, target.location)
+      : input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(target);
+    const required = target?.mode === "indexeddb" ? "browser_indexeddb" : target?.mode === "solid_pod" ? "authenticated_solid_fetch" : target?.mode === "google_drive" ? DRIVE_HOST_CAPABILITY : "local_filesystem";
     const capable = input.hostCapabilities ? input.hostCapabilities.includes(required) : null;
     return { persistence, capabilityCheck: { required, capable }, confirmationRule: "Say saved only after a successful write and independent read-back verification." };
   }
@@ -682,7 +695,7 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
   server.registerTool("asfai_resource", { title: "Manage and transform educator resources", description: "Prepare source-grounded transformations; manage portable versioned resources and sharing.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save records and course objects in the user's Solid Pod; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save records and course objects in the user's Solid Pod; gives host-side steps for Google Drive and other stores.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
     try { return json(await storageAction(action, data(payload), tenantId(extra))); } catch (error) { return err(error); }
   });
   server.registerTool("asfai_classroom", { title: "Exchange work with a classroom provider", description: "Connect a provider such as Google, import work, create assignments with documents, export learner work, and return approved evaluations.", inputSchema: { action: classroomActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {

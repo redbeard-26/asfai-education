@@ -22,6 +22,7 @@ Inspect the host's available capabilities first. Ask the learner only about stor
 - IndexedDB requires browser JavaScript executing on the ASFAI Education origin. Use database `asfai-education`, version `1`, object store `learner-profile`, key `current`.
 - A local JSON file requires a host filesystem tool that can atomically replace and reread a learner-approved path such as `asfai/learner.json`.
 - A Solid Pod requires a learner-authenticated Solid fetch in the chat host or connected app. Store at `<pod-root>/asfai/learner.json`; never send credentials or tokens to the public MCP.
+- Google Drive requires the assistant's own Google Drive connector. Store at `ASFAI/learner.json` in the learner's My Drive; ASFAI never receives Drive credentials or content.
 - If no supported writer is available, continue as practice or return the updated profile as downloadable JSON and say that saving is still pending.
 
 Read [references/learner-storage.md](references/learner-storage.md) before loading or saving. Follow the selected procedure exactly, including its read-back check.
