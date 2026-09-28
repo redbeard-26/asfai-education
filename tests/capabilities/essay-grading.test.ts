@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getCapability } from "@/lib/capabilities/catalog";
-import { prepareCapabilityRun } from "@/lib/capabilities/execution";
+import { prepareCapabilityRun, startLearningSession } from "@/lib/capabilities/execution";
 import { validateEssayGrade, validateEssayRevision } from "@/lib/capabilities/essay-grading";
 import { validatePriorityCapability } from "@/lib/capabilities/priority-capabilities";
 
@@ -48,9 +48,14 @@ describe("T30 essay grading", () => {
     expect(prepared.execution?.validation).toMatchObject({ requiredBeforeSave: true });
   });
 
-  it("keeps the essay out of ASFAI requests and results", () => {
-    expect(() => prepareCapabilityRun({ capabilityId: "T30", input: { request: "Grade this essay", essayText, rubric }, phase: "prepare" })).toThrow(/essayText/);
-    expect(validateEssayGrade({ ...grade(), essayText }).issues).toContain("Remove 'essayText': the student's text stays with the assistant and is not sent to ASFAI.");
+  it("ignores essay text instead of processing or returning it", () => {
+    const prepared = prepareCapabilityRun({ capabilityId: "T30", input: { request: "Grade this essay", essayText, rubric }, phase: "prepare" });
+    expect(prepared.request?.input).not.toHaveProperty("essayText");
+    const validated = validateEssayGrade({ ...grade(), essayText });
+    expect(validated.valid).toBe(true);
+    expect(validated.candidate).not.toHaveProperty("essayText");
+    const session = startLearningSession("S17", { previousText: essayText, revisedText: essayText, gradeBand: "7" }).session;
+    expect(session.context).toEqual({ gradeBand: "7" });
   });
 
   it("accepts a consistent, passage-anchored grade", () => {

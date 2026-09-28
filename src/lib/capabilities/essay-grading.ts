@@ -65,14 +65,8 @@ export const essayRevisionSchema = z.object({
   newIssues: z.array(z.object({ comment: z.string().min(1), passages: z.array(passageSchema).min(1) })).default([]),
 });
 
-const studentTextFields = ["essayText", "previousText", "revisedText", "originalText", "content"];
-
-function rejectStudentText(candidate: unknown, issues: string[]) {
-  if (!candidate || typeof candidate !== "object") return;
-  for (const field of studentTextFields) {
-    if (field in candidate) issues.push(`Remove '${field}': the student's text stays with the assistant and is not sent to ASFAI.`);
-  }
-}
+// Student text fields that T30 and S17 drop unread; validation schemas omit them too.
+export const STUDENT_TEXT_FIELDS = ["essayText", "previousText", "revisedText", "originalText", "content"];
 
 function checkPassages(passages: Array<z.infer<typeof passageSchema>>, label: string, issues: string[]) {
   for (const passage of passages) {
@@ -87,7 +81,6 @@ const overlaps = (a: z.infer<typeof passageSchema>, b: z.infer<typeof passageSch
 export function validateEssayGrade(candidate: unknown) {
   const value = essayGradeSchema.parse(candidate);
   const issues: string[] = [];
-  rejectStudentText(candidate, issues);
   const { rubric } = value;
 
   const levelIds = rubric.levels.map((level) => level.id);
@@ -154,7 +147,6 @@ export function validateEssayGrade(candidate: unknown) {
 export function validateEssayRevision(candidate: unknown) {
   const value = essayRevisionSchema.parse(candidate);
   const issues: string[] = [];
-  rejectStudentText(candidate, issues);
   const growIds = value.grows.map((grow) => grow.id);
   for (const id of growIds) {
     if (value.revisionChecks.filter((check) => check.growId === id).length !== 1) issues.push(`Grow '${id}' must be checked exactly once.`);

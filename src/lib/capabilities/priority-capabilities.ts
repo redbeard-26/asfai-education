@@ -2,7 +2,7 @@ import { z } from "zod";
 import { quizDefinitionSchema } from "@/lib/capabilities/quiz";
 import { validateCoursePackage, validateGroundedAnswer } from "@/lib/capabilities/course-knowledge";
 import { validateLesson } from "@/lib/lessons/validation";
-import { validateEssayGrade, validateEssayRevision } from "@/lib/capabilities/essay-grading";
+import { STUDENT_TEXT_FIELDS, validateEssayGrade, validateEssayRevision } from "@/lib/capabilities/essay-grading";
 
 const jsonSchema = "https://json-schema.org/draft/2020-12/schema";
 
@@ -61,6 +61,7 @@ type PrioritySpec = {
   inputSchema: Record<string, unknown>;
   outputSchema: Record<string, unknown>;
   evaluators: string[];
+  ignoredInput?: string[];
 };
 
 const commonOutput = (resultProperties: Record<string, unknown>, required: string[]) => ({
@@ -127,6 +128,7 @@ export const PRIORITY_CAPABILITIES: Record<string, PrioritySpec> = {
     inputSchema: { $schema: jsonSchema, type: "object", additionalProperties: false, required: ["request", "rubric"], properties: { request: { type: "string", minLength: 1 }, rubric: { type: "object" }, assignment: { type: "string" }, gradeBand: { type: "string" }, standardIds: { type: "array", items: { type: "string" }, maxItems: 50 }, sourceRefs: { type: "array", items: { type: "string" }, maxItems: 50 }, locale: { type: "string" } } },
     outputSchema: commonOutput({ rubric: { type: "object" }, criterionScores: { type: "array", items: { type: "object" } }, totalScore: { type: "number" }, maxScore: { type: "number" }, band: { type: "string" }, glows: { type: "array", items: { type: "object" } }, grows: { type: "array", items: { type: "object" } }, comprehensionFlags: { type: "array", items: { type: "object" } }, walkthrough: { type: "array", items: { type: "object" } }, teacherConference: { type: "object" } }, ["rubric", "criterionScores", "totalScore", "maxScore", "glows", "grows", "walkthrough", "teacherConference"]),
     evaluators: ["essay-grade-schema", "rubric-score-consistency", "assistant-side-quote-check", "student-text-stays-with-assistant", "grow-per-lost-point", "comprehension-flag-integrity", "walkthrough-order", "teacher-final-authority"],
+    ignoredInput: STUDENT_TEXT_FIELDS,
   },
   S17: {
     guidance: "Walk the learner through teacher-approved writing feedback one item at a time. Keep the learner's text with the assistant; never send it to any ASFAI tool. Read each compliment aloud and highlight the passage it describes, then each suggestion with its one next step. Let the learner revise in their own words; never write the revision for them. When they revise, compare the new text with the earlier version, say which suggestions are addressed, partly addressed, or not yet, and point to the exact revised passage, confirming each quote against the revised text yourself. If the learner seems confused about a word or idea, stop and explain it before continuing.",
@@ -134,6 +136,7 @@ export const PRIORITY_CAPABILITIES: Record<string, PrioritySpec> = {
     inputSchema: { $schema: jsonSchema, type: "object", additionalProperties: false, required: ["request"], properties: { request: { type: "string", minLength: 1 }, feedback: { type: "object" }, gradeBand: { type: "string" }, locale: { type: "string" } } },
     outputSchema: commonOutput({ textChanged: { type: "boolean" }, grows: { type: "array", items: { type: "object" } }, revisionChecks: { type: "array", items: { type: "object" } }, newIssues: { type: "array", items: { type: "object" } } }, ["textChanged", "grows", "revisionChecks"]),
     evaluators: ["essay-revision-schema", "assistant-side-quote-check", "student-text-stays-with-assistant", "one-check-per-suggestion", "learner-authorship", "natural-learner-language"],
+    ignoredInput: STUDENT_TEXT_FIELDS,
   },
   T41: {
     guidance: "Create an editable, accessible worksheet aligned to supplied objectives. Keep answers out of learner prompts, include a complete answer key with explanations, validate every item, and provide equivalent nonvisual or nonprint alternatives where needed.",
