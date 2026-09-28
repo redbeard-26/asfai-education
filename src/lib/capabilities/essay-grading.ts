@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-// A passage is an exact, highlightable span of the text it cites.
+// A passage is a highlightable span of the student's text. The text itself stays
+// with the assistant, so the server can check only that each span is well formed;
+// the assistant must confirm text.slice(start, end) === quote before presenting.
 const passageSchema = z.object({
   start: z.number().int().min(0),
   end: z.number().int().min(1),
@@ -27,7 +29,6 @@ const feedbackItemSchema = z.object({
 });
 
 export const essayGradeSchema = z.object({
-  essayText: z.string().min(1),
   rubric: essayRubricSchema,
   criterionScores: z.array(z.object({
     criterionId: z.string(),
@@ -53,8 +54,7 @@ export const essayGradeSchema = z.object({
 });
 
 export const essayRevisionSchema = z.object({
-  previousText: z.string().min(1),
-  revisedText: z.string().min(1),
+  textChanged: z.boolean(),
   grows: z.array(z.object({ id: z.string(), comment: z.string().min(1), action: z.string().min(1) })).min(1),
   revisionChecks: z.array(z.object({
     growId: z.string(),
@@ -65,10 +65,19 @@ export const essayRevisionSchema = z.object({
   newIssues: z.array(z.object({ comment: z.string().min(1), passages: z.array(passageSchema).min(1) })).default([]),
 });
 
-function checkPassages(text: string, passages: Array<z.infer<typeof passageSchema>>, label: string, issues: string[]) {
+const studentTextFields = ["essayText", "previousText", "revisedText", "originalText", "content"];
+
+function rejectStudentText(candidate: unknown, issues: string[]) {
+  if (!candidate || typeof candidate !== "object") return;
+  for (const field of studentTextFields) {
+    if (field in candidate) issues.push(`Remove '${field}': the student's text stays with the assistant and is not sent to ASFAI.`);
+  }
+}
+
+function checkPassages(passages: Array<z.infer<typeof passageSchema>>, label: string, issues: string[]) {
   for (const passage of passages) {
-    if (passage.end <= passage.start || text.slice(passage.start, passage.end) !== passage.quote) {
-      issues.push(`${label} cites '${passage.quote}' at ${passage.start}-${passage.end}, which does not match the text.`);
+    if (passage.end <= passage.start || passage.end - passage.start !== passage.quote.length) {
+      issues.push(`${label} cites '${passage.quote}' at ${passage.start}-${passage.end}, but the span length does not match the quote.`);
     }
   }
 }
@@ -78,6 +87,7 @@ const overlaps = (a: z.infer<typeof passageSchema>, b: z.infer<typeof passageSch
 export function validateEssayGrade(candidate: unknown) {
   const value = essayGradeSchema.parse(candidate);
   const issues: string[] = [];
+  rejectStudentText(candidate, issues);
   const { rubric } = value;
 
   const levelIds = rubric.levels.map((level) => level.id);
@@ -95,7 +105,7 @@ export function validateEssayGrade(candidate: unknown) {
     const level = rubric.levels.find((item) => item.id === entry.levelId);
     if (!level) issues.push(`Criterion '${entry.criterionId}' uses unknown level '${entry.levelId}'.`);
     else if (level.score !== entry.score) issues.push(`Criterion '${entry.criterionId}' score ${entry.score} does not match level '${level.id}' (${level.score}).`);
-    checkPassages(value.essayText, entry.passages, `Score for '${entry.criterionId}'`, issues);
+    checkPassages(entry.passages, `Score for '${entry.criterionId}'`, issues);
     if (level && level.score < topScore && !value.grows.some((grow) => grow.criterionId === entry.criterionId)) {
       issues.push(`Criterion '${entry.criterionId}' is below the top level but has no grow explaining how to improve.`);
     }
@@ -114,10 +124,10 @@ export function validateEssayGrade(candidate: unknown) {
   if (new Set(itemIds).size !== itemIds.length) issues.push("Glow, grow, and flag IDs must be unique.");
   for (const item of [...value.glows, ...value.grows]) {
     if (!criterionIds.includes(item.criterionId)) issues.push(`Feedback '${item.id}' cites unknown criterion '${item.criterionId}'.`);
-    checkPassages(value.essayText, item.passages, `Feedback '${item.id}'`, issues);
+    checkPassages(item.passages, `Feedback '${item.id}'`, issues);
   }
   for (const flag of value.comprehensionFlags) {
-    checkPassages(value.essayText, flag.passages, `Flag '${flag.id}'`, issues);
+    checkPassages(flag.passages, `Flag '${flag.id}'`, issues);
     for (const glow of value.glows) {
       if (glow.passages.some((a) => flag.passages.some((b) => overlaps(a, b)))) {
         issues.push(`Glow '${glow.id}' praises a passage that flag '${flag.id}' marks as not understood.`);
@@ -144,17 +154,17 @@ export function validateEssayGrade(candidate: unknown) {
 export function validateEssayRevision(candidate: unknown) {
   const value = essayRevisionSchema.parse(candidate);
   const issues: string[] = [];
+  rejectStudentText(candidate, issues);
   const growIds = value.grows.map((grow) => grow.id);
   for (const id of growIds) {
     if (value.revisionChecks.filter((check) => check.growId === id).length !== 1) issues.push(`Grow '${id}' must be checked exactly once.`);
   }
-  const unchanged = value.previousText === value.revisedText;
   for (const check of value.revisionChecks) {
     if (!growIds.includes(check.growId)) issues.push(`Revision check cites unknown grow '${check.growId}'.`);
-    checkPassages(value.revisedText, check.passages, `Check for '${check.growId}'`, issues);
+    checkPassages(check.passages, `Check for '${check.growId}'`, issues);
     if (check.status !== "not-yet" && check.passages.length === 0) issues.push(`Check for '${check.growId}' is '${check.status}' but cites no revised passage.`);
-    if (check.status !== "not-yet" && unchanged) issues.push(`Check for '${check.growId}' is '${check.status}' but the text is unchanged.`);
+    if (check.status !== "not-yet" && !value.textChanged) issues.push(`Check for '${check.growId}' is '${check.status}' but the text is unchanged.`);
   }
-  value.newIssues.forEach((item, index) => checkPassages(value.revisedText, item.passages, `New issue ${index + 1}`, issues));
+  value.newIssues.forEach((item, index) => checkPassages(item.passages, `New issue ${index + 1}`, issues));
   return { valid: issues.length === 0, issues, candidate: value };
 }

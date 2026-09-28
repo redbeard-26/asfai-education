@@ -23,7 +23,6 @@ const rubric = {
 
 function grade() {
   return {
-    essayText,
     rubric,
     criterionScores: [
       { criterionId: "organization", levelId: "excellent", score: 3, rationale: "Opens with the topic and keeps one idea per sentence.", passages: [at(essayText, "Bees are important.")] },
@@ -44,22 +43,27 @@ describe("T30 essay grading", () => {
   it("publishes a specialized contract that requires the essay and rubric", () => {
     const capability = getCapability("T30");
     expect(capability).toMatchObject({ name: "Essay Grading & Feedback", version: "1.1.0", risk: "high" });
-    expect(capability?.inputSchema.required).toEqual(["request", "essayText", "rubric"]);
-    const prepared = prepareCapabilityRun({ capabilityId: "T30", input: { request: "Grade this essay", essayText, rubric }, phase: "prepare" });
+    expect(capability?.inputSchema.required).toEqual(["request", "rubric"]);
+    const prepared = prepareCapabilityRun({ capabilityId: "T30", input: { request: "Grade this essay", rubric }, phase: "prepare" });
     expect(prepared.execution?.validation).toMatchObject({ requiredBeforeSave: true });
+  });
+
+  it("keeps the essay out of ASFAI requests and results", () => {
+    expect(() => prepareCapabilityRun({ capabilityId: "T30", input: { request: "Grade this essay", essayText, rubric }, phase: "prepare" })).toThrow(/essayText/);
+    expect(validateEssayGrade({ ...grade(), essayText }).issues).toContain("Remove 'essayText': the student's text stays with the assistant and is not sent to ASFAI.");
   });
 
   it("accepts a consistent, passage-anchored grade", () => {
     expect(validatePriorityCapability("T30", grade())).toMatchObject({ valid: true, totalScore: 5, maxScore: 6 });
   });
 
-  it("rejects a wrong total, band, or passage", () => {
+  it("rejects a wrong total, band, or malformed passage", () => {
     const wrongTotal = { ...grade(), totalScore: 6 };
     expect(validateEssayGrade(wrongTotal).issues).toEqual(expect.arrayContaining([expect.stringContaining("totalScore is 6")]));
     const wrongBand = { ...grade(), band: "Developing" };
     expect(validatePriorityCapability("T30", wrongBand).valid).toBe(false);
     const badPassage = grade();
-    badPassage.glows[0].passages[0].quote = "Bees are pollinators.";
+    badPassage.glows[0].passages[0].quote = "They carry pollen.";
     expect(validatePriorityCapability("T30", badPassage).valid).toBe(false);
   });
 
@@ -83,8 +87,7 @@ describe("T30 essay grading", () => {
 describe("S17 revision check", () => {
   const revisedText = essayText.replace("Farmers rent hives in the spring.", "According to Bee Facts, farmers rent hives in the spring.");
   const check = () => ({
-    previousText: essayText,
-    revisedText,
+    textChanged: true,
     grows: [{ id: "grow-1", comment: "Name the source.", action: "Name the article you read." }],
     revisionChecks: [{ growId: "grow-1", status: "addressed", comment: "You named your source.", passages: [at(revisedText, "According to Bee Facts")] }],
     newIssues: [],
@@ -96,7 +99,7 @@ describe("S17 revision check", () => {
   });
 
   it("rejects an 'addressed' status when nothing changed", () => {
-    const unchanged = { ...check(), revisedText: essayText, revisionChecks: [{ growId: "grow-1", status: "addressed", comment: "Done.", passages: [at(essayText, "Farmers")] }] };
+    const unchanged = { ...check(), textChanged: false };
     expect(validateEssayRevision(unchanged).issues).toEqual(expect.arrayContaining([expect.stringContaining("text is unchanged")]));
   });
 
