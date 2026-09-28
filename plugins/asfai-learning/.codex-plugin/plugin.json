@@ -1,7 +1,7 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.5+codex.20260928",
-  "description": "Plan lessons, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
+  "version": "0.1.6+codex.20260928",
+  "description": "Plan lessons, guide student research, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
@@ -13,18 +13,20 @@
     "education",
     "learning",
     "lessons",
+    "research",
     "private-data"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "ASFAI Learning",
-    "shortDescription": "ASFAI lessons, evaluations, asset transformations, and private learning data.",
+    "shortDescription": "ASFAI lessons, guided research, evaluations, and private learning data.",
     "longDescription": "Plan lessons, design evaluations, transform teaching assets, and teach through chat using the ASFAI learning graph. Save to storage you own, and exchange work with configurable classroom providers through one authenticated remote MCP connector. Learning records are saved only in storage the user owns. Storage and Google Classroom authorization is encrypted, isolated to the user's connector, and restored across devices using that connection until explicit removal or provider revocation.",
     "developerName": "ASFAI",
     "category": "Education",
     "capabilities": [
       "Learning",
       "Lesson planning",
+      "Guided student research",
       "Evaluation design",
       "Teaching asset transformation",
       "Private storage",
@@ -34,6 +36,7 @@
       "Save my progress to my own storage and continue my lesson.",
       "Help me learn a concept and save my progress.",
       "Create a lesson outline for my course.",
+      "Help me research a question and keep a source-based research record.",
       "Design an evaluation from my lesson plan.",
       "Transform my lesson notes into teaching slides."
     ]
