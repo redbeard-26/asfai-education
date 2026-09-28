@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { STORAGE_RULE } from "@/lib/storage-resources";
 
 const timestampSchema = z.string().datetime({ offset: true });
 
@@ -118,6 +119,6 @@ export function joinStudentRoom(input: { room: unknown; code?: string; rosterAut
     membership,
     visibleToTeacher: room.policy.teacherVisibility,
     transparency: `Your teacher can receive ${room.policy.teacherVisibility.replace(/-/g, " ")} from this room. Raw conversations are not retained or shared by default.`,
-    persistence: { owner: "learner", verified: false, nextTool: "asfai_storage" },
+    persistence: { owner: "learner", verified: false, rule: STORAGE_RULE, nextTool: "asfai_storage" },
   };
 }

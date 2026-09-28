@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it } from "vitest";
 import { addMaterialVersion, createCourseAccessGrant, createCoursePackage, storageObjectReferenceSchema, validateCoursePackage } from "@/lib/capabilities/course-knowledge";
 import { createResource, newEducatorWorkspace } from "@/lib/capabilities/workspace";
-import { driveDocumentProcedure, driveObjectProcedure, driveObjectReferenceSchema } from "@/lib/drive-storage";
+import { driveDocumentLocation, driveObjectLocation, driveObjectReferenceSchema } from "@/lib/drive-storage";
 import { persistenceFor, storageTargetSchema } from "@/lib/learner-workflow";
 import { registerAsfaiTools } from "@/lib/register-asfai-tools";
 
@@ -21,26 +21,23 @@ function storageTool() {
 }
 
 describe("Google Drive host-side storage", () => {
-  it("returns document steps that ASFAI never performs itself", () => {
-    const procedure = driveDocumentProcedure("learner");
-    expect(procedure).toMatchObject({ mode: "google_drive", location: "ASFAI/learner.json", requiredCapability: "host_google_drive", serverRetained: false });
-    expect(procedure.steps.join(" ")).toContain("asfai-store.json");
-    expect(procedure.rules.join(" ")).toMatch(/Never send Google passwords/);
+  it("returns a document location and the Drive resource, not steps", () => {
+    const location = driveDocumentLocation("learner");
+    expect(location).toMatchObject({ mode: "google_drive", location: "ASFAI/learner.json", requiredCapability: "host_google_drive", serverRetained: false, resource: { name: "asfai-storage-drive" } });
+    expect(location).not.toHaveProperty("steps");
   });
 
-  it("uses a known folder ID instead of searching", () => {
-    expect(driveDocumentProcedure("educator", fileId).steps[0]).toContain(fileId);
-    expect(() => driveDocumentProcedure("educator", "not a folder id")).toThrow();
+  it("keeps a known folder ID and rejects a malformed one", () => {
+    expect(driveDocumentLocation("educator", fileId).folderId).toBe(fileId);
+    expect(() => driveDocumentLocation("educator", "not a folder id")).toThrow();
   });
 
-  it("returns immutable object steps under the shared layout", () => {
-    const procedure = driveObjectProcedure("writing/machu-picchu/essay-v1.txt", "text/plain; charset=utf-8");
-    expect(procedure.location).toBe("ASFAI/writing/machu-picchu/essay-v1.txt");
-    expect(procedure.steps.join(" ")).toMatch(/do not overwrite/);
-    expect(() => driveObjectProcedure("../escape.txt", "text/plain")).toThrow();
+  it("returns object locations under the shared layout", () => {
+    expect(driveObjectLocation("writing/machu-picchu/essay-v1.txt", "text/plain; charset=utf-8").location).toBe("ASFAI/writing/machu-picchu/essay-v1.txt");
+    expect(() => driveObjectLocation("../escape.txt", "text/plain")).toThrow();
   });
 
-  it("serves Drive steps from asfai_storage instructions", async () => {
+  it("serves Drive locations from asfai_storage instructions", async () => {
     const instructions = storageTool();
     await expect(instructions({ owner: "learner", target: { mode: "google_drive" }, hostCapabilities: ["host_google_drive"] }))
       .resolves.toMatchObject({ capabilityCheck: { required: "host_google_drive", capable: true }, persistence: { location: "ASFAI/learner.json" } });

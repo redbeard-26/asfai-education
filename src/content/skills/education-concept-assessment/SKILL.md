@@ -1,6 +1,6 @@
 ---
 name: education-concept-assessment
-description: Run an adaptive ASFAI learning-objective assessment entirely in chat, create evidence and an assessment claim, and persist the portable learner profile locally, in the learner's Solid Pod, or in the learner's Google Drive without requiring the education website.
+description: Run an adaptive ASFAI learning-objective assessment entirely in chat, create evidence and an assessment claim, and persist the portable learner profile in the learner's own store without requiring the education website.
 ---
 
 # ASFAI conversational learning assessment
@@ -17,15 +17,7 @@ Storage and consent messages may be direct, but keep them plain: “Where would 
 
 ## 1. Establish learner-owned storage
 
-Inspect the host's available capabilities first, then ask the learner only about storage choices the host can actually use. Call `asfai_storage` with action `instructions`, `owner: "learner"`, the selected target, and the capabilities you have confirmed.
-
-- IndexedDB: use database `asfai-education`, version `1`, object store `learner-profile`, key `current`. This requires browser JavaScript executing on the ASFAI Education origin; an ordinary remote MCP server or chat without browser execution cannot access it.
-- Local file: use a persistent, user-approved path such as `asfai/learner.json`. This requires a host filesystem tool.
-- Solid Pod: use `<pod-root>/asfai/learner.json`. This requires a learner-authenticated Solid fetch in the chat host or connected app. The public ASFAI MCP cannot perform the login or receive authentication secrets.
-- Google Drive: use `ASFAI/learner.json` in the learner's My Drive. This requires the assistant's own Google Drive connector; ASFAI never receives Drive credentials or content.
-- No supported writer: continue as practice or return the updated profile as downloadable JSON. Say that saving is still pending.
-
-Read [references/learner-storage.md](references/learner-storage.md) before loading or saving a profile. Follow its procedure exactly, including the read-back check.
+Ask the learner where to save only among stores the host can actually use. Load and save the profile by following the storage resource for the user's store (`asfai-storage-pod`, `asfai-storage-drive`, or `asfai-storage-local`, from `asfai_capability` action `get_skill`). Follow it exactly, including its read-back check. If nothing can be saved, continue as practice or offer the profile as downloadable JSON, and say that saving is still pending.
 
 Legacy profile schema `0.1` is accepted; evidence-recording tools return the migrated `0.2` profile with lesson collections preserved.
 
@@ -59,14 +51,9 @@ Adapt to the learner's replies. Track whether help was none, light, or substanti
 
 Call `asfai_evidence` action `record_learning` only after the learner has actually responded. Supply concise response summaries, the evidence observed, level, confidence, rationale, assistance, and your host/model name as `assessorSystem`. Avoid unnecessary personal details and verbatim answers unless the learner wants them retained. These are internal fields; do not repeat their names to the learner.
 
-For `storage`:
+For `storage`, pass the `mode` and `location` that the learner's storage resource specifies.
 
-- local file: `{ "mode": "local_file", "location": "<chosen path>" }`
-- browser IndexedDB: `{ "mode": "indexeddb" }`
-- Solid Pod: `{ "mode": "solid_pod", "location": "<pod root or full learner.json URL>" }`
-- Google Drive: `{ "mode": "google_drive" }`, adding `"location": "<ASFAI folder ID>"` once known
-
-The tool returns a complete updated `profile`, not a server-side write confirmation. Follow every returned persistence step immediately and save exactly that profile. Read it back and compare `learnerId`, `schemaVersion`, `updatedAt`, and collection counts. Confirm saving to the learner only after that verification succeeds.
+The tool returns a complete updated `profile`, not a server-side write confirmation. Save exactly that profile by following the storage resource. Confirm saving to the learner only after its read-back verification succeeds.
 
 Never replace this evidence/claim process with a bare mastery boolean. Never claim the MCP server stored the profile: it did not.
 

@@ -17,15 +17,7 @@ Storage messages may be direct but plain: “Where would you like me to save you
 
 ## Establish learner-owned state
 
-Inspect the host's available capabilities first. Ask the learner only about storage choices the host can actually use, then call `asfai_storage` action `instructions` with `owner: "learner"`, the selected target, and confirmed capabilities.
-
-- IndexedDB requires browser JavaScript executing on the ASFAI Education origin. Use database `asfai-education`, version `1`, object store `learner-profile`, key `current`.
-- A local JSON file requires a host filesystem tool that can atomically replace and reread a learner-approved path such as `asfai/learner.json`.
-- A Solid Pod requires a learner-authenticated Solid fetch in the chat host or connected app. Store at `<pod-root>/asfai/learner.json`; never send credentials or tokens to the public MCP.
-- Google Drive requires the assistant's own Google Drive connector. Store at `ASFAI/learner.json` in the learner's My Drive; ASFAI never receives Drive credentials or content.
-- If no supported writer is available, continue as practice or return the updated profile as downloadable JSON and say that saving is still pending.
-
-Read [references/learner-storage.md](references/learner-storage.md) before loading or saving. Follow the selected procedure exactly, including its read-back check.
+Ask the learner where to save only among stores the host can actually use. Load and save the profile by following the storage resource for the user's store (`asfai-storage-pod`, `asfai-storage-drive`, or `asfai-storage-local`, from `asfai_capability` action `get_skill`). Follow it exactly, including its read-back check; say progress is saved only after that verification. If nothing can be saved, continue as practice or return the updated profile as downloadable JSON and say that saving is still pending.
 
 ## Start or resume
 

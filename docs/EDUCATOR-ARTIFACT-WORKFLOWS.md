@@ -8,7 +8,7 @@ The Education MCP keeps its nine default tools. It adds actions to existing gate
 | Evaluation | `asfai_evidence.design_evaluation` | `asfai_evidence.validate_evaluation` | `evaluation`, linked to a complete lesson plan |
 | Transform | `asfai_resource.prepare_transform` | `asfai_resource.validate_transform` | `transform`, linked to an existing source and a distinct output |
 
-The chat host reads attachments and creates prose, slides, audio scripts, or other output using capabilities it actually has. The MCP returns missing-information questions and validates the resulting typed records; it does not pretend to render a file or retain a draft. Private teacher artifacts can be versioned through `asfai_resource` and saved to the teacher's Solid Pod with `asfai_storage`, or to the teacher's Google Drive with the assistant's own Drive connector. A save is complete only after read-back verification.
+The chat host reads attachments and creates prose, slides, audio scripts, or other output using capabilities it actually has. The MCP returns missing-information questions and validates the resulting typed records; it does not pretend to render a file or retain a draft. Private teacher artifacts can be versioned through `asfai_resource` and saved in the teacher's own store by following its storage resource. A save is complete only after read-back verification.
 
 ## Provisional state graph
 

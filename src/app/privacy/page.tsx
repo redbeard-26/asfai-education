@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           that learner&apos;s or educator&apos;s control. The ASFAI Learning connector supplies learning objectives,
           lesson guidance, private-storage routing, and classroom exchange. It creates an accountless,
           connector-scoped identifier rather than requiring a learner account. Private learning records live
-          in storage the user owns: a connected Solid Pod or the user&apos;s Google Drive.
+          only in storage the user owns.
         </p>
       </section>
 
@@ -29,13 +29,13 @@ export default function PrivacyPage() {
         <ul>
           <li>Public learning-objective, lesson, and curriculum queries sent to the ASFAI service.</li>
           <li>
-            Learner evidence, assessment claims, and lesson reports that a user chooses to save in an
-            authorized Solid Pod. ASFAI does not retain a private education-data fallback copy.
-          </li>
-          <li>
-            Records a user chooses to keep in Google Drive are written by the user&apos;s own AI assistant
-            through its own Google connection. ASFAI does not receive Google Drive credentials or the content
-            of those files.
+            Learner evidence, assessment claims, lesson reports, and other records that a user chooses to save
+            in storage the user owns. Depending on the kind of storage, ASFAI either passes a record to that
+            storage without keeping a copy or never receives it; the storage resources for{" "}
+            <a href="https://github.com/redbeard-26/asfai-education/blob/main/src/content/skills/asfai-storage-pod/SKILL.md">network storage</a>,{" "}
+            <a href="https://github.com/redbeard-26/asfai-education/blob/main/src/content/skills/asfai-storage-drive/SKILL.md">assistant-managed file storage</a>, and{" "}
+            <a href="https://github.com/redbeard-26/asfai-education/blob/main/src/content/skills/asfai-storage-local/SKILL.md">browser or local storage</a> state which. ASFAI does
+            not retain a private education-data fallback copy.
           </li>
           <li>
             Google Classroom course, assignment, submission, roster, and Drive-attachment information that
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
       <section>
         <h2>Storage, retention, and deletion</h2>
         <p>
-          Reusable Google and Solid authorization records are encrypted at the hosted connector and isolated
+          Reusable Google and storage-provider authorization records are encrypted at the hosted connector and isolated
           by connector identity. An authorization remains available until the user asks ASFAI to forget it,
           disconnects the connector, or revokes access through the provider. Imported work is used for the
           requested operation and is not retained as a complete submission by default. A concise excerpt,
@@ -79,8 +79,8 @@ export default function PrivacyPage() {
           approves that save.
         </p>
         <p>
-          Users control records stored in their Solid Pod or Google Drive and may edit or delete them there.
-          If neither is available, private education records remain pending in the user&apos;s assistant rather
+          Users control records in their own storage and may edit or delete them there. If no storage is
+          available, private education records remain pending in the user&apos;s assistant rather
           than being saved by ASFAI. Users can revoke Google access at any time from their Google Account permissions or
           by asking ASFAI to forget the Classroom authorization for that connector.
         </p>

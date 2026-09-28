@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { driveDocumentProcedure } from "@/lib/drive-storage";
+import { driveDocumentLocation } from "@/lib/drive-storage";
+import { STORAGE_HOST_CAPABILITIES, storageResource } from "@/lib/storage-resources";
 import { lessonReportSchema, lessonRunSchema } from "@/lib/lessons/schemas";
 
 export const ASSESSMENT_POLICY_VERSION = "asfai-assessment-0.2";
@@ -122,7 +123,7 @@ export const storageTargetSchema = z.object({
   location: z
     .string()
     .optional()
-    .describe("Local profile path, IndexedDB location, the learner's HTTPS Pod root/profile URL, or the ID of the learner's ASFAI Google Drive folder"),
+    .describe("Where the store keeps the profile; the storage resource for the mode says what to put here"),
 });
 
 export type MasteryLevel = z.infer<typeof masteryLevelSchema>;
@@ -212,74 +213,36 @@ export function summarizeLearnerProfile(profile?: LearnerProfileInput) {
 
 export function persistenceFor(storage?: StorageTarget) {
   const target = storage ?? { mode: "local_file" as const, location: "asfai/learner.json" };
+  const common = {
+    mode: target.mode,
+    contentType: "application/json",
+    requiredCapability: STORAGE_HOST_CAPABILITIES[target.mode],
+    serverRetained: false,
+    writeRequired: true,
+    resource: storageResource(target.mode),
+    instruction: "Save the complete returned profile by following the storage resource named here, and say it is saved only after its read-back check succeeds.",
+  };
+  if (target.mode === "google_drive") return { ...driveDocumentLocation("learner", target.location), ...common };
   if (target.mode === "indexeddb") {
     return {
-      mode: target.mode,
+      ...common,
       location: "indexeddb://asfai-education/learner-profile/current",
       database: "asfai-education",
       databaseVersion: 1,
       objectStore: "learner-profile",
       key: "current",
-      contentType: "application/json",
-      requiredCapability: "Browser JavaScript executing on the ASFAI Education origin with IndexedDB access.",
-      serverRetained: false,
-      writeRequired: true,
-      steps: [
-        "Open IndexedDB database 'asfai-education' at version 1.",
-        "Create object store 'learner-profile' during upgrade if it does not exist.",
-        "In a readwrite transaction, put the complete returned profile at key 'current'.",
-        "Wait for the transaction complete event; a successful put request alone is not enough.",
-        "Read key 'current' back in a new readonly transaction and verify learnerId, schemaVersion, updatedAt, and collection counts match the returned profile.",
-      ],
-      instruction:
-        "Write and verify the complete returned profile in the ASFAI Education origin's IndexedDB. If this host cannot execute browser JavaScript on that origin, do not claim it was saved; offer a local JSON file, an authenticated Solid Pod, or Google Drive through the assistant's Drive connector instead.",
     };
   }
-  if (target.mode === "google_drive") return driveDocumentProcedure("learner", target.location);
   if (target.mode === "solid_pod") {
-    if (!target.location) {
-      throw new Error("A Solid Pod root or learner profile URL is required for solid_pod storage.");
-    }
+    if (!target.location) throw new Error("A store root or learner profile URL is required for this storage target.");
     const location = target.location.endsWith("learner.json")
       ? target.location
       : `${target.location.replace(/\/$/, "")}/asfai/learner.json`;
     const url = new URL(location);
-    if (url.protocol !== "https:") throw new Error("Solid Pod storage requires an HTTPS URL.");
-    return {
-      mode: target.mode,
-      location: url.toString(),
-      contentType: "application/json",
-      requiredCapability:
-        "An authenticated Solid fetch owned by the learner, with write access to the selected Pod root.",
-      serverRetained: false,
-      writeRequired: true,
-      steps: [
-        "Confirm the host has a logged-in Solid session and authenticated fetch; never ask the learner to paste a password, token, cookie, or DPoP key into chat.",
-        "Resolve the resource to '<pod-root>/asfai/learner.json' and create the 'asfai/' container with the authenticated Solid client if it does not exist.",
-        "Read the current resource first. Treat 404 as a new profile, but treat 401 or 403 as an authorization failure that requires reconnecting the Pod.",
-        "Write the complete returned profile as application/json using the learner's authenticated fetch. Use the prior ETag with If-Match when the host exposes it; on 412, reload and reconcile instead of overwriting silently.",
-        "Read the resource back with the authenticated fetch and verify learnerId, schemaVersion, updatedAt, and collection counts match the returned profile.",
-      ],
-      instruction:
-        "Write and verify the returned profile JSON with the learner's own authenticated Solid fetch. Never send Solid access tokens, passwords, DPoP keys, or session cookies to the ASFAI MCP server. If authenticated Solid fetch is unavailable, do not claim Pod storage succeeded.",
-    };
+    if (url.protocol !== "https:") throw new Error("This storage target requires an HTTPS URL.");
+    return { ...common, location: url.toString() };
   }
-  return {
-    mode: target.mode,
-    location: target.location || "asfai/learner.json",
-    contentType: "application/json",
-    requiredCapability: "A host filesystem tool with permission to read, replace, and verify the selected file.",
-    serverRetained: false,
-    writeRequired: true,
-    steps: [
-      "Read and parse the existing file before calling personalized or evidence-recording tools; omit learnerProfile only when no file exists.",
-      "Write the complete returned profile to a temporary file in the same directory.",
-      "Atomically replace the selected learner.json with the temporary file.",
-      "Read the file back and verify learnerId, schemaVersion, updatedAt, and collection counts match the returned profile.",
-    ],
-    instruction:
-      "Atomically replace and verify the local learner profile file with the complete returned profile JSON. If this host cannot write files, do not claim it was saved; return a downloadable JSON profile instead.",
-  };
+  return { ...common, location: target.location || "asfai/learner.json" };
 }
 
 function assertEvidencePolicy(input: RecordEvidenceInput) {

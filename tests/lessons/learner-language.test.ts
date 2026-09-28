@@ -23,17 +23,21 @@ describe("learner-facing language", () => {
     }
   });
 
-  it("ships full storage guidance inside both independently installable learner skills", () => {
-    for (const path of [
-      "src/content/skills/education-concept-assessment/references/learner-storage.md",
-      "src/content/skills/education-lesson-facilitation/references/learner-storage.md",
-    ]) {
-      const content = fs.readFileSync(path, "utf8");
-      expect(content).toContain("asfai-education");
-      expect(content).toContain("learner-profile");
-      expect(content).toContain("<pod-root>/asfai/learner.json");
-      expect(content).toMatch(/authenticated fetch/i);
-      expect(content).toMatch(/read-back verification/i);
+  it("keeps saving instructions only in the three storage resources", () => {
+    const resources = {
+      "asfai-storage-pod": [/<pod-root>\/asfai\/learner\.json/, /expectedDigest/, /authenticated fetch/i],
+      "asfai-storage-drive": [/asfai-store\.json/, /modified time/i, /never sees Drive file content/i],
+      "asfai-storage-local": [/asfai-education/, /learner-profile/, /atomically replace/i],
+    };
+    for (const [name, patterns] of Object.entries(resources)) {
+      const content = fs.readFileSync(`src/content/skills/${name}/SKILL.md`, "utf8");
+      for (const pattern of patterns) expect(content, name).toMatch(pattern);
+    }
+    const methodDetails = /connect_pod|put_object|expectedDigest|<pod-root>|asfai-store\.json|My Drive|IndexedDB|indexeddb|learner-profile|Solid|Google Drive/;
+    for (const entry of fs.readdirSync("src/content/skills")) {
+      if (entry in resources) continue;
+      const content = fs.readFileSync(`src/content/skills/${entry}/SKILL.md`, "utf8");
+      expect(content, entry).not.toMatch(methodDetails);
     }
   });
 });

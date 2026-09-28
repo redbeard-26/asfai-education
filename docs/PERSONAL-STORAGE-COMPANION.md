@@ -1,64 +1,48 @@
-# Private storage gateway
+# Private storage
 
-The **ASFAI Learning** plugin uses one authenticated remote MCP connector for public learning workflows, private storage, and classroom exchange. It does not install a local companion or require the ASFAI Education website.
+ASFAI keeps no private education records. Learner, educator, classroom, course, and writing records are saved only in storage the user owns. The **ASFAI Learning** plugin uses one authenticated remote MCP connector for public learning workflows, private storage, and classroom exchange; it does not install a local companion or require the ASFAI Education website.
 
-## Learner installation
+## Storage resources
 
-The intended flow is:
+Every instruction for saving lives in exactly one storage resource per kind of store. Nothing else in this repository describes how to save:
 
-1. Install or update **ASFAI Learning** from the plugin directory.
-2. Approve the ASFAI connector once. This creates a pseudonymous connector tenant; no ASFAI account or email address is required.
-3. Say, “Connect my private Pod,” and approve access on the Pod provider page.
-4. Continue in chat. The connector restores the saved Pod grant until the user explicitly revokes or forgets it.
+| Resource | File |
+|---|---|
+| `asfai-storage-pod` | [src/content/skills/asfai-storage-pod/SKILL.md](../src/content/skills/asfai-storage-pod/SKILL.md) |
+| `asfai-storage-drive` | [src/content/skills/asfai-storage-drive/SKILL.md](../src/content/skills/asfai-storage-drive/SKILL.md) |
+| `asfai-storage-local` | [src/content/skills/asfai-storage-local/SKILL.md](../src/content/skills/asfai-storage-local/SKILL.md) |
 
-The learner does not clone a repository, install Node packages, edit MCP settings, select a filesystem path, or keep a webpage open. A repository developer may still run `npm run personal-storage:mcp` as a legacy local test harness; it is not packaged in the plugin.
+Assistants get a resource with `asfai_capability` action `get_skill`. Tools that return data to save include a `resource` pointer to the right one, and `asfai_storage` action `instructions` returns the location in the user's store plus that pointer. When the user's store is not known, the assistant asks where to save.
 
-## Google Drive
+## Shared layout
 
-Users who prefer Google Drive keep the same records in an `ASFAI` folder in their My Drive. The assistant writes those files with its own Google Drive connector; ASFAI never receives Drive credentials or content. `asfai_storage` action `instructions` with `target.mode: "google_drive"` returns the steps. See [Google Drive storage](GOOGLE-DRIVE-STORAGE.md).
-
-## Pod storage
-
-Call `asfai_storage` with action `connect_pod` and only the Pod root and OIDC issuer, for example:
-
-```json
-{
-  "action": "connect_pod",
-  "payload": {
-    "podRoot": "https://student.name.privatedatapod.com/",
-    "oidcIssuer": "https://privatedatapod.com/"
-  }
-}
-```
-
-The connector returns a hosted provider authorization URL when consent is needed. Authentication occurs entirely on the provider page. Never paste a password, cookie, authorization code, token, client secret, or DPoP key into chat.
-
-After `status` reports a connected Pod, use `load` and `save` with document `learner`, `educator`, or `classroom`. Do not reconnect at the start of a chat or lesson. `save` performs conflict checking and independent read-back. Pass the digest returned by the prior `load` as `expectedDigest` when updating an existing document.
-
-The authorization persists across chats and, when the host shares the installed connector authorization, across the user's devices. It ends only when the user calls `forget_pod_authorization`, revokes ASFAI at the Pod provider, or revokes the ASFAI connector itself. Assistants must never call the forget action as cleanup.
-
-## Fallback and identity
-
-If no Pod is available, `status` returns `mode: "not_connected"`. Private `load`, `save`, object, identity, and signing actions stop without creating an ASFAI-hosted record. The assistant may use a Google Drive store, continue without persistence, or return portable JSON while the user connects a Pod.
-
-Large course files and derived text use the object actions `put_object`, `get_object`, `head_object`, `list_objects`, and `delete_object`. Paths are confined beneath the Pod's `asfai/` container, reads are bounded, and writes and deletes support digest conflict checks.
-
-`identity` creates an owner-scoped Ed25519 key. `sign` never exports the private key. Signed progress envelopes can move through a classroom system or another transport while `asfai_evidence` verifies the envelope, recipient, fingerprint, and replay state.
-
-## Essays and writing feedback
-
-A student's essays and writing feedback are saved only in the student's own Pod or Google Drive, from the student's own chat, after the student agrees. A teacher's connector cannot write to a student's store. The teacher approves the T30 grade and feedback first; the student then saves it during S17 Writing Feedback.
+All stores use the same logical names, so records can move between stores:
 
 ```text
-<pod-root>/asfai/writing/<assignment-id>/   (Drive: My Drive/ASFAI/writing/<assignment-id>/)
-  essay-v1.txt         the student's text, exactly as written
-  feedback-v1.json     teacher-approved grade and feedback, with essayPath and essayDigest
-  essay-v2.txt         each revision is a new file; saved drafts are never overwritten
-  revision-v2.json     revision check, with previous and revised essay paths and digests
+learner.json  educator.json  classroom.json
+courses/<course-id>/...
+learner-course-access/<course-id>.json
+writing/<assignment-id>/essay-v<N>.txt | feedback-v<N>.json | revision-v<N>.json
 ```
 
-Pod files are written with `put_object`; Drive files are uploaded by the assistant. Both are confirmed by read-back. Each essay version also gets an `artifacts` entry in `learner.json` that points to its Pod path or Drive file ID; the full text is kept inline only up to 8,192 bytes. The step-by-step instructions are in the `asfai-personal-storage` skill. With a Pod, these storage calls are the only ASFAI calls that carry essay text: the grading and revision tools ignore it, and the storage gateway writes it to the Pod without keeping a copy. With Drive, essay text never reaches ASFAI.
+A store that cannot hold files keeps only the records. Saved course material and writing drafts are immutable; a new version gets a new name.
+
+## Writing records
+
+A student's essays and writing feedback are saved only in the student's own store, from the student's own chat, after the student agrees. A teacher cannot save into a student's store. The teacher approves the T30 grade and feedback first; the student then saves them during S17 Writing Feedback.
+
+```text
+writing/<assignment-id>/
+  essay-v1.txt         the student's text, exactly as written
+  feedback-v1.json     teacher-approved grade and feedback, with a reference to essay-v1
+  essay-v2.txt         each revision is a new file; saved drafts are never overwritten
+  revision-v2.json     revision check, with references to both drafts
+```
+
+Each essay version also gets an `artifacts` entry in `learner.json` that points to the saved file; the full text is kept inline only up to 8,192 bytes. The grading and revision tools ignore essay text.
 
 ## Security boundary
 
-The connector uses OAuth 2.1 with PKCE. Reusable provider grants are encrypted with AES-256-GCM and isolated by pseudonymous connector tenant. This authorization material is the only durable connector-side private state. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model. Owner signing keys are stored in the connected Pod rather than an ASFAI tenant data directory.
+The connector uses OAuth 2.1 with PKCE and creates a pseudonymous connector tenant; no ASFAI account or email address is required. Reusable provider grants are encrypted with AES-256-GCM and isolated by connector tenant. This authorization material is the only durable connector-side private state. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model.
+
+A repository developer may run `npm run personal-storage:mcp` as a legacy local test harness; it is not packaged in the plugin.

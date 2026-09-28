@@ -36,7 +36,7 @@ export const podObjectReferenceSchema = z.object({
 
 export type PodObjectReference = z.infer<typeof podObjectReferenceSchema>;
 
-// A stored object lives in the user's Solid Pod or in their Google Drive.
+// A stored object lives in one of the user's stores; see storage-resources.ts.
 export const storageObjectReferenceSchema = z.discriminatedUnion("storage", [podObjectReferenceSchema, driveObjectReferenceSchema]);
 
 export type StorageObjectReference = z.infer<typeof storageObjectReferenceSchema>;

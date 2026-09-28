@@ -11,7 +11,7 @@ export default function TermsPage() {
     <main className="legal-page">
       <p className="eyebrow">ASFAI Education</p>
       <h1>Terms of service</h1>
-      <p className="legal-updated">Effective August 24, 2026</p>
+      <p className="legal-updated">Effective September 28, 2026</p>
 
       <section>
         <h2>Using ASFAI Education</h2>
@@ -26,7 +26,7 @@ export default function TermsPage() {
       <section>
         <h2>Your accounts, content, and permissions</h2>
         <p>
-          You remain responsible for your Google, Solid, school, and other third-party accounts. You must have
+          You remain responsible for your Google, storage, school, and other third-party accounts. You must have
           authority to access, evaluate, save, share, submit, grade, or modify any student work or classroom
           information you ask ASFAI to handle. You retain your rights in content you provide. You authorize
           ASFAI to process that content only as needed to perform the functions you request.
@@ -54,7 +54,7 @@ export default function TermsPage() {
       <section>
         <h2>Third-party services</h2>
         <p>
-          Google Classroom, Google Drive, Solid Pods, curriculum sources, and other connected services are
+          Google Classroom, storage providers, curriculum sources, and other connected services are
           governed by their own terms and availability. ASFAI is not responsible for changes, interruptions,
           or actions by those providers. A user may disconnect a provider at any time.
         </p>

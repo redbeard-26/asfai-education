@@ -25,7 +25,7 @@ export const educatorResourceSchema = z.object({
     aiGenerated: z.boolean().default(false),
   }),
 }).refine((resource) => resource.content !== undefined || resource.contentRef !== undefined, {
-  message: "A resource requires inline content or a Pod or Drive content reference.",
+  message: "A resource requires inline content or a stored content reference.",
   path: ["content"],
 });
 
@@ -97,7 +97,7 @@ export function createResource(workspaceInput: unknown, input: {
   license?: string;
   aiGenerated?: boolean;
 }) {
-  if (input.content === undefined && input.contentRef === undefined) throw new Error("A resource requires inline content or a Pod or Drive content reference.");
+  if (input.content === undefined && input.contentRef === undefined) throw new Error("A resource requires inline content or a stored content reference.");
   const workspace = parseWorkspace(workspaceInput);
   const now = new Date().toISOString();
   const id = uuidUrn();
@@ -140,7 +140,7 @@ export function versionResource(workspaceInput: unknown, resourceId: string, inp
   const id = uuidUrn();
   const content = input.content !== undefined ? input.content : input.contentRef !== undefined ? undefined : existing.content;
   const contentRef = input.contentRef !== undefined ? input.contentRef : input.content !== undefined ? undefined : existing.contentRef;
-  if (content === undefined && contentRef === undefined) throw new Error("A resource version requires inline content or a Pod or Drive content reference.");
+  if (content === undefined && contentRef === undefined) throw new Error("A resource version requires inline content or a stored content reference.");
   const resource = educatorResourceSchema.parse({
     ...existing,
     id,

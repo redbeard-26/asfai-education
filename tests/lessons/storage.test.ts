@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { persistenceFor } from "@/lib/learner-workflow";
 import { assertStoredProfileMatches, newLearnerProfile } from "@/lib/learner-store/types";
 
-describe("learner-owned storage instructions", () => {
+describe("learner-owned storage locations", () => {
   it("identifies the exact ASFAI IndexedDB database, store, and key", () => {
     const persistence = persistenceFor({ mode: "indexeddb" });
     expect(persistence).toMatchObject({
@@ -14,11 +14,11 @@ describe("learner-owned storage instructions", () => {
       serverRetained: false,
       writeRequired: true,
     });
-    expect(persistence.steps.join(" ")).toMatch(/transaction complete/i);
-    expect(persistence.steps.join(" ")).toMatch(/read.*back/i);
+    expect(persistence.resource.name).toBe("asfai-storage-local");
+    expect(persistence).not.toHaveProperty("steps");
   });
 
-  it("resolves a Solid Pod root and requires authenticated read-back", () => {
+  it("resolves a Solid Pod root and points to the Pod resource", () => {
     const persistence = persistenceFor({ mode: "solid_pod", location: "https://pod.example/private/" });
     expect(persistence).toMatchObject({
       mode: "solid_pod",
@@ -26,16 +26,14 @@ describe("learner-owned storage instructions", () => {
       serverRetained: false,
       writeRequired: true,
     });
-    expect(persistence.requiredCapability).toMatch(/authenticated Solid fetch/i);
-    expect(persistence.steps.join(" ")).toMatch(/401 or 403/i);
-    expect(persistence.steps.join(" ")).toMatch(/read.*back/i);
+    expect(persistence.requiredCapability).toBe("authenticated_solid_fetch");
+    expect(persistence.resource.name).toBe("asfai-storage-pod");
   });
 
-  it("requires an atomic local replacement and read-back", () => {
+  it("keeps the chosen local path and points to the local resource", () => {
     const persistence = persistenceFor({ mode: "local_file", location: "profiles/learner.json" });
     expect(persistence.location).toBe("profiles/learner.json");
-    expect(persistence.steps.join(" ")).toMatch(/atomically replace/i);
-    expect(persistence.steps.join(" ")).toMatch(/read.*back/i);
+    expect(persistence.resource.name).toBe("asfai-storage-local");
   });
 
   it("rejects a read-back that differs from the returned profile", () => {

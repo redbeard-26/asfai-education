@@ -53,4 +53,4 @@ Call `asfai_lesson` action `validate`, correct every error, then call action `re
 
 Call `asfai_lesson` action `prepare_publication` only after the teacher confirms the final package. This produces a digest and immutable object keys; it does not perform the authenticated publication. Never tell the teacher that a lesson or artifact is hosted until the authenticated publisher confirms it.
 
-After publication, call `asfai_lesson` action `create_assignment` when the teacher wants to distribute the lesson. Save the returned assignment through `asfai_resource` and `asfai_storage`, and share only the intended assignment fields.
+After publication, call `asfai_lesson` action `create_assignment` when the teacher wants to distribute the lesson. Record the returned assignment through `asfai_resource`, save it by following the storage resource for the user's store (`asfai-storage-pod`, `asfai-storage-drive`, or `asfai-storage-local`, from `asfai_capability` action `get_skill`), and share only the intended assignment fields.

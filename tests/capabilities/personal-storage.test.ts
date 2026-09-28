@@ -37,7 +37,7 @@ describe("personal storage MCP companion", () => {
     process.env.ASFAI_REMOTE_ENCRYPTION_KEY = "test-only-encryption-key-at-least-32-bytes";
     try {
       await expect(remoteStorageAction("status", {}, "tenant-no-pod")).resolves.toMatchObject({ mode: "not_connected", fallbackStore: null, serverRetainedEducationData: false });
-      await expect(remoteStorageAction("load", { document: "learner" }, "tenant-no-pod")).rejects.toThrow("Connect a Solid Pod");
+      await expect(remoteStorageAction("load", { document: "learner" }, "tenant-no-pod")).rejects.toThrow("asfai-storage-pod");
       const files = await readdir(directory, { recursive: true }).catch(() => [] as string[]);
       expect(files.some((file) => file.endsWith("learner.json"))).toBe(false);
     } finally {

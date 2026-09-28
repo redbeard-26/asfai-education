@@ -10,11 +10,11 @@ The architecture therefore separates six concerns that are often collapsed into 
 
 ### MCP access boundary
 
-The installed ASFAI Learning plugin contains one authenticated remote MCP connector. OAuth 2.1 with PKCE establishes a pseudonymous, accountless connector tenant. Nine compact gateway tools serve public learning operations, private Pod storage, and provider-neutral classroom exchange without requiring a coordinating website or local runtime.
+The installed ASFAI Learning plugin contains one authenticated remote MCP connector. OAuth 2.1 with PKCE establishes a pseudonymous, accountless connector tenant. Nine compact gateway tools serve public learning operations, private storage, and provider-neutral classroom exchange without requiring a coordinating website or local runtime.
 
-Solid and classroom OAuth grants are encrypted and isolated by connector tenant. Learner, educator, course, and evidence records are stored only in storage the user owns: a connected Solid Pod, written by the gateway, or the user's Google Drive, written by the assistant's own Drive connector without ASFAI involvement. When neither is available, nothing private is persisted. See [Google Drive storage](GOOGLE-DRIVE-STORAGE.md). Classroom systems transport assignments, documents, submissions, approved evaluations, and signed course references; they do not become the source of truth for mastery.
+Storage and classroom OAuth grants are encrypted and isolated by connector tenant. Learner, educator, course, and evidence records are stored only in storage the user owns; when none is available, nothing private is persisted. See [Private storage](PERSONAL-STORAGE-COMPANION.md). Classroom systems transport assignments, documents, submissions, approved evaluations, and signed course references; they do not become the source of truth for mastery.
 
-The user's connected AI assistant performs document interpretation, extraction, retrieval judgment, tutoring, generation, and assessment. ASFAI supplies versioned skills, public graph data, deterministic schemas, reducers and validators, and authenticated Pod transport. Google Drive files are handled by the assistant, not ASFAI. ASFAI does not operate a backend course-chat, OCR, embedding, or generation model.
+The user's connected AI assistant performs document interpretation, extraction, retrieval judgment, tutoring, generation, and assessment. ASFAI supplies versioned skills, public graph data, deterministic schemas, reducers and validators, and storage pointers. ASFAI does not operate a backend course-chat, OCR, embedding, or generation model.
 
 ### 1. Competency graph
 
@@ -91,16 +91,16 @@ An activity can target technical objectives and durable practices at once. For e
 
 ## Recommended first implementation
 
-An ASFAI learner or educator database is not required. Public objective metadata may be fetched and cached by the service; private courses, activities, evidence, artifacts, and derived learner state remain in owner-controlled Pods or Google Drive folders. The portable schemas allow a store to split large append-oriented collections into immutable resources without changing the assistant workflow.
+An ASFAI learner or educator database is not required. Public objective metadata may be fetched and cached by the service; private courses, activities, evidence, artifacts, and derived learner state remain in owner-controlled storage. The portable schemas allow a store to split large append-oriented collections into immutable resources without changing the assistant workflow.
 
 The implementation boundary is:
 
 ```text
 Public MCP               versioned frameworks, objectives, workflow contracts
 User AI assistant        extraction, retrieval judgment, tutoring, generation, assessment
-Solid Pod or Drive       courses, activities, resources, evidence, profiles, private indexes
+User-owned storage       courses, activities, resources, evidence, profiles, private indexes
 Deterministic reducers   validation, versioning, citations, mastery projections
-Integration gateway      authenticated Pod and classroom transport
+Integration gateway      authenticated storage and classroom transport
 ```
 
 ## Privacy and governance

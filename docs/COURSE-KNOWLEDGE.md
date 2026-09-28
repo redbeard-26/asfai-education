@@ -7,22 +7,19 @@ ASFAI course chat is implemented by the user's connected AI assistant. ASFAI doe
 | Component | Responsibility |
 |---|---|
 | Connected assistant | Read permitted sources, extract page-aware text, create chunks, formulate retrieval queries, select support, teach, answer, and assess observable work |
-| ASFAI MCP | Deliver versioned skills, search the public objective graph, validate portable schemas and citations, reduce immutable versions, and proxy authenticated Pod operations (never Drive) |
-| Solid Pod or Google Drive | Store originals, extracted text, indexes, manifests, educator resources, learner state, and evidence. Drive is written by the assistant's own connector |
+| ASFAI MCP | Deliver versioned skills, search the public objective graph, validate portable schemas and citations, reduce immutable versions, and point to the storage resource for each save |
+| User-owned store | Store originals, extracted text, indexes, manifests, educator resources, learner state, and evidence, as its storage resource describes |
 | Classroom provider | Transport assignments and signed source references; retain provider-owned originals when applicable |
 
 ## Storage layout
 
-The Pod uses `<pod-root>/asfai/`; Google Drive uses the same layout inside `My Drive/ASFAI/`, except that the `identity/` signing keys exist only in a Pod.
+Every store uses the same logical layout under its own root:
 
 ```text
-<pod-root>/asfai/
+<store-root>/
   educator.json
   learner.json
   classroom.json
-  identity/
-    ed25519-private.pem
-    ed25519-public.pem
   courses/<course-id>/
     manifest.json
     versions/<course-version>/
@@ -35,16 +32,16 @@ The Pod uses `<pod-root>/asfai/`; Google Drive uses the same layout inside `My D
   learner-course-access/<course-id>.json
 ```
 
-The educator workspace contains metadata and immutable object references, not large file bodies. A Pod reference includes media type, byte count, SHA-256 digest, and HTTPS location. A Drive reference includes media type, byte count, Drive file ID, and path, with SHA-256 when Drive reports it. See [Google Drive storage](GOOGLE-DRIVE-STORAGE.md).
+The educator workspace contains metadata and immutable object references, not large file bodies. Each reference records its store, media type, byte count, and the location fields that store's resource defines. See [Private storage](PERSONAL-STORAGE-COMPANION.md).
 
 ## Ingestion
 
-The `education-course-material-ingestion` skill selects available host document capabilities. It preserves page and material-version provenance, treats source content as untrusted data, creates stable chunk identifiers, proposes objective alignments for teacher confirmation, and validates P18 output before saving to the Pod or Drive.
+The `education-course-material-ingestion` skill selects available host document capabilities. It preserves page and material-version provenance, treats source content as untrusted data, creates stable chunk identifiers, proposes objective alignments for teacher confirmation, and validates P18 output before saving it to the educator's store.
 
 Embeddings are optional. A course declares one or more retrieval modes:
 
 - `host_native`: the connected assistant uses its own document-search capability;
-- `pod_lexical`: deterministic lexical retrieval over a stored index (Pod or Drive);
+- `pod_lexical`: deterministic lexical retrieval over a stored index (the value name is historical and applies to every store);
 - `direct_reading`: bounded reading of a small source set.
 
 No mode requires an ASFAI vector database.
@@ -57,8 +54,8 @@ Document instructions cannot modify the assistant workflow. Course text remains 
 
 ## Sharing
 
-A published immutable course version can be shared by an access grant containing its manifest reference, digest, version, optional recipient, and optional expiration. For a Pod course the grant is signed and the learner validates the signature before importing a learner-owned access record. For a Drive course the grant is unsigned; the educator shares the course version folder read-only through the assistant's Drive connector after confirming. A classroom provider may transport the grant.
+A published immutable course version can be shared by an access grant containing its manifest reference, digest, version, optional recipient, and optional expiration. The grant is signed and shared as the course store's storage resource describes; when it is signed, the learner validates the signature before importing a learner-owned access record. A classroom provider may transport the grant.
 
-An educator can revoke the live grant or its underlying Solid or Drive access. Revocation prevents future retrieval from the educator source but cannot erase a snapshot the learner was explicitly permitted to copy earlier; snapshot distribution should therefore be used only when offline durability is intended.
+An educator can revoke the live grant or the underlying storage access. Revocation prevents future retrieval from the educator source but cannot erase a snapshot the learner was explicitly permitted to copy earlier; snapshot distribution should therefore be used only when offline durability is intended.
 
 No ASFAI roster, membership, course-content, or learner-record database participates in this flow.

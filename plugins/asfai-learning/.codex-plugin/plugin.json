@@ -1,6 +1,6 @@
 {
   "name": "asfai-learning",
-  "version": "0.1.3+codex.20260928",
+  "version": "0.1.4+codex.20260928",
   "description": "Plan lessons, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
   "author": {
     "name": "ASFAI",
@@ -13,15 +13,13 @@
     "education",
     "learning",
     "lessons",
-    "solid",
-    "google-drive",
     "private-data"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "ASFAI Learning",
     "shortDescription": "ASFAI lessons, evaluations, asset transformations, and private learning data.",
-    "longDescription": "Plan lessons, design evaluations, transform teaching assets, and teach through chat using the ASFAI learning graph. Save to PrivateDataPod and other Solid Pods or to Google Drive, and exchange work with configurable classroom providers through one authenticated remote MCP connector. Learning records are saved only in the user's own Pod or Google Drive; Drive files are written by the assistant's own Drive connector, never by ASFAI. Pod and Google Classroom authorization is encrypted, isolated to the user's connector, and restored across devices using that connection until explicit removal or provider revocation.",
+    "longDescription": "Plan lessons, design evaluations, transform teaching assets, and teach through chat using the ASFAI learning graph. Save to storage you own, and exchange work with configurable classroom providers through one authenticated remote MCP connector. Learning records are saved only in storage the user owns. Storage and Google Classroom authorization is encrypted, isolated to the user's connector, and restored across devices using that connection until explicit removal or provider revocation.",
     "developerName": "ASFAI",
     "category": "Education",
     "capabilities": [
@@ -33,7 +31,7 @@
       "Classroom exchange"
     ],
     "defaultPrompt": [
-      "Connect my private Pod and continue my lesson.",
+      "Save my progress to my own storage and continue my lesson.",
       "Help me learn a concept and save my progress.",
       "Create a lesson outline for my course.",
       "Design an evaluation from my lesson plan.",

@@ -13,6 +13,7 @@ import { GoogleClassroomAdapter } from "@/lib/classroom-connectors/google";
 import { DeviceProtectedStorage, serverStorageProtector } from "@/lib/device-protected-storage";
 import { PersonalStorageService, personalDocumentKinds } from "@/lib/personal-storage";
 import { asfaiEducationBaseUrl, signCallbackToken } from "@/lib/remote-oauth";
+import { STORAGE_RULE } from "@/lib/storage-resources";
 
 export const privateStorageActionSchema = z.enum([
   "status", "connect_pod", "forget_pod_authorization", "load", "save", "identity", "sign", "verify_signature",
@@ -69,8 +70,8 @@ function publicStorageResult(value: Record<string, unknown>) {
     primaryStore: "solid_pod",
     fallbackStore: null,
     storageRule: connected
-      ? "Private education data is read from and written to the connected Solid Pod. ASFAI does not retain a fallback copy."
-      : "No private store is connected. Connect a Solid Pod before loading or saving private education data.",
+      ? `Connected. ASFAI does not retain a fallback copy. ${STORAGE_RULE}`
+      : `Not connected through this connector. ${STORAGE_RULE}`,
     serverRetainedEducationData: false,
   };
 }
@@ -88,7 +89,7 @@ function publicPodResult(value: Record<string, unknown>) {
 async function requireConnectedPod(storage: PersonalStorageService) {
   const status = await storage.status();
   if (status.mode !== "solid" || !status.isLoggedIn) {
-    throw new Error("Private storage is not connected. Connect a Solid Pod before reading, writing, or signing private ASFAI data.");
+    throw new Error(`Private storage is not connected through this connector. ${STORAGE_RULE}`);
   }
 }
 

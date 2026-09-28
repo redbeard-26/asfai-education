@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STORAGE_RULE } from "@/lib/storage-resources";
 import { getCapability } from "@/lib/capabilities/catalog";
 import { getPriorityCapabilitySpec, validatePriorityCapability } from "@/lib/capabilities/priority-capabilities";
 
@@ -177,7 +178,7 @@ export function continueLearningSession(input: {
     hostInstruction: capability.guidance,
     next:
       "Respond to what the learner actually demonstrated, then ask one content-focused follow-up, fresh example, transfer question, misconception check, or reflection appropriate to the capability. Do not reveal orchestration or private assessment machinery.",
-    persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: "asfai_storage" },
+    persistence: { owner: capability.mcp.stateOwner, verified: false, rule: STORAGE_RULE, nextTool: "asfai_storage" },
   };
 }
 
@@ -197,6 +198,6 @@ export function finishLearningSession(input: { session: unknown; abandon?: boole
       rule:
         "Candidates are not evidence or mastery by themselves. Record only justified observations through asfai_evidence after learner consent and preserve assistance and limitations.",
     },
-    persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: "asfai_storage" },
+    persistence: { owner: capability.mcp.stateOwner, verified: false, rule: STORAGE_RULE, nextTool: "asfai_storage" },
   };
 }

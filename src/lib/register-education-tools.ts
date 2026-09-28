@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { STORAGE_RULE } from "@/lib/storage-resources";
 import {
   getObjective,
   learningFrontier,
@@ -36,7 +37,7 @@ export function registerEducationTools(server: McpServer) {
     {
       title: "Get learner-owned storage instructions",
       description:
-        "Returns exact host-side write and verification steps for ASFAI IndexedDB, a local learner.json file, the learner's Solid Pod, or the learner's Google Drive. It does not receive credentials or write the profile.",
+        "Returns where the learner's store keeps the profile and which storage resource describes how to save it. It does not receive credentials or write the profile.",
       inputSchema: {
         storage: storageTargetSchema,
         hostCapabilities: z
@@ -48,24 +49,16 @@ export function registerEducationTools(server: McpServer) {
     async ({ storage, hostCapabilities }) => {
       try {
         const persistence = persistenceFor(storage);
-        const required = storage.mode === "indexeddb"
-          ? "browser_indexeddb"
-          : storage.mode === "solid_pod"
-            ? "authenticated_solid_fetch"
-            : storage.mode === "google_drive"
-              ? "host_google_drive"
-              : "local_filesystem";
+        const required = persistence.requiredCapability;
         const capable = hostCapabilities ? hostCapabilities.includes(required) : null;
         return json({
           persistence,
           capabilityCheck: {
             required,
             capable,
-            rule:
-              "Confirm the required host capability before beginning. A public MCP call cannot itself access browser IndexedDB, a local filesystem, a private Pod session, or Google Drive.",
+            rule: "Confirm the required host capability before beginning. This MCP call does not write the profile.",
           },
-          confirmationRule:
-            "Say that progress was saved only after the host completes the write and read-back verification. Otherwise say that saving is still pending and offer an available storage target or downloadable JSON.",
+          confirmationRule: STORAGE_RULE,
         });
       } catch (error) {
         return err(error instanceof Error ? error.message : String(error));
@@ -250,7 +243,7 @@ export function registerEducationTools(server: McpServer) {
     {
       title: "Create learning evidence and an assessment claim",
       description:
-        "Validates a completed chat assessment and returns an updated portable learner profile containing an evidence event, linked assessment claim, and derived objective state. The public MCP server never stores the profile. The AI host must save the returned JSON locally, to the learner's Solid Pod, or to the learner's Google Drive using the learner's own authenticated session or connector.",
+        "Validates a completed chat assessment and returns an updated portable learner profile containing an evidence event, linked assessment claim, and derived objective state. The public MCP server never stores the profile. The AI host must save the returned JSON in the learner's own store by following that store's storage resource.",
       inputSchema: {
         learnerProfile: learnerProfileSchema.optional().describe("Existing portable profile; omit to create one"),
         objectiveId: z.string(),
