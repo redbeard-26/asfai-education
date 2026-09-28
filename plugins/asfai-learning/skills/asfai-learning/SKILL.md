@@ -33,6 +33,8 @@ Private records are saved only in storage the user owns, never in ASFAI. How to 
 
 For course ingestion use the `education-course-material-ingestion` skill. For teacher or learner questions against approved sources use `education-source-grounded-chat`. The host assistant performs extraction, retrieval judgment, teaching, and answer generation. Save original files and derived text as stored files, leaving only references in educator state.
 
+For a student collecting facts from articles or videos, retrieve `education-guided-research` through `asfai_capability` action `install_skill` with `delivery:"inline"` so its research-record reference is included. It uses the existing S12 Research Assistant session, checks exact source support, and keeps the student's notes and understanding learner-owned. Do not search for another research connector.
+
 Record concise evidence rather than a bare mastery flag. Avoid unnecessary personal details and verbatim chat. Share progress with a teacher only after learner approval, using a scoped envelope (signed when the learner's storage resource supports it) instead of the full profile.
 
 ## Exchange classroom work

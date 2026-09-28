@@ -130,6 +130,7 @@ describe("compact ASFAI MCP surface", () => {
       "education-concept-assessment",
       "education-asset-transform",
       "education-evaluation-design",
+      "education-guided-research",
       "education-lesson-authoring",
       "education-lesson-facilitation",
     ]));
@@ -172,10 +173,13 @@ describe("compact ASFAI MCP surface", () => {
 
   it("delivers the new workflow skills through the MCP capability installer", async () => {
     const tool = registeredServer().asfai_capability;
-    for (const name of ["education-lesson-authoring", "education-evaluation-design", "education-asset-transform"]) {
+    for (const name of ["education-lesson-authoring", "education-evaluation-design", "education-asset-transform", "education-guided-research"]) {
       const installed = resultJson(await tool.handler({ action: "install_skill", payload: { name, delivery: "inline" } }));
       expect(installed).toMatchObject({ name, delivery: "inline" });
       expect((installed.files as Array<{ path: string }>).some((file) => file.path === `${name}/SKILL.md`)).toBe(true);
+      if (name === "education-guided-research") {
+        expect((installed.files as Array<{ path: string }>).some((file) => file.path === `${name}/references/research-record.md`)).toBe(true);
+      }
     }
   });
 });

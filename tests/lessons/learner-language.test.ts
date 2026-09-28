@@ -11,10 +11,11 @@ describe("learner-facing language", () => {
     }
   });
 
-  it("requires natural learner dialogue in both learner skills", () => {
+  it("requires natural learner dialogue in learner skills", () => {
     for (const path of [
       "src/content/skills/education-concept-assessment/SKILL.md",
       "src/content/skills/education-lesson-facilitation/SKILL.md",
+      "src/content/skills/education-guided-research/SKILL.md",
     ]) {
       const content = fs.readFileSync(path, "utf8");
       expect(content).toContain("Speak only in learner language");
