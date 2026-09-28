@@ -3,6 +3,7 @@ import { getCapability } from "@/lib/capabilities/catalog";
 import { prepareCapabilityRun, startLearningSession } from "@/lib/capabilities/execution";
 import { validateEssayGrade, validateEssayRevision } from "@/lib/capabilities/essay-grading";
 import { validatePriorityCapability } from "@/lib/capabilities/priority-capabilities";
+import { evidenceArtifactSchema } from "@/lib/learner-workflow";
 
 const essayText = "Bees are important. They carry pollen between flowers so plants can make seeds. Farmers rent hives in the spring. The bees are pollinators of mutualistic symbiosis.";
 
@@ -110,5 +111,21 @@ describe("S17 revision check", () => {
 
   it("requires every suggestion to be checked", () => {
     expect(validateEssayRevision({ ...check(), revisionChecks: [] }).issues).toContain("Grow 'grow-1' must be checked exactly once.");
+  });
+});
+
+describe("essay Pod save instructions", () => {
+  it("describe a learner artifact entry that matches the learner schema", () => {
+    const entry = {
+      id: "essay-bees-v1",
+      createdAt: "2026-09-28T12:00:00-07:00",
+      kind: "document",
+      mediaType: "text/plain",
+      byteLength: Buffer.byteLength(essayText),
+      sha256: "a".repeat(64),
+      provenance: { system: "asfai-pod", externalId: "writing/bees/essay-v1.txt" },
+      transcript: { text: essayText, method: "learner-authored", reviewStatus: "learner-confirmed", complete: true },
+    };
+    expect(evidenceArtifactSchema.parse(entry)).toMatchObject({ provenance: { externalId: "writing/bees/essay-v1.txt" } });
   });
 });

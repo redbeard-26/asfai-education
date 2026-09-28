@@ -41,6 +41,20 @@ Large course files and derived text use the object actions `put_object`, `get_ob
 
 `identity` creates an owner-scoped Ed25519 key. `sign` never exports the private key. Signed progress envelopes can move through a classroom system or another transport while `asfai_evidence` verifies the envelope, recipient, fingerprint, and replay state.
 
+## Essays and writing feedback
+
+A student's essays and writing feedback are saved only in the student's own Pod, from the student's own chat, after the student agrees. A teacher's connector cannot write to a student's Pod. The teacher approves the T30 grade and feedback first; the student then saves it during S17 Writing Feedback.
+
+```text
+<pod-root>/asfai/writing/<assignment-id>/
+  essay-v1.txt         the student's text, exactly as written
+  feedback-v1.json     teacher-approved grade and feedback, with essayPath and essayDigest
+  essay-v2.txt         each revision is a new file; saved drafts are never overwritten
+  revision-v2.json     revision check, with previous and revised essay paths and digests
+```
+
+Files are written with `put_object` and confirmed by read-back. Each essay version also gets an `artifacts` entry in `learner.json` that points to its object path and digest; the full text is kept inline only up to 8,192 bytes. The step-by-step instructions are in the `asfai-personal-storage` skill. These storage calls are the only ASFAI calls that carry essay text: the grading and revision tools ignore it, and the storage gateway writes it to the Pod without keeping a copy.
+
 ## Security boundary
 
 The connector uses OAuth 2.1 with PKCE. Reusable provider grants are encrypted with AES-256-GCM and isolated by pseudonymous connector tenant. This authorization material is the only durable connector-side private state. Provider credentials and raw private documents are not placed in tool descriptions or returned to the model. Owner signing keys are stored in the connected Pod rather than an ASFAI tenant data directory.

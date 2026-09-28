@@ -23,3 +23,19 @@ Pod documents are stored at `<pod-root>/asfai/learner.json`, `<pod-root>/asfai/e
 The learner document may contain a top-level `artifacts` map. Evidence events link entries through `artifactIds`. Keep full transcript text inline only through the 8,192-byte UTF-8 cutoff; otherwise retain a summary of at most 2,000 characters and a provider/object reference. Binary artifact content stays outside `learner.json`.
 
 For teacher/student exchange, use `asfai_evidence` to create an integrity-protected progress envelope, `asfai_storage` to sign the exact envelope, and `asfai_resource` to queue or accept the signed envelope. Share only the scoped envelope the learner approved, never the full profile or raw conversation.
+
+## Essays and writing feedback
+
+Save a student's essay and its feedback only in the student's own Pod, from the student's own chat with their Pod connected, and only after the student agrees. A teacher's connector cannot write to a student's Pod.
+
+Keep each assignment in one folder, `writing/<assignment-id>/`, where the ID is a short lowercase slug such as `machu-picchu`. Never overwrite a saved essay; every draft gets its own version number.
+
+1. Call `status`. If the Pod is not connected, offer `connect_pod` or continue without saving.
+2. Call `list_objects` with `containerPath: "writing/<assignment-id>"` to find the next version number `N`; if the folder does not exist yet, `N` is 1.
+3. Save the essay exactly as the student wrote it with `put_object`: `path: "writing/<assignment-id>/essay-v<N>.txt"`, `contentType: "text/plain; charset=utf-8"`, and `text`. Keep the returned `digest`.
+4. Save the teacher-approved feedback with `put_object`: `path: "writing/<assignment-id>/feedback-v<N>.json"`, `contentType: "application/json"`, and `text` set to JSON containing `essayPath`, `essayDigest` (the digest from step 3), the approved grade and feedback, `approvedBy: "teacher"`, and `savedAt`. Passage offsets in the feedback refer to that essay version.
+5. After the student revises, save the new draft as `essay-v<N+1>.txt`, then save the revision check as `revision-v<N+1>.json` with `previousEssayPath`, `revisedEssayPath`, both digests, and the checks.
+6. Call `load` with `document: "learner"`, add one `artifacts` entry per essay version (a new `id`, `createdAt`, `kind: "document"`, `mediaType: "text/plain"`, `byteLength`, `sha256` set to the digest, `provenance.system: "asfai-pod"`, `provenance.externalId` set to the object path, and a `transcript` with `method: "learner-authored"`, `reviewStatus: "learner-confirmed"`, `complete: true`, and the full text only when it is at most 8,192 bytes, otherwise a summary of at most 2,000 characters). Call `save` with the prior `digest` as `expectedDigest`.
+7. Tell the student it is saved only when every call returns `verified: true`. Record evidence from the essay only through `asfai_evidence` with the student's approval.
+
+These storage calls are the only ASFAI calls that carry the essay text. The gateway writes it to the student's Pod and does not keep a copy (`serverRetained: false`).
