@@ -45,6 +45,8 @@ async function addDirectory(relativePath, archiveRoot = relativePath) {
 
 // The ZIP root is a valid plugin for both ChatGPT/Codex and Claude. The Codex
 // marketplace copy is generated from the same source files for CLI installs.
+// Claude rejects an upload with more than one .claude-plugin/plugin.json, so
+// the marketplace copy carries only the Codex manifest.
 await addFile(".codex-plugin/plugin.json");
 await addFile(".claude-plugin/plugin.json");
 await addFile(".mcp.json");
@@ -52,12 +54,16 @@ await addFile("README.md");
 await addDirectory("skills");
 
 await addFile(".codex-plugin/plugin.json", "plugins/asfai-learning/.codex-plugin/plugin.json");
-await addFile(".claude-plugin/plugin.json", "plugins/asfai-learning/.claude-plugin/plugin.json");
 await addFile(".mcp.json", "plugins/asfai-learning/.mcp.json");
 await addFile("README.md", "plugins/asfai-learning/README.md");
 await addDirectory("skills", "plugins/asfai-learning/skills");
 files[".agents/plugins/marketplace.json"] = [await readFile(".agents/plugins/marketplace.json"), zipOptions];
 files["INSTALL.md"] = [await readFile("docs/PLUGIN-INSTALL.md"), zipOptions];
+
+const claudeManifests = Object.keys(files).filter((name) => name.endsWith(".claude-plugin/plugin.json"));
+if (claudeManifests.length !== 1 || claudeManifests[0] !== ".claude-plugin/plugin.json") {
+  throw new Error(`The ZIP must contain exactly one root .claude-plugin/plugin.json; found ${claudeManifests.join(", ") || "none"}.`);
+}
 
 const zip = zipSync(files, { level: 9 });
 await mkdir(path.dirname(outputPath), { recursive: true });
