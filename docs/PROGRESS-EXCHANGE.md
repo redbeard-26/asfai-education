@@ -21,7 +21,7 @@ The authenticated ASFAI Learning connector supplies the owner-scoped execution l
 
 1. Each owner calls `identity` once and shares only the public key/fingerprint through the approved class channel.
 2. The sender creates an integrity-protected envelope with `asfai_evidence`, signs the exact envelope with `asfai_storage`, and queues it with `asfai_resource` action `queue_exchange`.
-3. The sender saves the complete classroom document locally or in their Pod with digest-based conflict protection and read-back verification.
+3. The sender saves the complete classroom document in their own store with conflict protection and read-back verification, following its storage resource, and signs it where that store supports signing.
 4. The recipient imports the portable signed envelope with action `accept_exchange`. Signature, integrity, intended recipient role, signer fingerprint, and replay receipt are checked before it enters the inbox.
 5. The recipient saves their own updated classroom document. Raw conversations and full learner profiles are not transported.
 

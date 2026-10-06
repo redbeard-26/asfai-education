@@ -2,9 +2,9 @@
 
 This plugin works with ChatGPT/Codex and Claude and installs one authenticated remote MCP server displayed as **ASFAI Learning**. It works without the education website or a desktop companion and is intended to use the same connection from Windows, iPhone, and iPad.
 
-The compact callable surface contains nine gateway tools: `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, `asfai_storage`, and `asfai_classroom`. Classroom is provider-neutral; pass `provider: "google"` for Google Classroom today. There is no separate Pod, storage, or Google connector.
+The compact callable surface contains nine gateway tools: `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, `asfai_resource`, `asfai_storage`, and `asfai_classroom`. Classroom is provider-neutral; pass `provider: "google"` for Google Classroom today. There is no separate ASFAI storage or Google connector.
 
-The connector establishes an accountless private identity through OAuth 2.1 and PKCE. A connected Solid Pod is the only remote store for learner, educator, classroom, and course records. When no Pod is connected, private writes remain pending; ASFAI retains no fallback education record. Provider passwords and tokens are never accepted through tool arguments or returned to the model.
+The connector establishes an accountless private identity through OAuth 2.1 and PKCE. Learner, educator, classroom, and course records are saved only in storage the user owns; ASFAI retains no fallback education record. The storage resources `asfai-storage-pod`, `asfai-storage-drive`, and `asfai-storage-local` hold the saving instructions. Provider passwords and tokens are never accepted through tool arguments or returned to the model.
 
 Google Classroom authorization is performed through a hosted browser handoff and then encrypted for the connector until the user explicitly removes it or revokes ASFAI in Google. The connector can list courses and assignments, import selected work, create assignments with links, Drive files, or generated Google Docs, attach or turn in approved work, and return approved grades. All external mutations are previewed before a confirmed call.
 

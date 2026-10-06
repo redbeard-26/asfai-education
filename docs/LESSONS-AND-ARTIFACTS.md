@@ -7,13 +7,13 @@ ASFAI lessons are public, immutable plans that coordinate objectives, activities
 | Record | Purpose | Default owner |
 |---|---|---|
 | `LessonDefinition` | Public versioned plan | ASFAI lesson catalog |
-| `LessonAssignment` | Teacher configuration and sharing scope | Teacher local store or Pod |
-| `LessonRun` | One learner's activity state and evidence references | Learner local store or Pod |
+| `LessonAssignment` | Teacher configuration and sharing scope | Teacher's own store |
+| `LessonRun` | One learner's activity state and evidence references | Learner's own store |
 | `LessonReport` | Lesson-scoped projection of evidence and claims | Learner until explicitly shared |
 
 The learner-profile schema is `0.2`. Existing `0.1` profiles are upgraded without changing the learner identifier or existing evidence and claims. Lesson runs and reports are added as separate collections.
 
-Small textual representations of student artifacts may be retained in `learner.json`: inline transcript text is capped at 8 KiB of UTF-8 text per artifact. The artifact stays in the top-level learner-owned `artifacts` map and evidence events refer to it by ID. Larger text uses an inline summary of at most 2,000 characters plus its private provider/object reference. Binary files and large telemetry bundles stay outside `learner.json`; images, audio, video, and documents must not be base64-encoded into the profile. The current browser and Solid stores continue to serialize the portable snapshot in one resource; separate blob stores are the next storage-adapter increment.
+Small textual representations of student artifacts may be retained in `learner.json`: inline transcript text is capped at 8 KiB of UTF-8 text per artifact. The artifact stays in the top-level learner-owned `artifacts` map and evidence events refer to it by ID. Larger text uses an inline summary of at most 2,000 characters plus its private provider/object reference. Binary files and large telemetry bundles stay outside `learner.json`; images, audio, video, and documents must not be base64-encoded into the profile. The current stores continue to serialize the portable snapshot in one resource; separate blob stores are the next storage-adapter increment.
 
 ## MCP workflow
 

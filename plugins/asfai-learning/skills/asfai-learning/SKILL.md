@@ -1,17 +1,17 @@
 ---
 name: asfai-learning
-description: Use or verify the ASFAI Learning plugin in chat to plan lessons, design evaluations, transform teaching assets, teach, assess, save to a Solid Pod, or exchange classroom work.
+description: Use or verify the ASFAI Learning plugin in chat to plan lessons, design evaluations, transform teaching assets, teach, assess, save to the user's own storage, or exchange classroom work.
 ---
 
 # ASFAI Learning
 
-The installed plugin has exactly one authenticated remote MCP server, **ASFAI Learning**. Do not search for a separate Solid, storage, companion, Google Classroom, student, or teacher connector. Its callable surface is:
+The installed plugin has exactly one authenticated remote MCP server, **ASFAI Learning**. Do not search for a separate storage, companion, Google Classroom, student, or teacher connector for ASFAI. Its callable surface is:
 
 - `asfai_capability`, `asfai_graph`, `asfai_run`, `asfai_session`, `asfai_lesson`, `asfai_evidence`, and `asfai_resource` for learning and teaching workflows;
-- `asfai_storage` for Pod-first private records, verified saves, identity, and signatures;
+- `asfai_storage` for private storage actions, save locations, and read-back checks;
 - `asfai_classroom` for provider-neutral classroom exchange.
 
-When asked whether ASFAI is available, inspect those tools and, when possible, call `asfai_capability` action `manifest` or `asfai_storage` action `status`. Do not search the public plugin directory to decide whether this installed plugin is available. Plugin updates load in a new chat.
+When asked whether ASFAI is available, inspect those tools and, when possible, call `asfai_capability` action `manifest`. Do not search the public plugin directory to decide whether this installed plugin is available. Plugin updates load in a new chat.
 
 ## Speak naturally
 
@@ -23,31 +23,19 @@ For a new goal, use `asfai_capability` to recommend the relevant capability and 
 
 For teacher requests, retrieve `education-lesson-authoring` when making or polishing an outline or full plan, `education-evaluation-design` when designing an evaluation from a completed lesson plan, and `education-asset-transform` when converting an existing source to a new representation. These are available through `asfai_capability` action `get_skill` or `install_skill`; do not add three more always-on MCP connectors. Use `asfai_lesson` actions `prepare_outline` and `validate_outline`, `asfai_evidence` actions `design_evaluation` and `validate_evaluation`, and `asfai_resource` actions `prepare_transform` and `validate_transform`. Ask the returned questions before generating; the chat host creates content and ASFAI validates the resulting artifact.
 
-## Save to the Pod first
+For an unfamiliar educator action, call `asfai_capability` action `action_schema` with payload `{ "tool": "asfai_lesson", "action": "prepare_outline" }` (substitute the intended tool and action). Follow the returned JSON Schema: the fields belong directly in `payload`, not inside `answers`. If a payload is rejected, correct it from the schema instead of repeating the same call. Planning tools return caller-owned artifacts and do not save or publish them.
 
-Before relying on personal state, call `asfai_storage` action `status`. If it reports `mode:"solid_pod"` and `isLoggedIn:true`, load the requested document immediately. Do not start another authorization.
+When mapping a lesson to the public graph, search with relevant terms and inspect the returned objective IDs. If a natural-language query yields no suitable result, try shorter or alternate terms; do not infer that no objectives exist. Before calling a standards citation graph-grounded, check the exact objective ID and code with `asfai_graph` action `verify_standard_alignment`. Keep the objective ID and fully qualified code with the plan. A code proposed from model knowledge without a verified graph link is an unverified suggestion, not a sourced alignment.
 
-If the user asks to connect a Pod and no valid Pod grant is restored, call `asfai_storage` action `connect_pod` with the Pod root and OIDC issuer. For PrivateDataPod use:
+## Save to the user's own store
 
-```json
-{
-  "action": "connect_pod",
-  "payload": {
-    "podRoot": "https://<name>.privatedatapod.com/",
-    "oidcIssuer": "https://privatedatapod.com/"
-  }
-}
-```
+Private records are saved only in storage the user owns, never in ASFAI. How to save depends on the store, and the instructions live only in the storage resources: `asfai-storage-pod`, `asfai-storage-drive`, and `asfai-storage-local`. Get the one for the user's store with `asfai_capability` action `get_skill` and follow it exactly. If the store is not known, ask the user where to save. Say data was saved only after that resource's read-back check succeeds; without a store, continue without persistence.
 
-Show the returned URL as **Connect private storage**. Never request a password, cookie, authorization code, access token, refresh token, client secret, or DPoP key in chat. After approval, call `status` again. The grant persists for this authenticated connector until the user explicitly forgets it or revokes it at the provider.
+For course ingestion use the `education-course-material-ingestion` skill. For teacher or learner questions against approved sources use `education-source-grounded-chat`. The host assistant performs extraction, retrieval judgment, teaching, and answer generation. Save original files and derived text as stored files, leaving only references in educator state.
 
-Load with payload `{ "document": "learner" }`, `{ "document": "educator" }`, or `{ "document": "classroom" }`. Save the complete updated document with the digest returned by `load` as `expectedDigest`. Say data was saved only when `save` returns `verified:true` after read-back. If status reports `not_connected`, connect a Pod or continue without persistence; ASFAI retains no fallback education record.
+For a student collecting facts from articles or videos, retrieve `education-guided-research` through `asfai_capability` action `install_skill` with `delivery:"inline"` so its research-record reference is included. It uses the existing S12 Research Assistant session, checks exact source support, and keeps the student's notes and understanding learner-owned. Do not search for another research connector.
 
-For course ingestion use the `education-course-material-ingestion` skill. For teacher or learner questions against approved sources use `education-source-grounded-chat`. The host assistant performs extraction, retrieval judgment, teaching, and answer generation. Use Pod object operations for original files and derived text, leaving only references in educator state.
-
-Never call `forget_pod_authorization` as cleanup. Use it only after an explicit request to forget or revoke the Pod connection.
-
-Record concise evidence rather than a bare mastery flag. Avoid unnecessary personal details and verbatim chat. Share progress with a teacher only after learner approval, using a scoped signed envelope instead of the full profile.
+Record concise evidence rather than a bare mastery flag. Avoid unnecessary personal details and verbatim chat. Share progress with a teacher only after learner approval, using a scoped envelope (signed when the learner's storage resource supports it) instead of the full profile.
 
 ## Exchange classroom work
 
@@ -57,7 +45,7 @@ Every `asfai_classroom` call includes a provider. Use `provider:"google"` for Go
 2. If already logged in with sufficient scopes, continue without another consent page.
 3. Otherwise call `connect` with `role`, least privilege, and provider. Default to `readOnly:true`. Set `includeDriveContent:true` only when attachment text is needed. Use writable access only for a user-requested external change. Show the URL as **Connect classroom** and check status after approval.
 4. Use `list_courses`, teacher-only `list_learners`, and `list_assignments` only as needed. Use `import_work` for the selected assignment or submission and only the attachment content needed for evaluation.
-5. Resolve objectives with `asfai_graph`, assess demonstrated work with `asfai_evidence`, and save concise evidence through `asfai_storage` before optional grade passback.
+5. Resolve objectives with `asfai_graph`, assess demonstrated work with `asfai_evidence`, and save concise evidence in the user's store before optional grade passback.
 
 The classroom bridge transports work; it does not decide mastery. A grade or submission state alone is not evidence. Preserve assistance, provenance, uncertainty, rubric references, and limitations.
 

@@ -13,4 +13,4 @@ For a learner-facing summary, describe what the learner showed, strengths, growt
 
 Restricted plans and consequential decisions require an authorized qualified human. The assistant may draft and compare evidence; it must not determine diagnosis, eligibility, placement, discipline, grades, or services.
 
-Persist the full learner profile only in the learner-owned store. Share only the minimum report envelope the learner or applicable policy authorizes. Verify every write through `asfai_storage` before saying data was saved.
+Persist the full learner profile only in the learner-owned store. Share only the minimum report envelope the learner or applicable policy authorizes. Save by following the storage resource for the user's store (`asfai-storage-pod`, `asfai-storage-drive`, or `asfai-storage-local`, from `asfai_capability` action `get_skill`), and verify every write as that resource describes before saying data was saved.

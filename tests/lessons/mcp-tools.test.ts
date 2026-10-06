@@ -8,6 +8,7 @@ import { toJsonSchemaCompat } from "../../node_modules/@modelcontextprotocol/sdk
 interface RegisteredTool {
   title?: string;
   description?: string;
+  annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean };
   inputSchema: unknown;
   handler: (input: Record<string, unknown>) => Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }>;
 }
@@ -23,7 +24,7 @@ function resultJson(result: Awaited<ReturnType<RegisteredTool["handler"]>>) {
 }
 
 describe("compact ASFAI MCP surface", () => {
-  it("registers exactly the eight default gateway tools", () => {
+  it("registers exactly the nine default gateway tools", () => {
     expect(Object.keys(registeredServer())).toEqual(ASFAI_DEFAULT_TOOL_NAMES);
   });
 
@@ -32,9 +33,10 @@ describe("compact ASFAI MCP surface", () => {
       name,
       title: tool.title,
       description: tool.description,
+      annotations: tool.annotations,
       inputSchema: toJsonSchemaCompat(tool.inputSchema as never),
     }));
-    expect(JSON.stringify(definitions).length).toBeLessThanOrEqual(6000);
+    expect(JSON.stringify(definitions).length).toBeLessThanOrEqual(7000);
   });
 
   it("publishes all inventoried capabilities through valid gateway entries", async () => {
@@ -128,6 +130,7 @@ describe("compact ASFAI MCP surface", () => {
       "education-concept-assessment",
       "education-asset-transform",
       "education-evaluation-design",
+      "education-guided-research",
       "education-lesson-authoring",
       "education-lesson-facilitation",
     ]));
@@ -150,12 +153,33 @@ describe("compact ASFAI MCP surface", () => {
     expect(transform).toMatchObject({ primitive: "Transform", state: "ready_to_draft" });
   });
 
+  it("publishes educator payload fields on demand and rejects an answers wrapper", async () => {
+    const tools = registeredServer();
+    for (const [tool, action, field] of [
+      ["asfai_lesson", "prepare_outline", "learningOutcomes"],
+      ["asfai_evidence", "design_evaluation", "lessonPlan"],
+      ["asfai_resource", "prepare_transform", "sourceRef"],
+    ]) {
+      const result = resultJson(await tools.asfai_capability.handler({ action: "action_schema", payload: { tool, action } }));
+      expect(result).toMatchObject({ tool, action, annotations: { readOnlyHint: true, destructiveHint: false } });
+      expect((result.payloadSchema as { properties: Record<string, unknown> }).properties).toHaveProperty(field);
+    }
+    const rejected = await tools.asfai_lesson.handler({ action: "prepare_outline", payload: { answers: { topic: "Snails", course: "Science" } } });
+    expect(rejected.isError).toBe(true);
+    expect(rejected.content[0].text).toContain("answers");
+    expect(tools.asfai_lesson.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(tools.asfai_storage.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+  });
+
   it("delivers the new workflow skills through the MCP capability installer", async () => {
     const tool = registeredServer().asfai_capability;
-    for (const name of ["education-lesson-authoring", "education-evaluation-design", "education-asset-transform"]) {
+    for (const name of ["education-lesson-authoring", "education-evaluation-design", "education-asset-transform", "education-guided-research"]) {
       const installed = resultJson(await tool.handler({ action: "install_skill", payload: { name, delivery: "inline" } }));
       expect(installed).toMatchObject({ name, delivery: "inline" });
       expect((installed.files as Array<{ path: string }>).some((file) => file.path === `${name}/SKILL.md`)).toBe(true);
+      if (name === "education-guided-research") {
+        expect((installed.files as Array<{ path: string }>).some((file) => file.path === `${name}/references/research-record.md`)).toBe(true);
+      }
     }
   });
 });

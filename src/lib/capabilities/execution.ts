@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STORAGE_RULE } from "@/lib/storage-resources";
 import { getCapability } from "@/lib/capabilities/catalog";
 import { getPriorityCapabilitySpec, validatePriorityCapability } from "@/lib/capabilities/priority-capabilities";
 
@@ -39,6 +40,11 @@ export const learningSessionSchema = z.object({
 
 export type LearningSession = z.infer<typeof learningSessionSchema>;
 
+// Drops fields a capability must never process or save, such as student essay text.
+function withoutIgnored(value: Record<string, unknown>, ignored?: string[]) {
+  return ignored ? Object.fromEntries(Object.entries(value).filter(([key]) => !ignored.includes(key))) : value;
+}
+
 function requireCapability(id: string) {
   const capability = getCapability(id);
   if (!capability) throw new Error(`No ASFAI capability '${id}'.`);
@@ -50,13 +56,14 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
   if (input.version && input.version !== capability.version) {
     throw new Error(`Capability '${capability.id}' version '${input.version}' is unavailable; current version is '${capability.version}'.`);
   }
+  const priority = getPriorityCapabilitySpec(capability.id);
+  const fields = withoutIgnored(input.input, priority?.ignoredInput);
   const allowed = new Set(Object.keys((capability.inputSchema.properties as Record<string, unknown>) ?? {}));
-  const unknown = Object.keys(input.input).filter((key) => !allowed.has(key));
+  const unknown = Object.keys(fields).filter((key) => !allowed.has(key));
   if (unknown.length) throw new Error(`Capability '${capability.id}' does not accept input field(s): ${unknown.join(", ")}.`);
-  if (typeof input.input.request !== "string" || input.input.request.trim().length === 0) {
+  if (typeof fields.request !== "string" || fields.request.trim().length === 0) {
     throw new Error(`Capability '${capability.id}' requires a non-empty 'request' input.`);
   }
-  const priority = getPriorityCapabilitySpec(capability.id);
   if (input.phase === "validate") {
     if (!priority) throw new Error(`Capability '${capability.id}' does not have a specialized validation contract.`);
     if (input.candidate === undefined) throw new Error("A candidate output is required for validation.");
@@ -78,7 +85,7 @@ export function prepareCapabilityRun(input: z.infer<typeof capabilityRunInputSch
   return {
     capability,
     request: {
-      input: input.input,
+      input: fields,
       contextRefs: input.contextRefs ?? [],
       outputFormat: input.outputFormat ?? "structured",
     },
@@ -124,7 +131,7 @@ export function startLearningSession(capabilityId: string, context?: Record<stri
     turn: 0,
     startedAt: now,
     updatedAt: now,
-    context: context ?? {},
+    context: withoutIgnored(context ?? {}, priority?.ignoredInput),
     interactionSummaries: [],
     evidenceCandidates: [],
   });
@@ -171,7 +178,7 @@ export function continueLearningSession(input: {
     hostInstruction: capability.guidance,
     next:
       "Respond to what the learner actually demonstrated, then ask one content-focused follow-up, fresh example, transfer question, misconception check, or reflection appropriate to the capability. Do not reveal orchestration or private assessment machinery.",
-    persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: "asfai_storage" },
+    persistence: { owner: capability.mcp.stateOwner, verified: false, rule: STORAGE_RULE, nextTool: "asfai_storage" },
   };
 }
 
@@ -191,6 +198,6 @@ export function finishLearningSession(input: { session: unknown; abandon?: boole
       rule:
         "Candidates are not evidence or mastery by themselves. Record only justified observations through asfai_evidence after learner consent and preserve assistance and limitations.",
     },
-    persistence: { owner: capability.mcp.stateOwner, verified: false, nextTool: "asfai_storage" },
+    persistence: { owner: capability.mcp.stateOwner, verified: false, rule: STORAGE_RULE, nextTool: "asfai_storage" },
   };
 }

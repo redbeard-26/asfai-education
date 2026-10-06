@@ -52,7 +52,7 @@ import {
   createCourseAccessGrant,
   createCoursePackage,
   groundedAnswerSchema,
-  podObjectReferenceSchema,
+  storageObjectReferenceSchema,
   retireMaterialVersion,
   revokeCourseAccessGrant,
   validateCourseAccess,
@@ -68,6 +68,7 @@ import {
   neighboringObjectives,
   objectivesInProgram,
   searchObjectives,
+  TAXONOMY_SOURCE,
 } from "@/lib/education-graph";
 import {
   learnerProfileSchema,
@@ -92,12 +93,20 @@ import {
   progressEnvelopeSchema,
 } from "@/lib/lessons/schemas";
 import { lessonContentDigest, validateLesson } from "@/lib/lessons/validation";
+import { driveDocumentKinds, driveDocumentLocation, driveObjectLocation } from "@/lib/drive-storage";
+import { STORAGE_HOST_CAPABILITIES, STORAGE_RULE, storageResource } from "@/lib/storage-resources";
 import { buildLessonReport, getNextActivity, startLessonRun } from "@/lib/lessons/workflow";
 import { reviewLesson } from "@/lib/register-lesson-tools";
 import {
   prepareEvaluationDesign,
   prepareLessonOutline,
   prepareTransform,
+  evaluationIntakeSchema,
+  evaluationDesignSchema,
+  lessonIntakeSchema,
+  lessonOutlineSchema,
+  transformIntakeSchema,
+  transformArtifactSchema,
   validateEvaluationDesign,
   validateLessonOutline,
   validateTransformArtifact,
@@ -156,11 +165,11 @@ function educationBaseUrl(siteOrigin: string) {
 }
 
 const capabilityActionSchema = z.enum([
-  "manifest", "list", "search", "get", "recommend", "list_skills", "get_skill", "install_skill", "validate_custom", "prepare_custom_publication",
+  "manifest", "list", "search", "get", "recommend", "list_skills", "get_skill", "install_skill", "validate_custom", "prepare_custom_publication", "action_schema",
 ]);
 
 const graphActionSchema = z.enum([
-  "list_programs", "search_objectives", "get_objective", "get_neighbors", "get_program_objectives", "get_frontier", "find_path",
+  "list_programs", "search_objectives", "get_objective", "get_neighbors", "get_program_objectives", "get_frontier", "find_path", "verify_standard_alignment",
 ]);
 
 const sessionActionSchema = z.enum(["start", "resume", "continue", "finish", "join_room", "start_quiz", "answer_quiz", "finish_quiz"]);
@@ -183,24 +192,60 @@ const storageActionSchema = z.enum([
   "put_object", "get_object", "head_object", "list_objects", "delete_object",
 ]);
 
+const actionPayloadSchemas = {
+  asfai_lesson: {
+    prepare_outline: lessonIntakeSchema,
+    validate_outline: z.object({ outline: lessonOutlineSchema }).strict(),
+  },
+  asfai_evidence: {
+    design_evaluation: evaluationIntakeSchema,
+    validate_evaluation: z.object({ evaluation: evaluationDesignSchema }).strict(),
+  },
+  asfai_resource: {
+    prepare_transform: transformIntakeSchema,
+    validate_transform: z.object({ artifact: transformArtifactSchema }).strict(),
+  },
+  asfai_graph: {
+    search_objectives: z.object({ query: z.string().min(1), limit: z.number().int().min(1).max(100).optional() }).strict(),
+    verify_standard_alignment: z.object({ objectiveId: z.string().min(1), standardCode: z.string().min(1) }).strict(),
+  },
+} as const;
+
+function actionSchema(payload: Record<string, unknown>) {
+  const input = z.object({ tool: z.enum(ASFAI_DEFAULT_TOOL_NAMES), action: z.string().min(1) }).strict().parse(payload);
+  const toolSchemas = actionPayloadSchemas[input.tool as keyof typeof actionPayloadSchemas];
+  const schema = toolSchemas && Object.hasOwn(toolSchemas, input.action)
+    ? toolSchemas[input.action as keyof typeof toolSchemas]
+    : undefined;
+  if (!schema) throw new Error(`No published payload schema for ${input.tool}/${input.action}. Available schemas: ${Object.entries(actionPayloadSchemas).flatMap(([tool, actions]) => Object.keys(actions).map((action) => `${tool}/${action}`)).join(", ")}.`);
+  return {
+    tool: input.tool,
+    action: input.action,
+    payloadSchema: z.toJSONSchema(schema),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+    rule: "Supply these fields at the top level of payload. Unknown fields are rejected for the educator artifact workflows; do not wrap answers in an answers object.",
+  };
+}
+
 function persistenceNotice(owner: "learner" | "educator") {
   return {
     owner,
     serverRetained: false,
     verified: false,
-    rule: "The caller must complete a host-side write and read-back before saying that data was saved.",
-    nextTool: "asfai_storage",
+    rule: STORAGE_RULE,
+    nextTool: "asfai_capability",
   };
 }
 
 async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, payload: Record<string, unknown>, siteOrigin: string) {
+  if (action === "action_schema") return actionSchema(payload);
   if (action === "manifest") {
     return {
       server: { name: "asfai-learning", version: "2.0.0" },
       catalog: { version: "2.0.0", digest: CAPABILITY_CATALOG_DIGEST, counts: capabilityCounts() },
       defaultTools: ASFAI_DEFAULT_TOOL_NAMES,
       contextBudget: { defaultToolCount: 9, maximumToolCount: 12, serializedCharacterTarget: 8000, serializedCharacterMaximum: 10000 },
-      state: "Public graph and capability metadata are cacheable. Private education records and course objects are written only to the user's connected Solid Pod; without one, persistence remains pending.",
+      state: `Public graph and capability metadata are cacheable. ASFAI keeps no private education records. ${STORAGE_RULE}`,
     };
   }
   if (action === "list" || action === "search" || action === "recommend") {
@@ -248,8 +293,23 @@ async function capabilityAction(action: z.infer<typeof capabilityActionSchema>, 
 async function graphAction(action: z.infer<typeof graphActionSchema>, payload: Record<string, unknown>) {
   if (action === "list_programs") return listPrograms();
   if (action === "search_objectives") {
-    const input = z.object({ query: z.string(), limit: z.number().int().min(1).max(100).optional() }).parse(payload);
+    const input = actionPayloadSchemas.asfai_graph.search_objectives.parse(payload);
     return searchObjectives(input.query, input.limit ?? 20);
+  }
+  if (action === "verify_standard_alignment") {
+    const input = actionPayloadSchemas.asfai_graph.verify_standard_alignment.parse(payload);
+    const objective = await getObjective(input.objectiveId);
+    if (!objective) throw new Error(`No objective '${input.objectiveId}'.`);
+    const matchingStandards = objective.standards.filter((standard) => standard === input.standardCode || standard.endsWith(`:${input.standardCode}`));
+    return {
+      objectiveId: objective.id,
+      objectiveName: objective.name,
+      standardCode: input.standardCode,
+      verified: matchingStandards.length > 0,
+      matchingStandards,
+      graphSource: TAXONOMY_SOURCE,
+      rule: "This verifies only that the cited code is mapped to this objective in Marble's graph. It does not verify the official standards text or prove that an earlier plan consulted the graph.",
+    };
   }
   if (action === "get_objective") {
     const { id } = z.object({ id: z.string() }).parse(payload);
@@ -457,16 +517,18 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
   }
   if (action === "prepare_course_share") {
     const input = z.object({
-      course: courseKnowledgePackageSchema, manifestRef: podObjectReferenceSchema, recipientId: z.string().optional(),
+      course: courseKnowledgePackageSchema, manifestRef: storageObjectReferenceSchema, recipientId: z.string().optional(),
       expiresAt: z.string().datetime({ offset: true }).optional(), confirmed: z.boolean().default(false),
     }).parse(payload);
     if (!input.confirmed) {
       return {
-        preview: { courseId: input.course.courseId, courseVersion: input.course.version, recipientId: input.recipientId, manifestRef: input.manifestRef.href, expiresAt: input.expiresAt },
+        preview: { courseId: input.course.courseId, courseVersion: input.course.version, recipientId: input.recipientId, manifestRef: "href" in input.manifestRef ? input.manifestRef.href : input.manifestRef.path, expiresAt: input.expiresAt },
         confirmationRequired: true,
       };
     }
-    return { grant: createCourseAccessGrant(input), signingRequired: true, ...persistenceNotice("educator"), nextTool: "asfai_storage" };
+    const grant = createCourseAccessGrant(input);
+    const signingRequired = input.manifestRef.storage === "solid_pod";
+    return { grant, signingRequired, sharing: "Sign and share the grant only as the storage resource for this course's store describes, after the educator confirms.", resource: storageResource(input.manifestRef.storage), ...persistenceNotice("educator") };
   }
   if (action === "revoke_course_share") {
     const input = z.object({ grant: courseAccessGrantSchema, confirmed: z.boolean().default(false) }).parse(payload);
@@ -564,11 +626,11 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
     return resource;
   }
   if (action === "create") {
-    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
+    const input = z.object({ title: z.string(), kind: z.enum(["document", "collection", "file", "artifact", "capability", "workflow", "room", "quiz", "feedback"]).optional(), content: z.unknown().optional(), contentRef: storageObjectReferenceSchema.optional(), author: z.string().optional(), capabilityId: z.string().optional(), capabilityVersion: z.string().optional(), sourceRefs: z.array(z.string()).optional(), license: z.string().optional(), aiGenerated: z.boolean().optional() }).parse(payload);
     return { ...createResource(workspace, input), ...persistenceNotice("educator") };
   }
   if (action === "version") {
-    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown().optional(), contentRef: podObjectReferenceSchema.optional() }).parse(payload);
+    const input = z.object({ resourceId: z.string(), title: z.string().optional(), content: z.unknown().optional(), contentRef: storageObjectReferenceSchema.optional() }).parse(payload);
     return { ...versionResource(workspace, input.resourceId, input), ...persistenceNotice("educator") };
   }
   if (action === "delete") {
@@ -594,16 +656,18 @@ function resourceAction(action: z.infer<typeof resourceActionSchema>, payload: R
 }
 
 function educatorPersistence(target?: { mode?: string; location?: string }) {
-  const mode = target?.mode ?? "local_file";
+  const mode = storageTargetSchema.shape.mode.parse(target?.mode ?? "local_file");
+  const common = { mode, contentType: "application/json", requiredCapability: STORAGE_HOST_CAPABILITIES[mode], serverRetained: false, resource: storageResource(mode) };
+  if (mode === "google_drive") return { ...driveDocumentLocation("educator", target?.location), ...common };
   if (mode === "solid_pod") {
-    if (!target?.location) throw new Error("A Solid Pod root or resource URL is required.");
+    if (!target?.location) throw new Error("A store root or resource URL is required for this storage target.");
     const root = target.location.replace(/\/$/, "");
     const location = root.endsWith(".json") ? root : `${root}/asfai/educator-workspace.json`;
-    if (new URL(location).protocol !== "https:") throw new Error("Solid Pod storage requires HTTPS.");
-    return { mode, location, requiredCapability: "authenticated_solid_fetch", steps: ["Use the educator's authenticated Solid session; never send credentials to ASFAI.", "Read first and preserve ETag when available.", "Write the complete JSON with application/json.", "Read back and compare digest, schemaVersion, owner identifier, and collection counts."], serverRetained: false };
+    if (new URL(location).protocol !== "https:") throw new Error("This storage target requires an HTTPS URL.");
+    return { ...common, location };
   }
-  if (mode === "indexeddb") return { mode, location: "indexeddb://asfai-education/educator-workspace/current", requiredCapability: "browser_indexeddb", steps: ["Put the complete workspace at key current in a readwrite transaction.", "Wait for transaction completion.", "Read back in a new transaction and compare digest and counts."], serverRetained: false };
-  return { mode: "local_file", location: target?.location ?? "asfai/educator-workspace.json", requiredCapability: "local_filesystem", steps: ["Write a temporary JSON file in the same directory.", "Atomically replace the target.", "Read back and compare digest and counts."], serverRetained: false };
+  if (mode === "indexeddb") return { ...common, location: "indexeddb://asfai-education/educator-workspace/current" };
+  return { ...common, location: target?.location ?? "asfai/educator-workspace.json" };
 }
 
 async function storageAction(action: z.infer<typeof storageActionSchema>, payload: Record<string, unknown>, tenantId?: string) {
@@ -616,12 +680,19 @@ async function storageAction(action: z.infer<typeof storageActionSchema>, payloa
     return owner === "learner" ? { state: migrateLearnerProfile(), ...persistenceNotice("learner") } : { state: newEducatorWorkspace(), ...persistenceNotice("educator") };
   }
   if (action === "instructions") {
-    const input = z.object({ owner: z.enum(["learner", "educator"]), target: z.record(z.string(), z.unknown()).optional(), hostCapabilities: z.array(z.string()).max(10).optional() }).parse(payload);
+    const input = z.object({
+      owner: z.enum(["learner", "educator"]), target: z.record(z.string(), z.unknown()).optional(), hostCapabilities: z.array(z.string()).max(10).optional(),
+      document: z.enum(driveDocumentKinds).optional(), objectPath: z.string().optional(), contentType: z.string().max(200).optional(),
+    }).parse(payload);
     const target = input.target as { mode?: string; location?: string } | undefined;
-    const persistence = input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(target);
-    const required = target?.mode === "indexeddb" ? "browser_indexeddb" : target?.mode === "solid_pod" ? "authenticated_solid_fetch" : "local_filesystem";
+    const persistence = target?.mode === "google_drive"
+      ? input.objectPath
+        ? driveObjectLocation(input.objectPath, input.contentType ?? "application/octet-stream", target.location)
+        : driveDocumentLocation(input.document ?? input.owner, target.location)
+      : input.owner === "learner" ? persistenceFor(storageTargetSchema.parse(input.target ?? { mode: "local_file" })) : educatorPersistence(target);
+    const required = persistence.requiredCapability;
     const capable = input.hostCapabilities ? input.hostCapabilities.includes(required) : null;
-    return { persistence, capabilityCheck: { required, capable }, confirmationRule: "Say saved only after a successful write and independent read-back verification." };
+    return { persistence, capabilityCheck: { required, capable }, confirmationRule: STORAGE_RULE };
   }
   if (action === "verify") {
     const input = z.object({ expected: z.unknown(), actual: z.unknown(), expectedDigest: z.string().optional() }).parse(payload);
@@ -639,16 +710,16 @@ function tenantId(extra?: { authInfo?: { extra?: Record<string, unknown> } }) {
 }
 
 export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
-  server.registerTool("asfai_capability", { title: "Discover ASFAI capabilities", description: "Catalog, route, and install ASFAI capabilities or workflow guidance.", inputSchema: { action: capabilityActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_capability", { title: "Discover ASFAI capabilities", description: "Route capabilities and skills; action_schema returns payload fields for an action.", inputSchema: { action: capabilityActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ action, payload }) => {
     try { return json(await capabilityAction(action, data(payload), siteOrigin)); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_graph", { title: "Use the public learning graph", description: "Search objectives, prerequisites, frontiers, programs, and paths.", inputSchema: { action: graphActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_graph", { title: "Use the public learning graph", description: "Search objectives and paths; verify_standard_alignment checks graph citations.", inputSchema: { action: graphActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ action, payload }) => {
     try { return json(await graphAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_run", { title: "Prepare or validate an ASFAI capability run", description: "Returns versioned instructions, specialized workflows, validation, and safety contracts for one-shot or job capabilities.", inputSchema: { capabilityId: z.string(), input: z.record(z.string(), z.unknown()), options: compactPayloadSchema } }, async ({ capabilityId, input, options }) => {
+  server.registerTool("asfai_run", { title: "Prepare or validate an ASFAI capability run", description: "Returns versioned instructions, specialized workflows, validation, and safety contracts for one-shot or job capabilities.", inputSchema: { capabilityId: z.string(), input: z.record(z.string(), z.unknown()), options: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ capabilityId, input, options }) => {
     try { return json(prepareCapabilityRun(capabilityRunInputSchema.parse({ capabilityId, input, ...(options ?? {}) }))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_session", { title: "Continue an interactive learning session", description: "Start, resume, advance, or finish portable learner-facing session state.", inputSchema: { action: sessionActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_session", { title: "Continue an interactive learning session", description: "Start, resume, advance, or finish portable learner-facing session state.", inputSchema: { action: sessionActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ action, payload }) => {
     try {
       const input = data(payload);
       if (action === "join_room") {
@@ -673,19 +744,19 @@ export function registerAsfaiTools(server: McpServer, siteOrigin: string) {
       return json(finishLearningSession({ session: input.session, abandon: input.abandon === true }));
     } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_lesson", { title: "Author and run ASFAI lessons", description: "Clarify and draft lesson outlines, review plans, prepare publication, and run activities.", inputSchema: { action: lessonActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_lesson", { title: "Author and run ASFAI lessons", description: "Clarify, draft, and run lessons. Artifact launch/claim actions use temporary relay state; no lesson is published here. Use asfai_capability/action_schema for payload fields.", inputSchema: { action: lessonActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: false, destructiveHint: true } }, async ({ action, payload }) => {
     try { return json(await lessonAction(action, data(payload), siteOrigin)); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_evidence", { title: "Design evaluations and record evidence", description: "Design lesson-grounded evaluations, record evidence, report outcomes, and exchange scoped progress.", inputSchema: { action: evidenceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_evidence", { title: "Design evaluations and record evidence", description: "Design evaluations and return caller-owned evidence; no save. Use asfai_capability/action_schema for payload fields.", inputSchema: { action: evidenceActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ action, payload }) => {
     try { return json(await evidenceAction(action, data(payload), siteOrigin)); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_resource", { title: "Manage and transform educator resources", description: "Prepare source-grounded transformations; manage portable versioned resources and sharing.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }) => {
+  server.registerTool("asfai_resource", { title: "Manage and transform educator resources", description: "Prepare caller-owned resource transforms; no external save. Use asfai_capability/action_schema for payload fields.", inputSchema: { action: resourceActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: true, destructiveHint: false } }, async ({ action, payload }) => {
     try { return json(resourceAction(action, data(payload))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Load or save records and course objects in the user's Solid Pod; also verifies portable host-side storage.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+  server.registerTool("asfai_storage", { title: "Connect and use private learning storage", description: "Private storage actions, save locations, and read-back checks. Saving follows the storage resource for the user's store. Some actions mutate or delete private data.", inputSchema: { action: storageActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: false, destructiveHint: true } }, async ({ action, payload }, extra) => {
     try { return json(await storageAction(action, data(payload), tenantId(extra))); } catch (error) { return err(error); }
   });
-  server.registerTool("asfai_classroom", { title: "Exchange work with a classroom provider", description: "Connect a provider such as Google, import work, create assignments with documents, export learner work, and return approved evaluations.", inputSchema: { action: classroomActionSchema, payload: compactPayloadSchema } }, async ({ action, payload }, extra) => {
+  server.registerTool("asfai_classroom", { title: "Exchange work with a classroom provider", description: "Connect a provider such as Google, import work, create assignments with documents, export learner work, and return approved evaluations. Some actions change classroom records and require explicit user confirmation.", inputSchema: { action: classroomActionSchema, payload: compactPayloadSchema }, annotations: { readOnlyHint: false, destructiveHint: true } }, async ({ action, payload }, extra) => {
     try {
       const owner = tenantId(extra);
       if (!owner) throw new Error("Classroom actions require an authenticated ASFAI connector.");

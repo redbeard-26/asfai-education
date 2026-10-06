@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "asfai-learning",
   "displayName": "ASFAI Learning",
-  "version": "0.1.2",
-  "description": "Plan lessons, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
+  "version": "0.1.6",
+  "description": "Plan lessons, guide student research, design evaluations, transform teaching assets, and teach with ASFAI through one remote MCP connector.",
   "author": {
     "name": "ASFAI",
     "url": "https://github.com/redbeard-26"
@@ -15,7 +15,7 @@
     "education",
     "learning",
     "lessons",
-    "solid",
+    "research",
     "private-data"
   ],
   "skills": "./skills/",

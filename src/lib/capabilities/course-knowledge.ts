@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { driveObjectReferenceSchema } from "@/lib/drive-storage";
 
 const timestampSchema = z.string().datetime({ offset: true });
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/i);
@@ -35,6 +36,11 @@ export const podObjectReferenceSchema = z.object({
 
 export type PodObjectReference = z.infer<typeof podObjectReferenceSchema>;
 
+// A stored object lives in one of the user's stores; see storage-resources.ts.
+export const storageObjectReferenceSchema = z.discriminatedUnion("storage", [podObjectReferenceSchema, driveObjectReferenceSchema]);
+
+export type StorageObjectReference = z.infer<typeof storageObjectReferenceSchema>;
+
 export const objectiveAlignmentSchema = z.object({
   objectiveId: z.string().min(1),
   alignmentType: z.enum(["teaches", "assesses", "supports"]),
@@ -52,9 +58,9 @@ export const courseMaterialVersionSchema = z.object({
   title: z.string().min(1).max(300),
   status: z.enum(["active", "retired"]),
   mediaType: z.string().min(1).max(200),
-  original: podObjectReferenceSchema,
-  extractedText: podObjectReferenceSchema.optional(),
-  chunkIndex: podObjectReferenceSchema.optional(),
+  original: storageObjectReferenceSchema,
+  extractedText: storageObjectReferenceSchema.optional(),
+  chunkIndex: storageObjectReferenceSchema.optional(),
   pageCount: z.number().int().positive().optional(),
   objectiveAlignments: z.array(objectiveAlignmentSchema).max(200).default([]),
   license: z.object({
@@ -139,7 +145,7 @@ export const courseAccessGrantSchema = z.object({
   id: z.string().min(1),
   courseId: z.string().min(1),
   courseVersion: z.number().int().positive(),
-  manifestRef: podObjectReferenceSchema,
+  manifestRef: storageObjectReferenceSchema,
   manifestDigest: digestSchema,
   recipientId: z.string().min(1).optional(),
   status: z.enum(["active", "revoked"]),

@@ -27,6 +27,8 @@ Call `asfai_lesson` action `prepare_authoring` with the teacher's idea, audience
 
 Use the learning-objective tools to find appropriate public objectives. When the public graph has no sufficiently specific objective, create a scoped ASFAI objective identifier and record sourced external alignments rather than copying taxonomy records.
 
+Search can accept a natural phrase, but inspect the returned objectives and retry with shorter or alternate terms if the matches are weak. Do not cite a standard as graph-grounded merely because the code sounds relevant. For each cited standard, call `asfai_graph` action `verify_standard_alignment` with its objective ID and code, then retain that ID and the verified fully qualified code in the lesson's source references. If verification fails, label it a proposed external alignment for teacher review rather than a graph result. An old plan without objective IDs cannot be retroactively certified as graph-grounded.
+
 For every objective, establish:
 
 - what the learner will do or create;
@@ -53,4 +55,4 @@ Call `asfai_lesson` action `validate`, correct every error, then call action `re
 
 Call `asfai_lesson` action `prepare_publication` only after the teacher confirms the final package. This produces a digest and immutable object keys; it does not perform the authenticated publication. Never tell the teacher that a lesson or artifact is hosted until the authenticated publisher confirms it.
 
-After publication, call `asfai_lesson` action `create_assignment` when the teacher wants to distribute the lesson. Save the returned assignment through `asfai_resource` and `asfai_storage`, and share only the intended assignment fields.
+After publication, call `asfai_lesson` action `create_assignment` when the teacher wants to distribute the lesson. Record the returned assignment through `asfai_resource`, save it by following the storage resource for the user's store (`asfai-storage-pod`, `asfai-storage-drive`, or `asfai-storage-local`, from `asfai_capability` action `get_skill`), and share only the intended assignment fields.
