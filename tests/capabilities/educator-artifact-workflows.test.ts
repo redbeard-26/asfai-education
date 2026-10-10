@@ -3,6 +3,7 @@ import {
   prepareEvaluationDesign,
   prepareLessonOutline,
   prepareTransform,
+  setClarificationSecretForTests,
   validateEvaluationDesign,
   validateLessonOutline,
   validateTransformArtifact,
@@ -12,13 +13,23 @@ const now = "2026-09-24T12:00:00Z";
 
 describe("teacher artifact workflows", () => {
   it("asks for audience and outcomes before outlining a lesson", () => {
+    setClarificationSecretForTests("test-secret");
     const result = prepareLessonOutline({ mode: "new", topic: "linear equations", course: "Algebra I" });
     expect(result.state).toBe("clarifying");
     expect(result.questions.map((item) => item.id)).toEqual(["audience", "learning_outcomes"]);
-    expect(prepareLessonOutline({
+    const invented = prepareLessonOutline({
       topic: "linear equations", course: "Algebra I", audience: "early high school",
       learningOutcomes: ["Solve a one-variable equation and explain each step"],
-    }).state).toBe("ready_to_draft");
+    });
+    expect(invented.state).toBe("clarifying");
+    expect(invented.questions.map((item) => item.id)).toEqual(["confirm_intake"]);
+    const accepted = prepareLessonOutline({
+      topic: "linear equations", course: "Algebra I", audience: "early high school",
+      learningOutcomes: ["Solve a one-variable equation and explain each step"],
+      clarificationReceipt: result.clarificationReceipt,
+    });
+    expect(accepted.state).toBe("ready_to_draft");
+    expect(accepted.draftAuthorization).toEqual(expect.any(String));
   });
 
   it("asks what polish means but does not demand pedagogical intake for formatting only", () => {
@@ -70,11 +81,28 @@ describe("teacher artifact workflows", () => {
     }).valid).toBe(true);
   });
 
-  it("validates a versioned outline artifact", () => {
+  it("rejects an outline the host drafted without a clarification receipt", () => {
+    setClarificationSecretForTests("test-secret");
+    const blocked = validateLessonOutline({
+      schemaVersion: "0.1", id: "outline-1", version: 1, status: "draft", kind: "lesson-outline",
+      sourceRefs: [], createdAt: now, updatedAt: now, course: "Algebra I", topic: "Linear equations",
+      audience: "early high school", learningOutcomes: ["Solve one-variable equations"],
+      sections: [{ id: "s1", title: "Explore", purpose: "Compare equivalent equations" }],
+    });
+    expect(blocked.valid).toBe(false);
+    expect(blocked.errors[0]).toMatch(/clarification/);
+
+    const first = prepareLessonOutline({ mode: "new", topic: "Linear equations", course: "Algebra I" });
+    const ready = prepareLessonOutline({
+      topic: "Linear equations", course: "Algebra I", audience: "early high school",
+      learningOutcomes: ["Solve one-variable equations"],
+      clarificationReceipt: first.clarificationReceipt,
+    });
     const result = validateLessonOutline({
       schemaVersion: "0.1", id: "outline-1", version: 1, status: "draft", kind: "lesson-outline",
       sourceRefs: [], createdAt: now, updatedAt: now, course: "Algebra I", topic: "Linear equations",
       audience: "early high school", learningOutcomes: ["Solve one-variable equations"],
+      draftAuthorization: ready.draftAuthorization,
       sections: [{ id: "s1", title: "Explore", purpose: "Compare equivalent equations" }],
     });
     expect(result.valid).toBe(true);
