@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 const text = z.string().trim().min(1).max(8000);
@@ -36,6 +37,7 @@ export const lessonOutlineSchema = z.object({
   topic: shortText,
   audience: shortText,
   learningOutcomes: z.array(shortText).min(1).max(30),
+  draftAuthorization: z.string().min(1).max(4000).optional(),
   sections: z.array(z.object({
     id: shortText,
     title: shortText,
@@ -94,6 +96,7 @@ export const lessonIntakeSchema = z.object({
   course: shortText.optional(),
   audience: shortText.optional(),
   learningOutcomes: z.array(shortText).max(30).optional(),
+  clarificationReceipt: z.string().min(1).max(4000).optional(),
   draftRef: sourceRefSchema.optional(),
   outline: lessonOutlineSchema.optional(),
   polishGoals: z.array(z.enum(["clarity", "gaps", "objective-mapping", "formatting", "full-review"])).max(5).optional(),
@@ -134,6 +137,60 @@ function question(id: string, prompt: string, reason: string, options?: string[]
   return workflowQuestionSchema.parse({ id, prompt, reason, kind: options ? multiple ? "multiple-choice" : "single-choice" : "open", options });
 }
 
+const INTAKE_QUESTION_IDS = ["topic", "course", "audience", "learning_outcomes"] as const;
+const INTAKE_RECEIPT_PAYLOAD = `q:${INTAKE_QUESTION_IDS.join(",")}`;
+const RECEIPT_TTL_MS = 30 * 60 * 1000;
+
+let clarificationSecret: string | null = process.env.ASFAI_CLARIFICATION_SECRET ?? null;
+
+/** Tests inject a secret. Production must set ASFAI_CLARIFICATION_SECRET. Missing secret fails closed. */
+export function setClarificationSecretForTests(secret: string | null) {
+  clarificationSecret = secret;
+}
+
+function issueReceipt(payload: string, now = Date.now()): string | null {
+  const key = clarificationSecret;
+  if (!key) return null;
+  const exp = now + RECEIPT_TTL_MS;
+  const body = `${exp}.${payload}`;
+  const sig = createHmac("sha256", key).update(body).digest("base64url");
+  return Buffer.from(`${body}.${sig}`).toString("base64url");
+}
+
+function verifyReceipt(token: string | undefined, payload: string, now = Date.now()): boolean {
+  const key = clarificationSecret;
+  if (!key || !token) return false;
+  let decoded: string;
+  try {
+    decoded = Buffer.from(token, "base64url").toString("utf8");
+  } catch {
+    return false;
+  }
+  const parts = decoded.split(".");
+  if (parts.length < 3) return false;
+  const sig = parts.pop()!;
+  const exp = Number(parts[0]);
+  const bodyPayload = parts.slice(1).join(".");
+  if (!Number.isFinite(exp) || exp < now || bodyPayload !== payload) return false;
+  const expected = createHmac("sha256", key).update(`${exp}.${payload}`).digest("base64url");
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function draftPayload(fields: { topic: string; course: string; audience: string; learningOutcomes: string[] }) {
+  return `draft:${fields.topic}|${fields.course}|${fields.audience}|${fields.learningOutcomes.join("\n")}`;
+}
+
+function intakeQuestions(brief: { topic?: string; course?: string; audience?: string; learningOutcomes?: string[] }) {
+  const questions: z.infer<typeof workflowQuestionSchema>[] = [];
+  if (!brief.topic) questions.push(question("topic", "What topic should this lesson cover?", "The outline needs a subject."));
+  if (!brief.course) questions.push(question("course", "Which course is this part of?", "Course context sets scope and sequencing."));
+  if (!brief.audience) questions.push(question("audience", "Who are the learners (level, age range, or prior knowledge)?", "Activities and language depend on the audience."));
+  if (!brief.learningOutcomes?.length) questions.push(question("learning_outcomes", "What should learners be able to do by the end?", "An observable outcome anchors the outline."));
+  return questions;
+}
+
 function response(primitive: "Lesson" | "Evaluation" | "Transform", phase: string, questions: z.infer<typeof workflowQuestionSchema>[], context: unknown, next: string) {
   return {
     primitive,
@@ -150,10 +207,36 @@ export function prepareLessonOutline(input: unknown) {
   const brief = lessonIntakeSchema.parse(input);
   const questions: z.infer<typeof workflowQuestionSchema>[] = [];
   if (brief.mode === "new") {
-    if (!brief.topic) questions.push(question("topic", "What topic should this lesson cover?", "The outline needs a subject."));
-    if (!brief.course) questions.push(question("course", "Which course is this part of?", "Course context sets scope and sequencing."));
-    if (!brief.audience) questions.push(question("audience", "Who are the learners (level, age range, or prior knowledge)?", "Activities and language depend on the audience."));
-    if (!brief.learningOutcomes?.length) questions.push(question("learning_outcomes", "What should learners be able to do by the end?", "An observable outcome anchors the outline."));
+    const missing = intakeQuestions(brief);
+    const receiptOk = verifyReceipt(brief.clarificationReceipt, INTAKE_RECEIPT_PAYLOAD);
+    if (!receiptOk) {
+      const asked = missing.length ? missing : [question(
+        "confirm_intake",
+        "The topic, course, audience, and outcomes in this call were supplied by the assistant, not confirmed by you. Confirm or replace them before any draft.",
+        "Field presence is not a teacher answer. A host can invent these in one call.",
+        ["Confirm these values", "I will replace them"],
+      )];
+      return {
+        ...response("Lesson", brief.mode, asked, { ...brief, unconfirmedSuggestions: true }, "Ask these questions in ordinary teacher-facing language. Do not invent answers. Call prepare_outline again with the clarificationReceipt and the teacher's answers."),
+        clarificationReceipt: issueReceipt(INTAKE_RECEIPT_PAYLOAD),
+      };
+    }
+    if (missing.length) {
+      return {
+        ...response("Lesson", brief.mode, missing, brief, "Ask the unresolved questions, then call prepare_outline again with the same clarificationReceipt and the teacher's answers."),
+        clarificationReceipt: brief.clarificationReceipt,
+      };
+    }
+    const accepted = {
+      topic: brief.topic!,
+      course: brief.course!,
+      audience: brief.audience!,
+      learningOutcomes: brief.learningOutcomes!,
+    };
+    return {
+      ...response("Lesson", brief.mode, [], brief, "Draft or revise a lesson-outline artifact, copy draftAuthorization onto it, then call asfai_lesson validate_outline. Do not publish or claim it is saved yet."),
+      draftAuthorization: issueReceipt(draftPayload(accepted)),
+    };
   } else if (brief.mode === "polish") {
     if (!brief.draftRef) questions.push(question("draft", "Please attach or identify the draft outline.", "Polishing requires an existing artifact."));
     if (!brief.polishGoals?.length) questions.push(question("polish_goal", "What kind of polish would help most?", "Formatting, gaps, and objective mapping require different reviews.", ["Clearer wording and structure", "Find gaps", "Map to learning objectives", "Formatting only", "Full instructional review"], true));
@@ -202,7 +285,9 @@ export function prepareTransform(input: unknown) {
 export function validateLessonOutline(input: unknown) {
   const outline = lessonOutlineSchema.parse(input);
   const sectionIds = outline.sections.map((item) => item.id);
+  const authorized = verifyReceipt(outline.draftAuthorization, draftPayload(outline));
   const errors = [
+    ...(!authorized ? ["Outline is not authorized by a completed clarification round. Surface prepare_outline questions, then submit the teacher's answers with the clarification receipt before drafting."] : []),
     ...(new Set(sectionIds).size !== sectionIds.length ? ["Section IDs must be unique."] : []),
     ...(outline.status === "reviewed" && outline.unresolvedDecisions.length ? ["Resolve open decisions before marking the outline reviewed."] : []),
   ];
