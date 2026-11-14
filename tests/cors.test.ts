@@ -17,6 +17,28 @@ const LISTED_ORIGIN = "https://silicus-ta.vercel.app";
 const UNLISTED_ORIGIN = "https://unlisted.example.com";
 const CORS_ENV = "ASFAI_CORS_ORIGINS";
 
+/*
+ * Look-alike Origins: requests that share text with the listed origin but are
+ * not an exact string match. Each must receive zero access-control-* headers
+ * on every endpoint — the security property of this allow-list is exact
+ * match. These rows guard the strict equality in corsOrigin() against
+ * startsWith / includes / "null" short-circuit regressions. A padded Origin
+ * (` https://… `) is deliberately NOT here: the Fetch/HTTP layer strips
+ * surrounding whitespace (OWS), so it reaches corsOrigin() as the exact
+ * listed origin and legitimately matches.
+ */
+const LOOKALIKE_ORIGINS: { name: string; origin: string }[] = [
+  { name: "a suffix after the host's TLD", origin: `${LISTED_ORIGIN}.evil.example` },
+  { name: "an extra subdomain before the host", origin: "https://evil.silicus-ta.vercel.app" },
+  { name: "the listed origin spliced after an attacker prefix", origin: `evil-${LISTED_ORIGIN}` },
+  { name: "an explicit default port", origin: `${LISTED_ORIGIN}:443` },
+  { name: "a different scheme", origin: "http://silicus-ta.vercel.app" },
+  { name: "a trailing slash", origin: `${LISTED_ORIGIN}/` },
+  { name: "an upper-case host", origin: "https://SILICUS-TA.VERCEL.APP" },
+  { name: "the literal string null", origin: "null" },
+  { name: "a wildcard", origin: "*" },
+];
+
 const BASE = "https://education.asfai.org/education";
 
 const ENDPOINTS = {
@@ -282,6 +304,68 @@ describe("CORS headers on the real responses", () => {
     expect(response.status).toBe(401);
     expectNoCorsHeaders(response.headers);
     expect(response.headers.get("www-authenticate")).toBeTruthy();
+  });
+});
+
+describe("look-alike origins get no CORS headers on preflights", () => {
+  const endpoints = Object.keys(ENDPOINTS) as (keyof typeof ENDPOINTS)[];
+  const cases = endpoints.flatMap((endpoint) =>
+    LOOKALIKE_ORIGINS.map((lookalike) => ({ endpoint, ...lookalike })),
+  );
+
+  it.each(cases)("$endpoint preflight: $name", async ({ endpoint, origin }) => {
+    const { OPTIONS } = await routes[endpoint]();
+    const response = await OPTIONS!(preflight(ENDPOINTS[endpoint], origin));
+    expect(response.status).toBe(204);
+    expectNoCorsHeaders(response.headers);
+  });
+});
+
+describe("look-alike origins get no CORS headers on real responses", () => {
+  it.each(LOOKALIKE_ORIGINS)("register POST: $name (400 stays readable, no CORS headers)", async ({ origin }) => {
+    const { POST } = await routes.register();
+    const response = await POST!(
+      new Request(ENDPOINTS.register, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expectNoCorsHeaders(response.headers);
+  });
+
+  it.each(LOOKALIKE_ORIGINS)("api/mcp POST: $name (401 stays readable, no CORS headers)", async ({ origin }) => {
+    const { POST } = await routes.mcp();
+    const response = await POST!(
+      new Request(ENDPOINTS.mcp, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+      }),
+    );
+    expect(response.status).toBe(401);
+    expectNoCorsHeaders(response.headers);
+    expect(response.headers.get("www-authenticate")).toBeTruthy();
+  });
+});
+
+describe("allow-list parsing: an env entry with surrounding spaces", () => {
+  it("is trimmed to an exact-match entry; the listed origin matches, look-alikes do not", async () => {
+    process.env[CORS_ENV] = `  ${LISTED_ORIGIN}  ,  https://app.example.com , ,`;
+    const { OPTIONS } = await routes.register();
+
+    const listed = await OPTIONS!(preflight(ENDPOINTS.register, LISTED_ORIGIN));
+    expect(listed.status).toBe(204);
+    expectListedPreflight(listed.headers, LISTED_ORIGIN);
+
+    const second = await OPTIONS!(preflight(ENDPOINTS.register, "https://app.example.com"));
+    expect(second.status).toBe(204);
+    expectListedPreflight(second.headers, "https://app.example.com");
+
+    const suffixed = await OPTIONS!(preflight(ENDPOINTS.register, `${LISTED_ORIGIN}.evil.example`));
+    expect(suffixed.status).toBe(204);
+    expectNoCorsHeaders(suffixed.headers);
   });
 });
 
