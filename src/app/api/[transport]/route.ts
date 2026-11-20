@@ -1,6 +1,7 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { registerAsfaiTools } from "@/lib/register-asfai-tools";
 import { asfaiEducationBaseUrl, verifyMcpAccessToken } from "@/lib/remote-oauth";
+import { corsPreflight, withCors } from "@/lib/cors";
 
 export const maxDuration = 60;
 
@@ -20,4 +21,10 @@ const handler = withMcpAuth(mcpHandler, verifyMcpAccessToken, {
   resourceUrl: asfaiEducationBaseUrl().replace(/\/education$/, ""),
 });
 
-export { handler as GET, handler as POST, handler as DELETE };
+const corsHandler = (request: Request) => withCors(request, handler(request));
+
+export { corsHandler as GET, corsHandler as POST, corsHandler as DELETE };
+
+export function OPTIONS(request: Request) {
+  return corsPreflight(request, "DELETE, GET, HEAD, OPTIONS, POST");
+}
